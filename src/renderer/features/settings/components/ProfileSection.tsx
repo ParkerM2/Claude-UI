@@ -30,6 +30,8 @@ export function ProfileSection() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   function handleAdd() {
     setEditingProfile(null);
@@ -41,8 +43,29 @@ export function ProfileSection() {
     setModalOpen(true);
   }
 
-  function handleDelete(id: string) {
-    deleteProfile.mutate(id);
+  function extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return 'An unexpected error occurred';
+  }
+
+  function handleDeleteRequest(id: string) {
+    setErrorMessage(null);
+    setDeleteConfirmId(id);
+  }
+
+  function handleDeleteConfirm() {
+    if (deleteConfirmId !== null) {
+      deleteProfile.mutate(deleteConfirmId, {
+        onError: (error) => setErrorMessage(extractErrorMessage(error)),
+      });
+      setDeleteConfirmId(null);
+    }
+  }
+
+  function handleDeleteCancel() {
+    setDeleteConfirmId(null);
   }
 
   function handleSetDefault(id: string) {
@@ -50,10 +73,12 @@ export function ProfileSection() {
   }
 
   function handleSave(data: { name: string; apiKey?: string; model?: string }) {
+    setErrorMessage(null);
+    const errorHandler = { onError: (error: unknown) => setErrorMessage(extractErrorMessage(error)) };
     if (editingProfile === null) {
-      createProfile.mutate(data);
+      createProfile.mutate(data, errorHandler);
     } else {
-      updateProfile.mutate({ id: editingProfile.id, updates: data });
+      updateProfile.mutate({ id: editingProfile.id, updates: data }, errorHandler);
     }
     setModalOpen(false);
     setEditingProfile(null);
@@ -72,6 +97,10 @@ export function ProfileSection() {
     );
   }
 
+  const deleteTarget = deleteConfirmId === null
+    ? undefined
+    : profiles?.find((p) => p.id === deleteConfirmId);
+
   return (
     <section className="mb-8">
       <div className="mb-3 flex items-center justify-between">
@@ -79,6 +108,7 @@ export function ProfileSection() {
           Profiles
         </h2>
         <button
+          type="button"
           className={cn(
             'text-muted-foreground hover:text-foreground flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs',
             'hover:bg-accent transition-colors',
@@ -95,7 +125,7 @@ export function ProfileSection() {
           <ProfileCard
             key={profile.id}
             profile={profile}
-            onDelete={handleDelete}
+            onDelete={handleDeleteRequest}
             onEdit={handleEdit}
             onSetDefault={handleSetDefault}
           />
@@ -106,6 +136,45 @@ export function ProfileSection() {
           </p>
         ) : null}
       </div>
+
+      {/* Error message */}
+      {errorMessage === null ? null : (
+        <div className="border-destructive/50 bg-destructive/5 mt-3 flex items-center justify-between rounded-lg border p-3">
+          <p className="text-destructive text-sm">{errorMessage}</p>
+          <button
+            className="text-muted-foreground hover:text-foreground rounded px-2 py-1 text-xs"
+            type="button"
+            onClick={() => setErrorMessage(null)}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {deleteTarget ? (
+        <div className="border-destructive/50 bg-destructive/5 mt-3 flex items-center justify-between rounded-lg border p-3">
+          <p className="text-sm">
+            Delete profile <strong>{deleteTarget.name}</strong>?
+          </p>
+          <div className="flex gap-2">
+            <button
+              className="text-muted-foreground hover:text-foreground rounded px-3 py-1 text-sm"
+              type="button"
+              onClick={handleDeleteCancel}
+            >
+              Cancel
+            </button>
+            <button
+              className="bg-destructive text-destructive-foreground rounded px-3 py-1 text-sm font-medium"
+              type="button"
+              onClick={handleDeleteConfirm}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <ProfileFormModal
         open={modalOpen}

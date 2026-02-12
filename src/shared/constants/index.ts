@@ -20,3 +20,5 @@ export {
   STATUS_ERROR_PATTERNS,
   PROGRESS_PATTERNS,
 } from './agent-patterns';
+
+export { CLAUDE_MODELS, MODEL_SHORT_LABELS } from './models';

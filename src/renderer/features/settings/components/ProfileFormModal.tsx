@@ -7,16 +7,10 @@ import { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X, Eye, EyeOff } from 'lucide-react';
 
+import { CLAUDE_MODELS } from '@shared/constants';
 import type { Profile } from '@shared/types';
 
 import { cn } from '@renderer/shared/lib/utils';
-
-const MODEL_OPTIONS = [
-  { value: '', label: 'No model selected' },
-  { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
-  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-  { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-] as const;
 
 interface ProfileFormModalProps {
   open: boolean;
@@ -148,9 +142,10 @@ export function ProfileFormModal({ open, profile, onClose, onSave }: ProfileForm
                 )}
                 onChange={(event) => setModel(event.target.value)}
               >
-                {MODEL_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
+                <option value="">No model selected</option>
+                {CLAUDE_MODELS.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
                   </option>
                 ))}
               </select>

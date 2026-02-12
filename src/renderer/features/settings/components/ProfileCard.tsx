@@ -4,15 +4,10 @@
 
 import { Pencil, Star, Trash2 } from 'lucide-react';
 
+import { MODEL_SHORT_LABELS } from '@shared/constants';
 import type { Profile } from '@shared/types';
 
 import { cn } from '@renderer/shared/lib/utils';
-
-const MODEL_LABELS: Record<string, string> = {
-  'claude-opus-4-6': 'Opus 4.6',
-  'claude-sonnet-4-5-20250929': 'Sonnet 4.5',
-  'claude-haiku-4-5-20251001': 'Haiku 4.5',
-};
 
 interface ProfileCardProps {
   profile: Profile;
@@ -37,6 +32,7 @@ export function ProfileCard({ profile, onEdit, onDelete, onSetDefault }: Profile
     >
       <div className="flex items-center gap-3">
         <button
+          type="button"
           aria-label={
             profile.isDefault ? 'Default profile' : `Set ${profile.name} as default`
           }
@@ -64,7 +60,7 @@ export function ProfileCard({ profile, onEdit, onDelete, onSetDefault }: Profile
           <div className="text-muted-foreground mt-0.5 flex items-center gap-2 text-xs">
             {profile.model ? (
               <span className="bg-muted rounded px-1.5 py-0.5">
-                {MODEL_LABELS[profile.model] ?? profile.model}
+                {MODEL_SHORT_LABELS[profile.model] ?? profile.model}
               </span>
             ) : null}
             {typeof profile.apiKey === 'string' && profile.apiKey.length > 0 ? (
@@ -80,6 +76,7 @@ export function ProfileCard({ profile, onEdit, onDelete, onSetDefault }: Profile
         <button
           aria-label={`Edit ${profile.name}`}
           className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1.5 transition-colors"
+          type="button"
           onClick={() => onEdit(profile)}
         >
           <Pencil className="h-4 w-4" />
@@ -87,6 +84,7 @@ export function ProfileCard({ profile, onEdit, onDelete, onSetDefault }: Profile
         <button
           aria-label={`Delete ${profile.name}`}
           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1.5 transition-colors"
+          type="button"
           onClick={() => onDelete(profile.id)}
         >
           <Trash2 className="h-4 w-4" />
