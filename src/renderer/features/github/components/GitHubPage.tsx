@@ -112,11 +112,11 @@ export function GitHubPage() {
                 )}
               />
               <span>{branch}</span>
-              {branch === 'main' && (
+              {branch === 'main' ? (
                 <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
                   default
                 </span>
-              )}
+              ) : null}
             </div>
           ))}
         </div>
