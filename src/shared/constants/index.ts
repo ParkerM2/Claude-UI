@@ -22,3 +22,5 @@ export {
 } from './agent-patterns';
 
 export { CLAUDE_MODELS, MODEL_SHORT_LABELS } from './models';
+export { COLOR_THEMES, COLOR_THEME_LABELS } from './themes';
+export type { ColorTheme } from './themes';
