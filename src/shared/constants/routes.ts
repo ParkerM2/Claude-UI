@@ -8,7 +8,14 @@
 /** Top-level routes */
 export const ROUTES = {
   INDEX: '/',
+  ALERTS: '/alerts',
+  ASSISTANT: '/assistant',
+  COMMUNICATIONS: '/communications',
   DASHBOARD: '/dashboard',
+  FITNESS: '/fitness',
+  NOTES: '/notes',
+  PLANNER: '/planner',
+  PRODUCTIVITY: '/productivity',
   PROJECTS: '/projects',
   SETTINGS: '/settings',
 } as const;

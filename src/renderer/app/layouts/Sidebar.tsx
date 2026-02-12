@@ -1,5 +1,5 @@
 /**
- * Sidebar — Navigation sidebar
+ * Sidebar -- Navigation sidebar
  *
  * Shows nav items for the active project's views.
  * Collapses to icon-only mode.
@@ -8,17 +8,24 @@
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import {
   BarChart3,
+  Bell,
   Bot,
+  CalendarDays,
+  Dumbbell,
+  Globe,
   GitBranch,
+  Headphones,
   Home,
   LayoutDashboard,
   Lightbulb,
   ListTodo,
   Map,
+  MessageSquare,
   PanelLeft,
   PanelLeftClose,
   ScrollText,
   Settings,
+  StickyNote,
   Terminal,
 } from 'lucide-react';
 
@@ -33,7 +40,27 @@ interface NavItem {
   path: string;
 }
 
-const navItems: NavItem[] = [
+const NAV_BASE_STYLE =
+  'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors';
+const NAV_HOVER_STYLE = 'hover:bg-accent hover:text-foreground';
+const INACTIVE_STYLE = 'text-muted-foreground';
+const ACTIVE_STYLE = 'bg-accent text-foreground font-medium';
+const COLLAPSED_STYLE = 'justify-center px-0';
+
+/** Top-level nav items (not project-scoped) */
+const topLevelItems: NavItem[] = [
+  { label: 'Dashboard', icon: Home, path: ROUTES.DASHBOARD },
+  { label: 'Assistant', icon: MessageSquare, path: ROUTES.ASSISTANT },
+  { label: 'Notes', icon: StickyNote, path: ROUTES.NOTES },
+  { label: 'Fitness', icon: Dumbbell, path: ROUTES.FITNESS },
+  { label: 'Planner', icon: CalendarDays, path: ROUTES.PLANNER },
+  { label: 'Productivity', icon: Headphones, path: ROUTES.PRODUCTIVITY },
+  { label: 'Alerts', icon: Bell, path: ROUTES.ALERTS },
+  { label: 'Comms', icon: Globe, path: ROUTES.COMMUNICATIONS },
+];
+
+/** Project-scoped nav items */
+const projectItems: NavItem[] = [
   { label: 'Kanban', icon: LayoutDashboard, path: PROJECT_VIEWS.KANBAN },
   { label: 'Tasks', icon: ListTodo, path: PROJECT_VIEWS.TASKS },
   { label: 'Terminals', icon: Terminal, path: PROJECT_VIEWS.TERMINALS },
@@ -83,28 +110,29 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
-        {/* Dashboard — top-level, not project-scoped */}
-        <button
-          title={sidebarCollapsed ? 'Dashboard' : undefined}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors',
-            'hover:bg-accent hover:text-foreground',
-            currentPath === ROUTES.DASHBOARD
-              ? 'bg-accent text-foreground font-medium'
-              : 'text-muted-foreground',
-            sidebarCollapsed && 'justify-center px-0',
-          )}
-          onClick={() => void navigate({ to: ROUTES.DASHBOARD })}
-        >
-          <Home className="h-4 w-4 shrink-0" />
-          {!sidebarCollapsed && <span>Dashboard</span>}
-        </button>
+        {/* Top-level items */}
+        {topLevelItems.map((item) => (
+          <button
+            key={item.path}
+            title={sidebarCollapsed ? item.label : undefined}
+            className={cn(
+              NAV_BASE_STYLE,
+              NAV_HOVER_STYLE,
+              currentPath === item.path ? ACTIVE_STYLE : INACTIVE_STYLE,
+              sidebarCollapsed && COLLAPSED_STYLE,
+            )}
+            onClick={() => void navigate({ to: item.path })}
+          >
+            <item.icon className="h-4 w-4 shrink-0" />
+            {!sidebarCollapsed && <span>{item.label}</span>}
+          </button>
+        ))}
 
         {/* Divider */}
         <div className="border-border my-1 border-t" />
 
         {/* Project views */}
-        {navItems.map((item) => {
+        {projectItems.map((item) => {
           const isActive = currentPath.includes(`/${item.path}`);
           return (
             <button
@@ -112,11 +140,11 @@ export function Sidebar() {
               disabled={!activeProjectId}
               title={sidebarCollapsed ? item.label : undefined}
               className={cn(
-                'flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors',
-                'hover:bg-accent hover:text-foreground',
+                NAV_BASE_STYLE,
+                NAV_HOVER_STYLE,
                 'disabled:pointer-events-none disabled:opacity-40',
-                isActive ? 'bg-accent text-foreground font-medium' : 'text-muted-foreground',
-                sidebarCollapsed && 'justify-center px-0',
+                isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
+                sidebarCollapsed && COLLAPSED_STYLE,
               )}
               onClick={() => handleNav(item.path)}
             >
@@ -132,10 +160,12 @@ export function Sidebar() {
         <button
           title={sidebarCollapsed ? 'Settings' : undefined}
           className={cn(
-            'text-muted-foreground flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm',
-            'hover:bg-accent hover:text-foreground transition-colors',
-            currentPath.includes(ROUTES.SETTINGS) && 'bg-accent text-foreground font-medium',
-            sidebarCollapsed && 'justify-center px-0',
+            INACTIVE_STYLE,
+            NAV_BASE_STYLE,
+            NAV_HOVER_STYLE,
+            'transition-colors',
+            currentPath.includes(ROUTES.SETTINGS) && ACTIVE_STYLE,
+            sidebarCollapsed && COLLAPSED_STYLE,
           )}
           onClick={() => navigate({ to: ROUTES.SETTINGS })}
         >

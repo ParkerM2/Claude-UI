@@ -1,0 +1,137 @@
+/**
+ * Changelog Service — Disk-persisted version history
+ *
+ * Changelog entries stored as JSON in the app's user data directory.
+ * All methods are synchronous; IPC handlers wrap with Promise.resolve().
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+import type { ChangeCategory, ChangelogEntry } from '@shared/types';
+
+export interface ChangelogService {
+  listEntries: () => ChangelogEntry[];
+  addEntry: (data: {
+    version: string;
+    date: string;
+    categories: ChangeCategory[];
+  }) => ChangelogEntry;
+}
+
+interface ChangelogFile {
+  entries: ChangelogEntry[];
+}
+
+const DEFAULT_ENTRIES: ChangelogEntry[] = [
+  {
+    version: 'v0.3.0',
+    date: 'February 2026',
+    categories: [
+      {
+        type: 'added',
+        items: [
+          'Color theme picker with 7 themes',
+          'UI scale slider (75-150%)',
+          'Profile management system',
+          'Changelog and Insights pages',
+        ],
+      },
+      {
+        type: 'changed',
+        items: [
+          'Settings page redesigned with sections',
+          'Sidebar updated with new navigation items',
+        ],
+      },
+      {
+        type: 'fixed',
+        items: ['Theme persistence across restarts', 'Sidebar collapse state preserved'],
+      },
+    ],
+  },
+  {
+    version: 'v0.2.0',
+    date: 'February 2026',
+    categories: [
+      {
+        type: 'added',
+        items: [
+          'Terminal integration with xterm.js',
+          'Agent management dashboard',
+          'Kanban board with drag-and-drop',
+          'GitHub integration page',
+          'Roadmap and Ideation views',
+        ],
+      },
+      {
+        type: 'changed',
+        items: ['Navigation restructured with project-scoped views'],
+      },
+    ],
+  },
+  {
+    version: 'v0.1.0',
+    date: 'February 2026',
+    categories: [
+      {
+        type: 'added',
+        items: [
+          'Initial project scaffold',
+          'IPC contract system',
+          'Project management',
+          'Task system with Kanban board',
+          'Electron main process with services',
+        ],
+      },
+    ],
+  },
+];
+
+function loadFile(filePath: string): ChangelogFile {
+  if (existsSync(filePath)) {
+    try {
+      const raw = readFileSync(filePath, 'utf-8');
+      const parsed = JSON.parse(raw) as unknown as Partial<ChangelogFile>;
+      return {
+        entries: Array.isArray(parsed.entries) ? parsed.entries : [...DEFAULT_ENTRIES],
+      };
+    } catch {
+      return { entries: [...DEFAULT_ENTRIES] };
+    }
+  }
+  return { entries: [...DEFAULT_ENTRIES] };
+}
+
+function saveFile(filePath: string, data: ChangelogFile): void {
+  const dir = join(filePath, '..');
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+export function createChangelogService(deps: { dataDir: string }): ChangelogService {
+  const filePath = join(deps.dataDir, 'changelog.json');
+  const store = loadFile(filePath);
+
+  function persist(): void {
+    saveFile(filePath, store);
+  }
+
+  return {
+    listEntries() {
+      return [...store.entries];
+    },
+
+    addEntry(data) {
+      const entry: ChangelogEntry = {
+        version: data.version,
+        date: data.date,
+        categories: data.categories,
+      };
+      // Insert at the beginning (newest first)
+      store.entries.unshift(entry);
+      persist();
+      return entry;
+    },
+  };
+}

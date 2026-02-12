@@ -1,0 +1,7 @@
+/**
+ * Changelog feature — version history and release notes
+ */
+
+export { ChangelogPage } from './components/ChangelogPage';
+export { useChangelog } from './api/useChangelog';
+export { changelogKeys } from './api/queryKeys';

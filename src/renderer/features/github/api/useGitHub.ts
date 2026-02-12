@@ -1,0 +1,69 @@
+/**
+ * GitHub React Query hooks
+ *
+ * Fetches GitHub data via IPC using the typed contract.
+ * Re-exports shared types for component convenience.
+ */
+
+import { useQuery } from '@tanstack/react-query';
+
+import type { GitHubIssue, GitHubNotification, GitHubPullRequest } from '@shared/types';
+
+import { ipc } from '@renderer/shared/lib/ipc';
+
+import { useGitHubStore } from '../store';
+
+import { githubKeys } from './queryKeys';
+
+// Re-export shared types for components
+export type { GitHubIssue, GitHubNotification, GitHubPullRequest };
+
+/** Alias for components that use the shorter name */
+export type GitHubPr = GitHubPullRequest;
+
+// ── Hooks ────────────────────────────────────────────────────
+
+/** Fetch pull requests for the active repo */
+export function useGitHubPrs() {
+  const { owner, repo } = useGitHubStore();
+
+  return useQuery({
+    queryKey: githubKeys.prList(owner, repo),
+    queryFn: () => ipc('github.listPrs', { owner, repo }),
+    enabled: owner.length > 0 && repo.length > 0,
+    staleTime: 60_000,
+  });
+}
+
+/** Fetch a single PR detail */
+export function useGitHubPrDetail(prNumber: number | null) {
+  const { owner, repo } = useGitHubStore();
+
+  return useQuery({
+    queryKey: githubKeys.prDetail(owner, repo, prNumber ?? 0),
+    queryFn: () => ipc('github.getPr', { owner, repo, number: prNumber ?? 0 }),
+    enabled: prNumber !== null && owner.length > 0,
+    staleTime: 60_000,
+  });
+}
+
+/** Fetch issues for the active repo */
+export function useGitHubIssues() {
+  const { owner, repo } = useGitHubStore();
+
+  return useQuery({
+    queryKey: githubKeys.issueList(owner, repo),
+    queryFn: () => ipc('github.listIssues', { owner, repo }),
+    enabled: owner.length > 0 && repo.length > 0,
+    staleTime: 60_000,
+  });
+}
+
+/** Fetch notifications for the authenticated user */
+export function useGitHubNotifications() {
+  return useQuery({
+    queryKey: githubKeys.notifications(),
+    queryFn: () => ipc('github.getNotifications', {}),
+    staleTime: 60_000,
+  });
+}

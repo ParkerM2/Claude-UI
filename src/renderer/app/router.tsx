@@ -17,12 +17,19 @@ import { ROUTES, ROUTE_PATTERNS } from '@shared/constants';
 
 // Feature page components
 import { AgentDashboard } from '@features/agents';
+import { AlertsPage } from '@features/alerts';
+import { AssistantPage } from '@features/assistant';
 import { ChangelogPage } from '@features/changelog';
+import { CommunicationsPage } from '@features/communications';
 import { DashboardPage } from '@features/dashboard';
+import { FitnessPage } from '@features/fitness';
 import { GitHubPage } from '@features/github';
 import { IdeationPage } from '@features/ideation';
 import { InsightsPage } from '@features/insights';
 import { KanbanBoard } from '@features/kanban';
+import { NotesPage } from '@features/notes';
+import { PlannerPage } from '@features/planner';
+import { ProductivityPage } from '@features/productivity';
 import { ProjectListPage } from '@features/projects';
 import { RoadmapPage } from '@features/roadmap';
 import { SettingsPage } from '@features/settings';
@@ -53,6 +60,62 @@ const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROUTES.DASHBOARD,
   component: DashboardPage,
+});
+
+// ─── Alerts ───────────────────────────────────────────────
+
+const alertsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.ALERTS,
+  component: AlertsPage,
+});
+
+// ─── Assistant ─────────────────────────────────────────────
+
+const assistantRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.ASSISTANT,
+  component: AssistantPage,
+});
+
+// ─── Communications ──────────────────────────────────────────
+
+const communicationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.COMMUNICATIONS,
+  component: CommunicationsPage,
+});
+
+// ─── Fitness ─────────────────────────────────────────────────
+
+const fitnessRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.FITNESS,
+  component: FitnessPage,
+});
+
+// ─── Notes ───────────────────────────────────────────────────
+
+const notesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.NOTES,
+  component: NotesPage,
+});
+
+// ─── Planner ──────────────────────────────────────────────────
+
+const plannerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.PLANNER,
+  component: PlannerPage,
+});
+
+// ─── Productivity ────────────────────────────────────────────
+
+const productivityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROUTES.PRODUCTIVITY,
+  component: ProductivityPage,
 });
 
 // ─── Projects ────────────────────────────────────────────────
@@ -147,6 +210,13 @@ const settingsRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   dashboardRoute,
+  alertsRoute,
+  assistantRoute,
+  communicationsRoute,
+  fitnessRoute,
+  notesRoute,
+  plannerRoute,
+  productivityRoute,
   projectsRoute,
   projectRoute,
   kanbanRoute,

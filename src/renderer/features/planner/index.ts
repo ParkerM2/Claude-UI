@@ -1,0 +1,22 @@
+/**
+ * Planner feature — public API
+ */
+
+// API hooks
+export {
+  useDay,
+  useUpdateDay,
+  useAddTimeBlock,
+  useUpdateTimeBlock,
+  useRemoveTimeBlock,
+} from './api/usePlanner';
+export { plannerKeys } from './api/queryKeys';
+
+// Events
+export { usePlannerEvents } from './hooks/usePlannerEvents';
+
+// Store
+export { usePlannerUI } from './store';
+
+// Components
+export { PlannerPage } from './components/PlannerPage';
