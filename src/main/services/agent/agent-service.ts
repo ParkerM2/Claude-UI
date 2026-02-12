@@ -12,6 +12,14 @@ import { join } from 'node:path';
 
 import * as pty from '@lydell/node-pty';
 
+import {
+  AUTO_CLAUDE_DIR,
+  SPECS_DIR,
+  STATUS_RUNNING_PATTERNS,
+  STATUS_COMPLETED_PATTERNS,
+  STATUS_ERROR_PATTERNS,
+  PROGRESS_PATTERNS,
+} from '@shared/constants';
 import type { AgentSession, AgentStatus } from '@shared/types';
 
 import type { IpcRouter } from '../../ipc/router';
@@ -47,20 +55,23 @@ function getShell(): string {
  * Parse Claude CLI output for status/progress indicators.
  * Returns event data if a status pattern is matched.
  */
+function matchesAny(line: string, patterns: readonly string[]): boolean {
+  return patterns.some((p) => line.includes(p));
+}
+
 function parseClaudeOutput(
   line: string,
 ): { type: 'status' | 'log' | 'progress'; data: Record<string, unknown> } | null {
-  // Claude CLI status patterns (examples — adjust based on actual output)
-  if (line.includes('Starting task')) {
+  if (matchesAny(line, STATUS_RUNNING_PATTERNS)) {
     return { type: 'status', data: { status: 'running' } };
   }
-  if (line.includes('Task completed') || line.includes('\u2713 Done')) {
+  if (matchesAny(line, STATUS_COMPLETED_PATTERNS)) {
     return { type: 'status', data: { status: 'completed' } };
   }
-  if (line.includes('Error:') || line.includes('\u2717 Failed')) {
+  if (matchesAny(line, STATUS_ERROR_PATTERNS)) {
     return { type: 'status', data: { status: 'error' } };
   }
-  if (line.includes('Phase:') || line.includes('Step:')) {
+  if (matchesAny(line, PROGRESS_PATTERNS)) {
     return { type: 'progress', data: { message: line } };
   }
   // Generic log
@@ -176,7 +187,7 @@ export function createAgentService(
       // Send the claude command after a brief delay for shell init
       setTimeout(() => {
         // Construct the claude command with the task context
-        const specDir = join(workDir, '.auto-claude', 'specs', taskId);
+        const specDir = join(workDir, AUTO_CLAUDE_DIR, SPECS_DIR, taskId);
         const claudeCmd = existsSync(specDir) ? `claude --task "${taskId}"\r` : `claude\r`;
         ptyProcess.write(claudeCmd);
         session.status = 'running';

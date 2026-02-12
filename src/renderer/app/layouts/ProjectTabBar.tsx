@@ -8,6 +8,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { X, Plus, FolderOpen } from 'lucide-react';
 
+import { ROUTES, PROJECT_VIEWS, projectViewPath } from '@shared/constants';
+
 import { cn } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
 
@@ -24,7 +26,7 @@ export function ProjectTabBar() {
 
   function handleSelectProject(projectId: string) {
     setActiveProject(projectId);
-    void navigate({ to: `/projects/${projectId}/kanban` });
+    void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.KANBAN) });
   }
 
   function handleCloseTab(e: React.MouseEvent | React.KeyboardEvent, projectId: string) {
@@ -33,7 +35,7 @@ export function ProjectTabBar() {
   }
 
   function handleAddProject() {
-    void navigate({ to: '/projects' });
+    void navigate({ to: ROUTES.PROJECTS });
   }
 
   return (

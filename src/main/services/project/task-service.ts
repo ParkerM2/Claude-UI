@@ -12,6 +12,14 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
+import {
+  AUTO_CLAUDE_DIR,
+  SPECS_DIR,
+  REQUIREMENTS_FILENAME,
+  PLAN_FILENAME,
+  METADATA_FILENAME,
+  LOGS_FILENAME,
+} from '@shared/constants';
 import type { Task, TaskDraft, TaskStatus, Subtask } from '@shared/types';
 
 /* ------------------------------------------------------------------ */
@@ -47,12 +55,6 @@ interface ImplementationPlanJson {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Constants                                                         */
-/* ------------------------------------------------------------------ */
-
-const PLAN_FILENAME = 'implementation_plan.json';
-
-/* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -84,7 +86,7 @@ function getPhaseStatus(ph: PlanPhase): 'completed' | 'in_progress' | 'pending' 
 }
 
 function getSpecsDir(p: string): string {
-  return join(p, '.auto-claude', 'specs');
+  return join(p, AUTO_CLAUDE_DIR, SPECS_DIR);
 }
 function getTaskDir(p: string, id: string): string {
   return join(getSpecsDir(p), id);
@@ -92,7 +94,7 @@ function getTaskDir(p: string, id: string): string {
 
 function readTask(taskDir: string, taskId: string): Task | null {
   try {
-    const reqPath = join(taskDir, 'requirements.json');
+    const reqPath = join(taskDir, REQUIREMENTS_FILENAME);
     const planPath = join(taskDir, PLAN_FILENAME);
     if (!existsSync(reqPath)) return null;
 
@@ -102,7 +104,7 @@ function readTask(taskDir: string, taskId: string): Task | null {
       : {};
 
     let logs: string[] = [];
-    const logsPath = join(taskDir, 'task_logs.json');
+    const logsPath = join(taskDir, LOGS_FILENAME);
     if (existsSync(logsPath)) {
       try {
         logs = readJsonFile(logsPath) as string[];
@@ -215,7 +217,7 @@ export function createTaskService(resolveProject: ProjectResolver): TaskService 
 
       const now = new Date().toISOString();
       writeFileSync(
-        join(taskDir, 'requirements.json'),
+        join(taskDir, REQUIREMENTS_FILENAME),
         JSON.stringify(
           {
             task_description: draft.description || draft.title,
@@ -246,7 +248,7 @@ export function createTaskService(resolveProject: ProjectResolver): TaskService 
       );
 
       writeFileSync(
-        join(taskDir, 'task_metadata.json'),
+        join(taskDir, METADATA_FILENAME),
         JSON.stringify(
           {
             sourceType: 'manual',

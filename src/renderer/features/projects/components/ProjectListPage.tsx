@@ -5,6 +5,8 @@
 import { useNavigate } from '@tanstack/react-router';
 import { FolderOpen, Plus, Trash2, Loader2 } from 'lucide-react';
 
+import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
+
 import { cn, formatRelativeTime } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
 
@@ -28,13 +30,13 @@ export function ProjectListPage() {
     if (result.path) {
       const project = await addProject.mutateAsync(result.path);
       addProjectTab(project.id);
-      void navigate({ to: `/projects/${project.id}/kanban` });
+      void navigate({ to: projectViewPath(project.id, PROJECT_VIEWS.KANBAN) });
     }
   }
 
   function handleOpenProject(projectId: string) {
     addProjectTab(projectId);
-    void navigate({ to: `/projects/${projectId}/kanban` });
+    void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.KANBAN) });
   }
 
   function handleRemoveProject(e: React.MouseEvent | React.KeyboardEvent, projectId: string) {

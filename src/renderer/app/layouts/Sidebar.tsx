@@ -19,6 +19,8 @@ import {
   PanelLeft,
 } from 'lucide-react';
 
+import { ROUTES, PROJECT_VIEWS, projectViewPath } from '@shared/constants';
+
 import { cn } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
 
@@ -29,13 +31,13 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Kanban', icon: LayoutDashboard, path: 'kanban' },
-  { label: 'Tasks', icon: ListTodo, path: 'tasks' },
-  { label: 'Terminals', icon: Terminal, path: 'terminals' },
-  { label: 'Agents', icon: Bot, path: 'agents' },
-  { label: 'Roadmap', icon: Map, path: 'roadmap' },
-  { label: 'Ideation', icon: Lightbulb, path: 'ideation' },
-  { label: 'GitHub', icon: GitBranch, path: 'github' },
+  { label: 'Kanban', icon: LayoutDashboard, path: PROJECT_VIEWS.KANBAN },
+  { label: 'Tasks', icon: ListTodo, path: PROJECT_VIEWS.TASKS },
+  { label: 'Terminals', icon: Terminal, path: PROJECT_VIEWS.TERMINALS },
+  { label: 'Agents', icon: Bot, path: PROJECT_VIEWS.AGENTS },
+  { label: 'Roadmap', icon: Map, path: PROJECT_VIEWS.ROADMAP },
+  { label: 'Ideation', icon: Lightbulb, path: PROJECT_VIEWS.IDEATION },
+  { label: 'GitHub', icon: GitBranch, path: PROJECT_VIEWS.GITHUB },
 ];
 
 export function Sidebar() {
@@ -47,7 +49,7 @@ export function Sidebar() {
 
   function handleNav(path: string) {
     if (!activeProjectId) return;
-    void navigate({ to: `/projects/${activeProjectId}/${path}` });
+    void navigate({ to: projectViewPath(activeProjectId, path) });
   }
 
   return (
@@ -106,10 +108,10 @@ export function Sidebar() {
           className={cn(
             'text-muted-foreground flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm',
             'hover:bg-accent hover:text-foreground transition-colors',
-            currentPath.includes('/settings') && 'bg-accent text-foreground font-medium',
+            currentPath.includes(ROUTES.SETTINGS) && 'bg-accent text-foreground font-medium',
             sidebarCollapsed && 'justify-center px-0',
           )}
-          onClick={() => navigate({ to: '/settings' })}
+          onClick={() => navigate({ to: ROUTES.SETTINGS })}
         >
           <Settings className="h-4 w-4 shrink-0" />
           {!sidebarCollapsed && <span>Settings</span>}

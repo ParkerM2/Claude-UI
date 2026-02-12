@@ -13,6 +13,8 @@ import {
   redirect,
 } from '@tanstack/react-router';
 
+import { ROUTES, ROUTE_PATTERNS } from '@shared/constants';
+
 // Feature page components
 import { AgentDashboard } from '@features/agents';
 import { GitHubPage } from '@features/github';
@@ -35,10 +37,10 @@ const rootRoute = createRootRoute({
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
+  path: ROUTES.INDEX,
   beforeLoad: () => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
-    throw redirect({ to: '/projects' });
+    throw redirect({ to: ROUTES.PROJECTS });
   },
 });
 
@@ -46,7 +48,7 @@ const indexRoute = createRoute({
 
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects',
+  path: ROUTES.PROJECTS,
   component: ProjectListPage,
 });
 
@@ -54,10 +56,10 @@ const projectsRoute = createRoute({
 
 const projectRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId',
+  path: ROUTE_PATTERNS.PROJECT,
   beforeLoad: ({ params }) => {
     // eslint-disable-next-line @typescript-eslint/only-throw-error -- TanStack Router redirect pattern
-    throw redirect({ to: '/projects/$projectId/kanban', params });
+    throw redirect({ to: ROUTE_PATTERNS.PROJECT_KANBAN, params });
   },
 });
 
@@ -65,43 +67,43 @@ const projectRoute = createRoute({
 
 const kanbanRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/kanban',
+  path: ROUTE_PATTERNS.PROJECT_KANBAN,
   component: KanbanBoard,
 });
 
 const terminalsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/terminals',
+  path: ROUTE_PATTERNS.PROJECT_TERMINALS,
   component: TerminalGrid,
 });
 
 const agentsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/agents',
+  path: ROUTE_PATTERNS.PROJECT_AGENTS,
   component: AgentDashboard,
 });
 
 const githubRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/github',
+  path: ROUTE_PATTERNS.PROJECT_GITHUB,
   component: GitHubPage,
 });
 
 const roadmapRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/roadmap',
+  path: ROUTE_PATTERNS.PROJECT_ROADMAP,
   component: RoadmapPage,
 });
 
 const ideationRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/ideation',
+  path: ROUTE_PATTERNS.PROJECT_IDEATION,
   component: IdeationPage,
 });
 
 const tasksRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/projects/$projectId/tasks',
+  path: ROUTE_PATTERNS.PROJECT_TASKS,
   component: () => (
     <div className="text-muted-foreground flex h-full items-center justify-center">
       Task list view — coming soon
@@ -113,7 +115,7 @@ const tasksRoute = createRoute({
 
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/settings',
+  path: ROUTES.SETTINGS,
   component: SettingsPage,
 });
 
