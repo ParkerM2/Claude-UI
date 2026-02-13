@@ -105,14 +105,14 @@ These must be addressed before any public release or multi-user deployment.
 - **What exists**: Client ID + Secret input forms per provider
 - **What's missing**: Credential validation before saving, links to provider developer consoles, required scope documentation
 
-### 2e. Hub Connection Setup Has No Pre-Save Validation
+### 2e. Hub Connection Setup Has No Pre-Save Validation — DONE
 - **File**: `HubSettings.tsx`
-- **What exists**: URL + API key form, connect/disconnect buttons
-- **What's missing**: Ping/health-check before saving config, error messages for unreachable URLs
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: Added `hub.validateConnection` IPC channel that pings the Hub's `/api/health` endpoint before saving. The HubSettings form now validates the connection and displays success/error feedback before persisting configuration.
 
-### 2f. No Environment Variable Documentation
-- **Needed but undocumented**: `ANTHROPIC_API_KEY`, OAuth provider env vars, `HUB_API_KEY`, `LOG_LEVEL`, `DATABASE_URL`
-- **Fix**: Create `.env.example` with all supported variables + descriptions
+### 2f. No Environment Variable Documentation — DONE
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: Created `.env.example` at project root documenting all supported environment variables including: `ANTHROPIC_API_KEY`, OAuth provider credentials (GitHub, Google, Linear, Notion, Todoist, Withings), Hub configuration (`HUB_API_KEY`, `HUB_BOOTSTRAP_SECRET`, `HUB_ALLOWED_ORIGINS`), and database settings.
 
 ---
 
@@ -411,8 +411,8 @@ These must be addressed before any public release or multi-user deployment.
 12. Build first-run onboarding wizard
 13. Add webhook setup instructions + test/ping button
 14. Add OAuth credential validation before saving
-15. Create `.env.example` with all supported variables
-16. Hub connection pre-save validation (ping before save)
+15. ~~Create `.env.example` with all supported variables~~ **DONE** (2026-02-13)
+16. ~~Hub connection pre-save validation (ping before save)~~ **DONE** (2026-02-13)
 
 ### P3 — Missing Features (High Value)
 17. Natural language time parser (chrono-node)
