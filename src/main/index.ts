@@ -27,6 +27,7 @@ import { createAlertService } from './services/alerts/alert-service';
 import { createAssistantService } from './services/assistant/assistant-service';
 import { createCalendarService } from './services/calendar/calendar-service';
 import { createChangelogService } from './services/changelog/changelog-service';
+import { createEmailService } from './services/email/email-service';
 import { createFitnessService } from './services/fitness/fitness-service';
 import { createGitService } from './services/git/git-service';
 import { createPolyrepoService } from './services/git/polyrepo-service';
@@ -151,6 +152,9 @@ function initializeApp(): void {
   // Fitness service — workouts, measurements, goals
   const fitnessService = createFitnessService({ dataDir, router });
 
+  // Email service — SMTP-based email sending with queue support
+  const emailService = createEmailService({ router });
+
   // Insights — aggregates data from tasks, agents, projects
   const insightsService = createInsightsService({
     taskService,
@@ -214,6 +218,7 @@ function initializeApp(): void {
     assistantService,
     calendarService,
     changelogService,
+    emailService,
     fitnessService,
     hubConnectionManager,
     hubSyncService,
