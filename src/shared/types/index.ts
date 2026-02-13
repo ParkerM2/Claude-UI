@@ -8,6 +8,7 @@ export type * from './alert';
 export type * from './assistant';
 export type * from './claude';
 export type * from './changelog';
+export type * from './email';
 export type * from './fitness';
 export type * from './git';
 export type * from './github';

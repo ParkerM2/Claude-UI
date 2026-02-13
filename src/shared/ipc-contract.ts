@@ -581,6 +581,59 @@ const ClaudeStreamChunkSchema = z.object({
   error: z.string().optional(),
 });
 
+// ─── Email Schemas ─────────────────────────────────────────────
+
+const EmailAttachmentSchema = z.object({
+  filename: z.string(),
+  content: z.union([z.string(), z.instanceof(Buffer)]),
+  contentType: z.string().optional(),
+  path: z.string().optional(),
+});
+
+const EmailSchema = z.object({
+  to: z.array(z.string()),
+  cc: z.array(z.string()).optional(),
+  bcc: z.array(z.string()).optional(),
+  subject: z.string(),
+  body: z.string(),
+  html: z.string().optional(),
+  attachments: z.array(EmailAttachmentSchema).optional(),
+  replyTo: z.string().optional(),
+});
+
+const SmtpProviderSchema = z.enum(['gmail', 'outlook', 'yahoo', 'custom']);
+
+const SmtpConfigSchema = z.object({
+  host: z.string(),
+  port: z.number(),
+  secure: z.boolean(),
+  auth: z.object({
+    user: z.string(),
+    pass: z.string(),
+  }),
+  from: z.string(),
+  provider: SmtpProviderSchema.optional(),
+});
+
+const EmailSendResultSchema = z.object({
+  success: z.boolean(),
+  messageId: z.string().optional(),
+  error: z.string().optional(),
+});
+
+const EmailStatusSchema = z.enum(['pending', 'sent', 'failed', 'queued']);
+
+const QueuedEmailSchema = z.object({
+  id: z.string(),
+  email: EmailSchema,
+  status: EmailStatusSchema,
+  attempts: z.number(),
+  lastAttempt: z.string().optional(),
+  error: z.string().optional(),
+  createdAt: z.string(),
+});
+
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -1455,6 +1508,36 @@ export const ipcInvokeContract = {
     input: z.object({}),
     output: z.object({ configured: z.boolean() }),
   },
+
+  // ── Email ──
+  'email.send': {
+    input: EmailSchema,
+    output: EmailSendResultSchema,
+  },
+  'email.getConfig': {
+    input: z.object({}),
+    output: SmtpConfigSchema.nullable(),
+  },
+  'email.updateConfig': {
+    input: SmtpConfigSchema,
+    output: z.object({ success: z.boolean() }),
+  },
+  'email.testConnection': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean(), error: z.string().optional() }),
+  },
+  'email.getQueue': {
+    input: z.object({}),
+    output: z.array(QueuedEmailSchema),
+  },
+  'email.retryQueued': {
+    input: z.object({ emailId: z.string() }),
+    output: EmailSendResultSchema,
+  },
+  'email.removeFromQueue': {
+    input: z.object({ emailId: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
 } as const;
 
 /**
@@ -1623,6 +1706,22 @@ export const ipcEventContract = {
       retryAfter: z.number().optional(),
     }),
   },
+
+  // ── Email Events ──
+  'event:email.sent': {
+    payload: z.object({
+      messageId: z.string(),
+      to: z.array(z.string()),
+      subject: z.string(),
+    }),
+  },
+  'event:email.failed': {
+    payload: z.object({
+      to: z.array(z.string()),
+      subject: z.string(),
+      error: z.string(),
+    }),
+  },
 } as const;
 
 // ─── Type Utilities ───────────────────────────────────────────
@@ -1714,4 +1813,11 @@ export {
   ClaudeTokenUsageSchema,
   ClaudeSendMessageResponseSchema,
   ClaudeStreamChunkSchema,
+  EmailSchema,
+  EmailAttachmentSchema,
+  EmailSendResultSchema,
+  EmailStatusSchema,
+  QueuedEmailSchema,
+  SmtpConfigSchema,
+  SmtpProviderSchema,
 };
