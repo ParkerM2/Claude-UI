@@ -45,6 +45,7 @@ import { createTaskService } from './services/project/task-service';
 import { createSettingsService } from './services/settings/settings-service';
 import { createSpotifyService } from './services/spotify/spotify-service';
 import { createTerminalService } from './services/terminal/terminal-service';
+import { createTimeParserService } from './services/time-parser/time-parser-service';
 
 import type { OAuthConfig } from './auth/types';
 
@@ -211,6 +212,7 @@ function initializeApp(): void {
     githubService,
     worktreeService,
     mergeService,
+    timeParserService: createTimeParserService(),
     dataDir,
     providers,
     tokenStore,
