@@ -419,7 +419,7 @@ These must be addressed before any public release or multi-user deployment.
 ### P3 — Missing Features (High Value)
 17. ~~Natural language time parser (chrono-node)~~ **DONE** (2026-02-13)
 18. ~~Agent queue + parallelism config~~ **DONE** (2026-02-13)
-19. Cost tracking (parse Claude CLI token output) — **DEFERRED** (CLI doesn't expose tokens)
+19. ~~Cost tracking (parse Claude CLI token output)~~ **DONE** (2026-02-13)
 20. ~~My Work view (cross-project tasks)~~ **DONE** (2026-02-13)
 21. ~~Merge workflow UI (diff preview + conflict resolution)~~ **DONE** (2026-02-13)
 22. ~~Changelog auto-generation from git~~ **DONE** (2026-02-13)
