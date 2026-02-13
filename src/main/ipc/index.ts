@@ -9,6 +9,7 @@ import { registerAgentHandlers } from './handlers/agent-handlers';
 import { registerAlertHandlers } from './handlers/alert-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerAssistantHandlers } from './handlers/assistant-handlers';
+import { registerBriefingHandlers } from './handlers/briefing-handlers';
 import { registerCalendarHandlers } from './handlers/calendar-handlers';
 import { registerChangelogHandlers } from './handlers/changelog-handlers';
 import { registerClaudeHandlers } from './handlers/claude-handlers';
@@ -43,6 +44,7 @@ import type { AgentQueue } from '../services/agent/agent-queue';
 import type { AgentService } from '../services/agent/agent-service';
 import type { AlertService } from '../services/alerts/alert-service';
 import type { AssistantService } from '../services/assistant/assistant-service';
+import type { BriefingService } from '../services/briefing/briefing-service';
 import type { CalendarService } from '../services/calendar/calendar-service';
 import type { ChangelogService } from '../services/changelog/changelog-service';
 import type { ClaudeClient } from '../services/claude';
@@ -102,8 +104,9 @@ export interface Services {
   timeParserService: TimeParserService;
   taskDecomposer: TaskDecomposer;
   githubImporter: GithubTaskImporter;
-  voiceService: VoiceService;
+voiceService: VoiceService;
   screenCaptureService: ScreenCaptureService;
+  briefingService: BriefingService;
   dataDir: string;
   providers: Map<string, OAuthConfig>;
   tokenStore: TokenStore;
@@ -154,5 +157,6 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerTimeHandlers(router, services.timeParserService);
   registerVoiceHandlers(router, services.voiceService);
   registerWebhookSettingsHandlers(router, services.settingsService);
-  registerScreenHandlers(router, services.screenCaptureService);
+registerScreenHandlers(router, services.screenCaptureService);
+  registerBriefingHandlers(router, services.briefingService);
 }
