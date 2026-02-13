@@ -27,6 +27,7 @@ import { createAlertService } from './services/alerts/alert-service';
 import { createAssistantService } from './services/assistant/assistant-service';
 import { createCalendarService } from './services/calendar/calendar-service';
 import { createChangelogService } from './services/changelog/changelog-service';
+import { createClaudeClient } from './services/claude';
 import { createFitnessService } from './services/fitness/fitness-service';
 import { createGitService } from './services/git/git-service';
 import { createPolyrepoService } from './services/git/polyrepo-service';
@@ -203,6 +204,12 @@ function initializeApp(): void {
     webhookRelay.handleHubMessage(data);
   });
 
+  // Claude client — wraps Anthropic SDK with conversation management
+  const claudeClient = createClaudeClient({
+    router,
+    getApiKey: () => settingsService.getSettings().anthropicApiKey,
+  });
+
   const services = {
     projectService,
     taskService,
@@ -210,6 +217,7 @@ function initializeApp(): void {
     settingsService,
     agentService,
     agentQueue,
+    claudeClient,
     alertService,
     assistantService,
     calendarService,

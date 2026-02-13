@@ -547,6 +547,40 @@ const WebhookConfigSchema = z.object({
   }),
 });
 
+// ─── Claude SDK Schemas ───────────────────────────────────────
+
+const ClaudeMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
+
+const ClaudeConversationSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  messageCount: z.number(),
+});
+
+const ClaudeTokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+});
+
+const ClaudeSendMessageResponseSchema = z.object({
+  conversationId: z.string(),
+  message: z.string(),
+  usage: ClaudeTokenUsageSchema,
+});
+
+const ClaudeStreamChunkSchema = z.object({
+  conversationId: z.string(),
+  type: z.enum(['content_delta', 'message_start', 'message_stop', 'error']),
+  content: z.string().optional(),
+  usage: ClaudeTokenUsageSchema.optional(),
+  error: z.string().optional(),
+});
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -1379,6 +1413,48 @@ export const ipcInvokeContract = {
     input: z.object({ server: z.string() }),
     output: z.enum(['disconnected', 'connecting', 'connected', 'error']),
   },
+
+  // ── Claude SDK ──
+  'claude.sendMessage': {
+    input: z.object({
+      conversationId: z.string(),
+      message: z.string(),
+      model: z.string().optional(),
+      maxTokens: z.number().optional(),
+      systemPrompt: z.string().optional(),
+    }),
+    output: ClaudeSendMessageResponseSchema,
+  },
+  'claude.streamMessage': {
+    input: z.object({
+      conversationId: z.string(),
+      message: z.string(),
+      model: z.string().optional(),
+      maxTokens: z.number().optional(),
+      systemPrompt: z.string().optional(),
+    }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'claude.createConversation': {
+    input: z.object({ title: z.string().optional() }),
+    output: z.object({ conversationId: z.string() }),
+  },
+  'claude.listConversations': {
+    input: z.object({}),
+    output: z.array(ClaudeConversationSchema),
+  },
+  'claude.getMessages': {
+    input: z.object({ conversationId: z.string() }),
+    output: z.array(ClaudeMessageSchema),
+  },
+  'claude.clearConversation': {
+    input: z.object({ conversationId: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'claude.isConfigured': {
+    input: z.object({}),
+    output: z.object({ configured: z.boolean() }),
+  },
 } as const;
 
 /**
@@ -1459,6 +1535,11 @@ export const ipcEventContract = {
       summary: z.string(),
       timestamp: z.string(),
     }),
+  },
+
+  // ── Claude SDK Events ──
+  'event:claude.streamChunk': {
+    payload: ClaudeStreamChunkSchema,
   },
 
   // ── Webhook Events ──
@@ -1628,4 +1709,9 @@ export {
   WebhookCommandSourceContextSchema,
   WebhookCommandSchema,
   WebhookConfigSchema,
+  ClaudeMessageSchema,
+  ClaudeConversationSchema,
+  ClaudeTokenUsageSchema,
+  ClaudeSendMessageResponseSchema,
+  ClaudeStreamChunkSchema,
 };
