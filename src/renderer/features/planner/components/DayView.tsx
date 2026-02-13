@@ -4,12 +4,15 @@
 
 import { useState } from 'react';
 
-import { Clock, Edit2, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Edit2, Plus, Trash2 } from 'lucide-react';
 
 import type { TimeBlock } from '@shared/types';
 
 import { cn } from '@renderer/shared/lib/utils';
 
+import { usePlannerUI } from '../store';
+
+import { CalendarOverlay } from './CalendarOverlay';
 import { TimeBlockEditor } from './TimeBlockEditor';
 
 const BLOCK_TYPE_STYLES: Record<TimeBlock['type'], string> = {
@@ -27,15 +30,18 @@ const BLOCK_TYPE_LABELS: Record<TimeBlock['type'], string> = {
 };
 
 interface DayViewProps {
+  /** Date in YYYY-MM-DD format */
+  date: string;
   timeBlocks: TimeBlock[];
   onAdd: (block: Omit<TimeBlock, 'id'>) => void;
   onUpdate: (blockId: string, updates: Partial<Omit<TimeBlock, 'id'>>) => void;
   onRemove: (blockId: string) => void;
 }
 
-export function DayView({ timeBlocks, onAdd, onUpdate, onRemove }: DayViewProps) {
+export function DayView({ date, timeBlocks, onAdd, onUpdate, onRemove }: DayViewProps) {
   const [showEditor, setShowEditor] = useState(false);
   const [editingBlock, setEditingBlock] = useState<TimeBlock | undefined>();
+  const { showCalendarOverlay, setShowCalendarOverlay } = usePlannerUI();
 
   const sorted = [...timeBlocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
 
@@ -59,25 +65,51 @@ export function DayView({ timeBlocks, onAdd, onUpdate, onRemove }: DayViewProps)
     setEditingBlock(undefined);
   }
 
+  function handleToggleCalendar() {
+    setShowCalendarOverlay(!showCalendarOverlay);
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-foreground text-sm font-semibold">Schedule</h3>
-        {showEditor ? null : (
+        <div className="flex items-center gap-2">
           <button
-            className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-xs transition-colors"
-            onClick={() => setShowEditor(true)}
+            aria-label={showCalendarOverlay ? 'Hide calendar events' : 'Show calendar events'}
+            title={showCalendarOverlay ? 'Hide calendar events' : 'Show calendar events'}
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs transition-colors',
+              showCalendarOverlay
+                ? 'bg-info/10 text-info hover:bg-info/20'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={handleToggleCalendar}
           >
-            <Plus className="h-3.5 w-3.5" />
-            Add Block
+            <Calendar className="h-3.5 w-3.5" />
+            Calendar
           </button>
-        )}
+          {showEditor ? null : (
+            <button
+              className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-xs transition-colors"
+              type="button"
+              onClick={() => setShowEditor(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add Block
+            </button>
+          )}
+        </div>
       </div>
 
       {showEditor ? (
         <TimeBlockEditor editingBlock={editingBlock} onCancel={handleCancel} onSave={handleSave} />
       ) : null}
 
+      {/* Calendar Events Overlay */}
+      <CalendarOverlay date={date} visible={showCalendarOverlay} />
+
+      {/* User Time Blocks */}
       {sorted.length === 0 && !showEditor ? (
         <p className="text-muted-foreground text-xs">No time blocks scheduled.</p>
       ) : (

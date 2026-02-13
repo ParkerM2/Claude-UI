@@ -217,6 +217,7 @@ export function PlannerPage() {
 
           {/* Right column — Schedule */}
           <DayView
+            date={selectedDate}
             timeBlocks={plan?.timeBlocks ?? []}
             onAdd={(block) => addTimeBlock.mutate({ date: selectedDate, timeBlock: block })}
             onRemove={(blockId) => removeTimeBlock.mutate({ date: selectedDate, blockId })}

@@ -149,10 +149,10 @@ These must be addressed before any public release or multi-user deployment.
 - `github.createIssue` — handler exists, no UI button wires to it
 - `app.getVersion` — internal use only
 
-### 3e. Calendar-Planner Integration Missing
+### 3e. Calendar-Planner Integration — DONE
 - **Both exist**: CalendarWidget shows Google Calendar events, Planner manages time blocks
-- **Gap**: No overlay of calendar events in planner view, no syncing events as time blocks
-- **VISION reference**: "Calendar integrations overlay on planner"
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: Added CalendarOverlay component that displays Google Calendar events directly in the Planner view. Events are shown with distinct visual styling (info color, dashed border) to differentiate them from time blocks. Users can toggle the calendar overlay visibility via a button in the Planner header.
 
 ### 3f. Merge Workflow Has No UI
 - **Service exists**: `merge-service.ts` with `previewDiff`, `checkConflicts`, `mergeBranch`, `abort`
@@ -405,7 +405,7 @@ These must be addressed before any public release or multi-user deployment.
 8. ~~Wire DailyStats tasksCompleted to real query~~ **DONE** (2026-02-13)
 9. ~~Wire Claude CLI auth check into app startup / RootLayout~~ **DONE** (2026-02-13) — already wired
 10. ~~Add listeners for 4 emitted-but-unlistened events (hub.connectionChanged, hub.syncCompleted, git.worktreeChanged, assistant.commandCompleted)~~ **DONE** (2026-02-13)
-11. Wire Calendar overlay into Planner view
+11. ~~Wire Calendar overlay into Planner view~~ **DONE** (2026-02-13)
 
 ### P2 — Setup & Onboarding
 12. Build first-run onboarding wizard
