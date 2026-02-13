@@ -1243,6 +1243,21 @@ export const ipcInvokeContract = {
     output: z.array(AgentSessionSchema),
   },
 
+  // ── Time Parser ──
+  'time.parse': {
+    input: z.object({
+      text: z.string(),
+      referenceDate: z.string().optional(),
+    }),
+    output: z
+      .object({
+        iso: z.string(),
+        text: z.string(),
+        isRelative: z.boolean(),
+      })
+      .nullable(),
+  },
+
   // ── MCP ──
   'mcp.callTool': {
     input: z.object({
