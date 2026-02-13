@@ -765,6 +765,54 @@ const ScreenshotSchema = z.object({
 
 const ScreenPermissionStatusSchema = z.enum(['granted', 'denied', 'not-determined', 'restricted']);
 
+// ─── Briefing Schemas ──────────────────────────────────────────
+
+const SuggestionTypeSchema = z.enum(['stale_project', 'parallel_tasks', 'blocked_task']);
+
+const SuggestionActionSchema = z.object({
+  label: z.string(),
+  targetId: z.string().optional(),
+  targetType: z.enum(['project', 'task']).optional(),
+});
+
+const SuggestionSchema = z.object({
+  type: SuggestionTypeSchema,
+  title: z.string(),
+  description: z.string(),
+  action: SuggestionActionSchema.optional(),
+});
+
+const TaskSummarySchema = z.object({
+  dueToday: z.number(),
+  completedYesterday: z.number(),
+  overdue: z.number(),
+  inProgress: z.number(),
+});
+
+const AgentActivitySummarySchema = z.object({
+  runningCount: z.number(),
+  completedToday: z.number(),
+  errorCount: z.number(),
+});
+
+const DailyBriefingSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  summary: z.string(),
+  taskSummary: TaskSummarySchema,
+  agentActivity: AgentActivitySummarySchema,
+  suggestions: z.array(SuggestionSchema),
+  githubNotifications: z.number().optional(),
+  generatedAt: z.string(),
+});
+
+const BriefingConfigSchema = z.object({
+  enabled: z.boolean(),
+  scheduledTime: z.string(),
+  includeGitHub: z.boolean(),
+  includeAgentActivity: z.boolean(),
+});
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -1728,7 +1776,7 @@ export const ipcInvokeContract = {
     }),
   },
 
-  // ── Voice ──
+// ── Voice ──
   'voice.getConfig': {
     input: z.object({}),
     output: VoiceConfigSchema,
@@ -1775,6 +1823,33 @@ export const ipcInvokeContract = {
       status: ScreenPermissionStatusSchema,
       platform: z.string(),
     }),
+  },
+
+  // ── Briefing ──
+  'briefing.getDaily': {
+    input: z.object({}),
+    output: DailyBriefingSchema.nullable(),
+  },
+  'briefing.generate': {
+    input: z.object({}),
+    output: DailyBriefingSchema,
+  },
+  'briefing.getConfig': {
+    input: z.object({}),
+    output: BriefingConfigSchema,
+  },
+  'briefing.updateConfig': {
+    input: z.object({
+      enabled: z.boolean().optional(),
+      scheduledTime: z.string().optional(),
+      includeGitHub: z.boolean().optional(),
+      includeAgentActivity: z.boolean().optional(),
+    }),
+    output: BriefingConfigSchema,
+  },
+  'briefing.getSuggestions': {
+    input: z.object({}),
+    output: z.array(SuggestionSchema),
   },
 } as const;
 
@@ -1980,11 +2055,19 @@ export const ipcEventContract = {
     }),
   },
 
-  // ── Voice Events ──
+// ── Voice Events ──
   'event:voice.transcript': {
     payload: z.object({
       transcript: z.string(),
       isFinal: z.boolean(),
+    }),
+  },
+
+  // ── Briefing Events ──
+  'event:briefing.ready': {
+    payload: z.object({
+      briefingId: z.string(),
+      date: z.string(),
     }),
   },
 } as const;
@@ -2097,9 +2180,15 @@ export {
   NotificationWatcherConfigSchema,
   SlackWatcherConfigSchema,
   GitHubWatcherConfigSchema,
-  VoiceInputModeSchema,
+VoiceInputModeSchema,
   VoiceConfigSchema,
   ScreenSourceSchema,
   ScreenshotSchema,
   ScreenPermissionStatusSchema,
+  SuggestionTypeSchema,
+  SuggestionSchema,
+  DailyBriefingSchema,
+  BriefingConfigSchema,
+  TaskSummarySchema,
+  AgentActivitySummarySchema,
 };

@@ -25,6 +25,8 @@ import { createAgentQueue } from './services/agent/agent-queue';
 import { createAgentService } from './services/agent/agent-service';
 import { createAlertService } from './services/alerts/alert-service';
 import { createAssistantService } from './services/assistant/assistant-service';
+import { createBriefingService } from './services/briefing/briefing-service';
+import { createSuggestionEngine } from './services/briefing/suggestion-engine';
 import { createCalendarService } from './services/calendar/calendar-service';
 import { createChangelogService } from './services/changelog/changelog-service';
 import { createClaudeClient } from './services/claude';
@@ -59,6 +61,7 @@ import { createTimeParserService } from './services/time-parser/time-parser-serv
 import { createVoiceService } from './services/voice/voice-service';
 
 import type { OAuthConfig } from './auth/types';
+import type { BriefingService } from './services/briefing/briefing-service';
 
 let mainWindow: BrowserWindow | null = null;
 let terminalServiceRef: ReturnType<typeof createTerminalService> | null = null;
@@ -66,6 +69,7 @@ let agentServiceRef: ReturnType<typeof createAgentService> | null = null;
 let alertServiceRef: ReturnType<typeof createAlertService> | null = null;
 let hubConnectionManagerRef: ReturnType<typeof createHubConnectionManager> | null = null;
 let notificationManagerRef: ReturnType<typeof createNotificationManager> | null = null;
+let briefingServiceRef: BriefingService | null = null;
 
 function getMainWindow(): BrowserWindow | null {
   return mainWindow;
@@ -255,11 +259,30 @@ function initializeApp(): void {
   const taskDecomposer = createTaskDecomposer({ claudeClient });
   const githubImporter = createGithubImporter({ githubService, taskService });
 
-  // Voice service — manages voice configuration
+// Voice service — manages voice configuration
   const voiceService = createVoiceService();
 
   // Screen capture service — uses Electron desktopCapturer
   const screenCaptureService = createScreenCaptureService();
+
+  // Briefing service — daily briefings with suggestions
+  const suggestionEngine = createSuggestionEngine({
+    projectService,
+    taskService,
+    agentService,
+  });
+  const briefingService = createBriefingService({
+    router,
+    projectService,
+    taskService,
+    agentService,
+    claudeClient,
+    notificationManager,
+    suggestionEngine,
+  });
+  briefingServiceRef = briefingService;
+  // Start the briefing scheduler
+  briefingService.startScheduler();
 
   const services = {
     projectService,
@@ -292,8 +315,9 @@ function initializeApp(): void {
     timeParserService: createTimeParserService(),
     taskDecomposer,
     githubImporter,
-    voiceService,
+voiceService,
     screenCaptureService,
+    briefingService,
     dataDir,
     providers,
     tokenStore,
@@ -324,4 +348,5 @@ app.on('before-quit', () => {
   alertServiceRef?.stopChecking();
   hubConnectionManagerRef?.dispose();
   notificationManagerRef?.dispose();
+  briefingServiceRef?.stopScheduler();
 });

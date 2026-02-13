@@ -153,7 +153,10 @@ Given the large scope of P4 items, we'll prioritize by:
 | claude-sdk-eng | Service Engineer | audit/claude-sdk | #24 | COMPLETE | Wave 1, merged |
 | watcher-eng | Service Engineer | audit/notification-watchers | #25 | COMPLETE | Wave 1, merged |
 | email-eng | Service Engineer | audit/email-integration | #29 | COMPLETE | Wave 1, merged |
-| smart-task-eng | Service Engineer | audit/smart-tasks | #28 | IN_PROGRESS | Wave 2 |
+| smart-task-eng | Service Engineer | audit/smart-tasks | #28 | COMPLETE | Wave 2, merged |
+| voice-eng | Feature Engineer | audit/voice-interface | #26 | COMPLETE | Wave 3, merged |
+| screen-eng | Feature Engineer | audit/screen-capture | #27 | COMPLETE | Wave 3, merged |
+| briefing-eng | Feature Engineer | audit/daily-briefing | #30 | IN_PROGRESS | Wave 3 |
 
 ---
 

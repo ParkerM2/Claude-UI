@@ -24,6 +24,7 @@ export type * from './task';
 export type * from './terminal';
 export type * from './voice';
 export type * from './screen';
+export type * from './briefing';
 export * from './notifications';
 export { VOICE_LANGUAGES, DEFAULT_VOICE_CONFIG } from './voice';
 
