@@ -243,6 +243,30 @@ All Hub endpoints are protected by `@fastify/rate-limit`:
 
 Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) are included in responses.
 
+### CORS Validation
+
+CORS is configured via the `HUB_ALLOWED_ORIGINS` environment variable (comma-separated list of allowed origins). If not set, defaults to `origin: true` for development mode.
+
+```bash
+# .env
+HUB_ALLOWED_ORIGINS=https://example.com,http://localhost:5173
+```
+
+### WebSocket First-Message Authentication
+
+WebSocket connections use first-message authentication instead of query parameters (which can be logged by proxies):
+
+1. Client connects to `/ws` without API key in URL
+2. Server expects an auth message within 5 seconds:
+   ```json
+   { "type": "auth", "apiKey": "your-api-key" }
+   ```
+3. Server validates the API key against the database
+4. On success: client is upgraded to `addAuthenticatedClient()` and receives broadcasts
+5. On failure: connection is closed with code 4001 (Unauthorized)
+
+The client implementation (`hub-connection.ts`) sends the auth message immediately upon WebSocket open.
+
 ---
 
 ## Build System

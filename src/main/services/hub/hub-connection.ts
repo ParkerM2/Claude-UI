@@ -161,7 +161,15 @@ export function createHubConnectionManager(router: IpcRouter): HubConnectionMana
       wsConnection = new WebSocket(wsUrl);
 
       wsConnection.addEventListener('open', () => {
-        console.log('[Hub] WebSocket connected');
+        console.log('[Hub] WebSocket connected, sending auth message');
+        // Send auth message as first message (required by hub's first-message auth protocol)
+        if (wsConnection?.readyState === WebSocket.OPEN) {
+          const authMessage = JSON.stringify({
+            type: 'auth',
+            apiKey: connection.apiKey,
+          });
+          wsConnection.send(authMessage);
+        }
       });
 
       wsConnection.addEventListener('message', (event) => {

@@ -17,7 +17,7 @@
 | IPC Events (defined) | 23 | 7 | 0 | 30 |
 | Renderer Features | 18 | 1 | 3 | 22 |
 | Setup/Onboarding Flows | 2 | 3 | 4 | 9 |
-| Security Hardening | 5 | 2 | 2 | 9 |
+| Security Hardening | 7 | 2 | 0 | 9 |
 
 What works well: Core infrastructure is solid — IPC contract has 100% handler coverage, all 22 main services are real implementations (not stubs), 18/19 renderer features are fully wired to real data, and the MCP framework is complete.
 
@@ -51,15 +51,15 @@ These must be addressed before any public release or multi-user deployment.
   - **Global**: 100 requests/minute per IP (all endpoints)
   - **Auth routes**: 10 requests/minute per IP (stricter for bootstrap/key generation)
 
-### 1e. CORS Allows All Origins
-- **File**: `hub/src/app.ts` — `origin: true`
-- **Risk**: MEDIUM — Any website can call the Hub API if they know the URL + key
-- **Fix**: Restrict to known origins (Electron app URL, localhost)
+### 1e. CORS Allows All Origins — DONE
+- **File**: `hub/src/app.ts`
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: CORS origin validation now uses `HUB_ALLOWED_ORIGINS` environment variable (comma-separated list). If set, only those origins are allowed. Falls back to `origin: true` if not configured (development mode).
 
-### 1f. WebSocket Auth via Query Parameter
-- **File**: `hub/src/app.ts` — `/ws` route skips API key middleware
-- **Risk**: MEDIUM — API key in URL is logged by proxies/load balancers
-- **Fix**: Use WebSocket protocol header or first-message auth
+### 1f. WebSocket Auth via Query Parameter — DONE
+- **File**: `hub/src/app.ts`, `hub/src/ws/broadcaster.ts`
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: WebSocket connections now require first-message authentication. Clients must send `{ type: "auth", apiKey: "..." }` as their first message within 5 seconds. The server validates the API key and upgrades to `addAuthenticatedClient()`. Connections that fail to authenticate are closed with code 4001.
 
 ### 1g. No API Key Rotation or Expiry
 - **File**: `hub/src/routes/auth.ts`
@@ -397,8 +397,8 @@ These must be addressed before any public release or multi-user deployment.
 2. ~~Encrypt webhook secrets via safeStorage~~ **DONE** (2026-02-13)
 3. ~~Protect Hub bootstrap endpoint~~ **DONE** (2026-02-13)
 4. ~~Add rate limiting to Hub~~ **DONE** (2026-02-13)
-5. Fix CORS to explicit origins
-6. Fix WebSocket auth
+5. ~~Fix CORS to explicit origins~~ **DONE** (2026-02-13)
+6. ~~Fix WebSocket auth~~ **DONE** (2026-02-13)
 
 ### P1 — Wiring Gaps (Components Exist, Just Need Connection)
 7. Wire Slack/Discord action buttons to MCP tools
