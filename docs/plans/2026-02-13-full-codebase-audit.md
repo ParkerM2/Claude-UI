@@ -95,15 +95,15 @@ These must be addressed before any public release or multi-user deployment.
 - **Status**: FIXED (2026-02-13)
 - **Implementation**: `AuthNotification` is already rendered in `RootLayout.tsx` and calls `useClaudeAuth()` on startup. The hook checks Claude CLI authentication status and displays a banner if not authenticated.
 
-### 2c. Webhook Setup Has No Guided Instructions
+### 2c. Webhook Setup Has No Guided Instructions — DONE
 - **File**: `WebhookSettings.tsx`
-- **What exists**: Input fields for secrets + auto-computed URLs
-- **What's missing**: Step-by-step instructions linking to Slack app creation, GitHub webhook setup, scope requirements, test/ping button
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: Added collapsible setup instruction sections for both Slack and GitHub webhooks. Each section includes step-by-step guidance with links to developer consoles, required scopes/permissions, and test URL buttons that copy webhook URLs to clipboard for easy testing.
 
-### 2d. OAuth Provider Setup Has No Validation
+### 2d. OAuth Provider Setup Has No Validation — DONE
 - **File**: `OAuthProviderSettings.tsx`
-- **What exists**: Client ID + Secret input forms per provider
-- **What's missing**: Credential validation before saving, links to provider developer consoles, required scope documentation
+- **Status**: FIXED (2026-02-13)
+- **Implementation**: Added OAuth credential validation that tests credentials against provider endpoints before saving. Each provider card now includes links to developer consoles and displays required scopes. Validation feedback shows success/error states with helpful messages.
 
 ### 2e. Hub Connection Setup Has No Pre-Save Validation — DONE
 - **File**: `HubSettings.tsx`
@@ -409,8 +409,8 @@ These must be addressed before any public release or multi-user deployment.
 
 ### P2 — Setup & Onboarding
 12. Build first-run onboarding wizard
-13. Add webhook setup instructions + test/ping button
-14. Add OAuth credential validation before saving
+13. ~~Add webhook setup instructions + test/ping button~~ **DONE** (2026-02-13)
+14. ~~Add OAuth credential validation before saving~~ **DONE** (2026-02-13)
 15. ~~Create `.env.example` with all supported variables~~ **DONE** (2026-02-13)
 16. ~~Hub connection pre-save validation (ping before save)~~ **DONE** (2026-02-13)
 
