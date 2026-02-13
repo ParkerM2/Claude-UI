@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude UI — Theme Settings Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .panel {
+    width: 520px;
+    background: #09090B;
+    border-radius: 12px;
+    border: 1px solid #27272A;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.05),
+      0 25px 50px -12px rgba(0,0,0,0.6);
+  }
+
+  /* ── Header ───────────────────────────────── */
+  .panel-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #27272A;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-header h2 {
+    color: #FAFAFA;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .panel-header span {
+    color: #52525B;
+    font-size: 11px;
+  }
+
+  .panel-body {
+    padding: 20px;
+  }
+
+  /* ── Theme Selector ───────────────────────── */
+  .section-label {
+    color: #A1A1AA;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 10px;
+  }
+
+  .theme-grid {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .theme-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #27272A;
+    background: #0f0f12;
+    cursor: default;
+    transition: all 0.15s;
+  }
+
+  .theme-chip.active {
+    border-color: #D6D876;
+    background: rgba(214, 216, 118, 0.08);
+  }
+
+  .theme-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+
+  .theme-chip-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #A1A1AA;
+  }
+
+  .theme-chip.active .theme-chip-label {
+    color: #D6D876;
+  }
+
+  /* Swatch Colors */
+  .swatch-oscura { background: #D6D876; }
+  .swatch-dusk { background: #C4A1FF; }
+  .swatch-lime { background: #84CC16; }
+  .swatch-ocean { background: #38BDF8; }
+  .swatch-retro { background: #FB923C; }
+  .swatch-neo { background: #F472B6; }
+  .swatch-forest { background: #34D399; }
+
+  /* ── Variable List ────────────────────────── */
+  .var-list {
+    margin-bottom: 24px;
+  }
+
+  .var-row {
+    display: flex;
+    align-items: center;
+    padding: 7px 0;
+    gap: 12px;
+  }
+
+  .var-color {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+
+  .var-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #71717A;
+    width: 130px;
+    flex-shrink: 0;
+  }
+
+  .var-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #A1A1AA;
+    flex: 1;
+  }
+
+  .var-bar {
+    width: 80px;
+    height: 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── UI Scale Slider ──────────────────────── */
+  .scale-section {
+    padding-top: 4px;
+  }
+
+  .scale-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .scale-label {
+    color: #71717A;
+    font-size: 12px;
+    font-weight: 500;
+    width: 60px;
+    flex-shrink: 0;
+  }
+
+  .scale-track {
+    flex: 1;
+    height: 4px;
+    background: #27272A;
+    border-radius: 2px;
+    position: relative;
+  }
+
+  .scale-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 60%;
+    background: linear-gradient(90deg, #D6D876, #a8aa40);
+    border-radius: 2px;
+  }
+
+  .scale-thumb {
+    position: absolute;
+    left: 60%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    background: #D6D876;
+    border-radius: 50%;
+    border: 2px solid #09090B;
+    box-shadow: 0 0 0 2px rgba(214,216,118,0.3);
+  }
+
+  .scale-value {
+    color: #FAFAFA;
+    font-size: 13px;
+    font-weight: 600;
+    width: 42px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Mode Toggle ──────────────────────────── */
+  .mode-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .mode-toggle {
+    display: flex;
+    background: #0f0f12;
+    border: 1px solid #27272A;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .mode-btn {
+    padding: 6px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #52525B;
+    cursor: default;
+  }
+
+  .mode-btn.active {
+    background: #27272A;
+    color: #FAFAFA;
+  }
+
+  /* ── Custom Theme Chip ────────────────────── */
+  .theme-chip.custom {
+    border-style: dashed;
+    border-color: #3F3F46;
+    background: transparent;
+    gap: 6px;
+  }
+
+  .theme-chip.custom:hover {
+    border-color: #52525B;
+  }
+
+  .custom-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: conic-gradient(
+      #EF4444 0deg,
+      #F59E0B 60deg,
+      #22C55E 120deg,
+      #3B82F6 180deg,
+      #8B5CF6 240deg,
+      #EC4899 300deg,
+      #EF4444 360deg
+    );
+    border: 2px solid rgba(255,255,255,0.1);
+  }
+
+  .custom-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: #52525B;
+  }
+
+  .custom-badge {
+    font-size: 9px;
+    font-weight: 600;
+    color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.12);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <!-- Header -->
+  <div class="panel-header">
+    <h2>Appearance</h2>
+    <span>Settings / Theme</span>
+  </div>
+
+  <div class="panel-body">
+    <!-- Mode Toggle -->
+    <div class="mode-section">
+      <span class="section-label">Mode</span>
+      <div class="mode-toggle">
+        <div class="mode-btn">Light</div>
+        <div class="mode-btn active">Dark</div>
+        <div class="mode-btn">System</div>
+      </div>
+    </div>
+
+    <!-- Theme Chips -->
+    <div class="section-label">Color Theme</div>
+    <div class="theme-grid">
+      <div class="theme-chip active">
+        <div class="theme-swatch swatch-oscura"></div>
+        <span class="theme-chip-label">Oscura</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-dusk"></div>
+        <span class="theme-chip-label">Dusk</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-lime"></div>
+        <span class="theme-chip-label">Lime</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-ocean"></div>
+        <span class="theme-chip-label">Ocean</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-retro"></div>
+        <span class="theme-chip-label">Retro</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-neo"></div>
+        <span class="theme-chip-label">Neo</span>
+      </div>
+      <div class="theme-chip">
+        <div class="theme-swatch swatch-forest"></div>
+        <span class="theme-chip-label">Forest</span>
+      </div>
+      <div class="theme-chip custom">
+        <div class="custom-swatch"></div>
+        <span class="custom-label">Custom</span>
+        <span class="custom-badge">tweakcn</span>
+      </div>
+    </div>
+
+    <!-- CSS Variables -->
+    <div class="section-label">Active Variables</div>
+    <div class="var-list">
+      <div class="var-row">
+        <div class="var-color" style="background: #D6D876;"></div>
+        <span class="var-name">--primary</span>
+        <span class="var-value">#D6D876</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #D6D876, #a8aa40);"></div>
+      </div>
+      <div class="var-row">
+        <div class="var-color" style="background: #09090B;"></div>
+        <span class="var-name">--background</span>
+        <span class="var-value">#09090B</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #09090B, #18181B);"></div>
+      </div>
+      <div class="var-row">
+        <div class="var-color" style="background: #FAFAFA;"></div>
+        <span class="var-name">--foreground</span>
+        <span class="var-value">#FAFAFA</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #FAFAFA, #D4D4D8);"></div>
+      </div>
+      <div class="var-row">
+        <div class="var-color" style="background: #27272A;"></div>
+        <span class="var-name">--accent</span>
+        <span class="var-value">#27272A</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #27272A, #3F3F46);"></div>
+      </div>
+      <div class="var-row">
+        <div class="var-color" style="background: #27272A;"></div>
+        <span class="var-name">--muted</span>
+        <span class="var-value">#27272A</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #27272A, #3F3F46);"></div>
+      </div>
+      <div class="var-row">
+        <div class="var-color" style="background: #27272A;"></div>
+        <span class="var-name">--border</span>
+        <span class="var-value">#27272A</span>
+        <div class="var-bar" style="background: linear-gradient(90deg, #27272A, #3F3F46);"></div>
+      </div>
+    </div>
+
+    <!-- UI Scale -->
+    <div class="scale-section">
+      <div class="section-label">UI Scale</div>
+      <div class="scale-row">
+        <span class="scale-label">Scale</span>
+        <div class="scale-track">
+          <div class="scale-fill"></div>
+          <div class="scale-thumb"></div>
+        </div>
+        <span class="scale-value">110%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude UI — Hero Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .window {
+    width: 820px;
+    background: #09090B;
+    border-radius: 12px;
+    border: 1px solid #27272A;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.05),
+      0 25px 50px -12px rgba(0,0,0,0.6),
+      0 0 80px rgba(214,216,118,0.03);
+  }
+
+  /* ── Title Bar ────────────────────────────── */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #0f0f12;
+    border-bottom: 1px solid #27272A;
+  }
+
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .titlebar-dots {
+    display: flex;
+    gap: 7px;
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #EF4444; }
+  .dot-yellow { background: #F59E0B; }
+  .dot-green { background: #22C55E; }
+
+  .titlebar-text {
+    color: #A1A1AA;
+    font-size: 13px;
+    font-weight: 500;
+    margin-left: 6px;
+  }
+
+  .titlebar-icon {
+    color: #D6D876;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── Layout ───────────────────────────────── */
+  .app {
+    display: flex;
+    height: 420px;
+  }
+
+  /* ── Sidebar ──────────────────────────────── */
+  .sidebar {
+    width: 56px;
+    background: #0f0f12;
+    border-right: 1px solid #27272A;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 0;
+    gap: 4px;
+  }
+
+  .nav-item {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: default;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .nav-item.active {
+    background: #27272A;
+  }
+
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    background: #D6D876;
+    border-radius: 0 3px 3px 0;
+  }
+
+  .sidebar-spacer {
+    flex: 1;
+  }
+
+  /* ── Main Content ─────────────────────────── */
+  .main {
+    flex: 1;
+    padding: 24px 28px;
+    overflow: hidden;
+  }
+
+  .page-title {
+    color: #FAFAFA;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .page-title span {
+    color: #71717A;
+    font-size: 13px;
+    font-weight: 400;
+  }
+
+  /* ── Stat Cards ───────────────────────────── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-card {
+    background: #0f0f12;
+    border: 1px solid #27272A;
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FAFAFA;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: #71717A;
+    margin-top: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 4px;
+    position: relative;
+    top: -1px;
+  }
+
+  .stat-dot.green { background: #22C55E; box-shadow: 0 0 8px rgba(34,197,94,0.4); }
+  .stat-dot.blue { background: #3B82F6; }
+  .stat-dot.amber { background: #F59E0B; }
+
+  /* ── Projects List ────────────────────────── */
+  .projects-section {
+    background: #0f0f12;
+    border: 1px solid #27272A;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .projects-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid #27272A;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .projects-header h3 {
+    color: #A1A1AA;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .projects-header span {
+    color: #52525B;
+    font-size: 11px;
+  }
+
+  .project-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a1e;
+    gap: 16px;
+  }
+
+  .project-row:last-child { border-bottom: none; }
+
+  .project-name {
+    color: #FAFAFA;
+    font-size: 13px;
+    font-weight: 600;
+    width: 140px;
+    white-space: nowrap;
+  }
+
+  .project-agents {
+    color: #71717A;
+    font-size: 12px;
+    width: 90px;
+  }
+
+  .progress-bar {
+    flex: 1;
+    height: 6px;
+    background: #27272A;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .progress-fill.p75 { width: 75%; background: linear-gradient(90deg, #D6D876, #a8aa40); }
+  .progress-fill.p100 { width: 100%; background: linear-gradient(90deg, #22C55E, #16A34A); }
+  .progress-fill.p50 { width: 50%; background: linear-gradient(90deg, #3B82F6, #2563EB); }
+
+  .project-percent {
+    color: #71717A;
+    font-size: 12px;
+    width: 36px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+
+<div class="window">
+  <!-- Title Bar -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-dots">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+      </div>
+      <span class="titlebar-icon">CLAUDE UI</span>
+    </div>
+    <span class="titlebar-text">Dashboard</span>
+  </div>
+
+  <!-- App -->
+  <div class="app">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="nav-item active">📊</div>
+      <div class="nav-item">🤖</div>
+      <div class="nav-item">📋</div>
+      <div class="nav-item">💻</div>
+      <div class="nav-item">🎵</div>
+      <div class="nav-item">📅</div>
+      <div class="nav-item">📝</div>
+      <div class="sidebar-spacer"></div>
+      <div class="nav-item">⚙️</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+      <div class="page-title">
+        Dashboard <span>Welcome back, Parker</span>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value"><span class="stat-dot green"></span>3</div>
+          <div class="stat-label">Agents Running</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><span class="stat-dot blue"></span>12</div>
+          <div class="stat-label">Tasks Completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><span class="stat-dot amber"></span>2</div>
+          <div class="stat-label">PRs For Review</div>
+        </div>
+      </div>
+
+      <!-- Recent Projects -->
+      <div class="projects-section">
+        <div class="projects-header">
+          <h3>Recent Projects</h3>
+          <span>View all</span>
+        </div>
+        <div class="project-row">
+          <span class="project-name">claude-ui</span>
+          <span class="project-agents">3 agents</span>
+          <div class="progress-bar"><div class="progress-fill p75"></div></div>
+          <span class="project-percent">75%</span>
+        </div>
+        <div class="project-row">
+          <span class="project-name">api-server</span>
+          <span class="project-agents">1 agent</span>
+          <div class="progress-bar"><div class="progress-fill p100"></div></div>
+          <span class="project-percent">100%</span>
+        </div>
+        <div class="project-row">
+          <span class="project-name">mobile-app</span>
+          <span class="project-agents">2 agents</span>
+          <div class="progress-bar"><div class="progress-fill p50"></div></div>
+          <span class="project-percent">50%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
