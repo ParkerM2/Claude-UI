@@ -386,6 +386,29 @@ const FitnessStatsSchema = z.object({
   averageWorkoutDuration: z.number(),
 });
 
+const TokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  totalTokens: z.number(),
+  estimatedCostUsd: z.number(),
+  lastUpdated: z.string(),
+});
+
+const AggregatedTokenUsageSchema = z.object({
+  totalInputTokens: z.number(),
+  totalOutputTokens: z.number(),
+  totalTokens: z.number(),
+  totalCostUsd: z.number(),
+  byAgent: z.array(
+    z.object({
+      agentId: z.string(),
+      taskId: z.string(),
+      projectId: z.string(),
+      usage: TokenUsageSchema,
+    }),
+  ),
+});
+
 const AgentSessionSchema = z.object({
   id: z.string(),
   taskId: z.string(),
@@ -395,6 +418,7 @@ const AgentSessionSchema = z.object({
   terminalId: z.string().optional(),
   startedAt: z.string(),
   completedAt: z.string().optional(),
+  tokenUsage: TokenUsageSchema.optional(),
 });
 
 const GitHubLabelSchema = z.object({
@@ -1310,6 +1334,10 @@ export const ipcInvokeContract = {
       maxConcurrent: z.number(),
     }),
   },
+  'agents.getTokenUsage': {
+    input: z.object({}),
+    output: AggregatedTokenUsageSchema,
+  },
 
   // ── Time Parser ──
   'time.parse': {
@@ -1394,6 +1422,12 @@ export const ipcEventContract = {
       pending: z.number(),
       running: z.number(),
       maxConcurrent: z.number(),
+    }),
+  },
+  'event:agent.tokenUsage': {
+    payload: z.object({
+      agentId: z.string(),
+      usage: TokenUsageSchema,
     }),
   },
 

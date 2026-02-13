@@ -20,7 +20,14 @@ import {
   STATUS_ERROR_PATTERNS,
   PROGRESS_PATTERNS,
 } from '@shared/constants';
-import type { AgentSession, AgentStatus } from '@shared/types';
+import type { AgentSession, AgentStatus, AggregatedTokenUsage } from '@shared/types';
+
+import {
+  createEmptyUsage,
+  mightContainTokenInfo,
+  parseTokenLine,
+  updateTokenUsage,
+} from './token-parser';
 
 import type { AgentQueue, AgentQueueStatus, QueuedAgent } from './agent-queue';
 import type { IpcRouter } from '../../ipc/router';
@@ -48,6 +55,7 @@ export interface AgentService {
   getQueueStatus: () => AgentQueueStatus;
   removeFromQueue: (queuedId: string) => { success: boolean };
   processQueue: () => void;
+  getAggregatedTokenUsage: () => AggregatedTokenUsage;
   dispose: () => void;
 }
 
@@ -144,6 +152,7 @@ export function createAgentService(
       status: 'idle',
       worktreePath: workDir,
       startedAt: new Date().toISOString(),
+      tokenUsage: createEmptyUsage(),
     };
 
     const agentProc: AgentProcess = {
@@ -153,12 +162,24 @@ export function createAgentService(
       isPaused: false,
     };
 
-    // Parse PTY output for status events
+    // Parse PTY output for status events and token usage
     ptyProcess.onData((data: string) => {
       if (agentProc.isPaused) return;
 
       const lines = data.split('\n');
       for (const line of lines) {
+        // Parse for token usage if line might contain it
+        if (mightContainTokenInfo(line) && session.tokenUsage) {
+          const tokenData = parseTokenLine(line);
+          if (tokenData.inputTokens !== undefined || tokenData.outputTokens !== undefined || tokenData.cost !== undefined) {
+            session.tokenUsage = updateTokenUsage(session.tokenUsage, tokenData);
+            router.emit('event:agent.tokenUsage', {
+              agentId: id,
+              usage: session.tokenUsage,
+            });
+          }
+        }
+
         const parsed = parseClaudeOutput(line);
         if (parsed) {
           if (parsed.type === 'status') {
@@ -315,6 +336,36 @@ export function createAgentService(
 
     processQueue() {
       processQueueInternal();
+    },
+
+    getAggregatedTokenUsage() {
+      const byAgent: AggregatedTokenUsage['byAgent'] = [];
+      let totalInputTokens = 0;
+      let totalOutputTokens = 0;
+      let totalCostUsd = 0;
+
+      for (const proc of agents.values()) {
+        const { session } = proc;
+        if (session.tokenUsage) {
+          totalInputTokens += session.tokenUsage.inputTokens;
+          totalOutputTokens += session.tokenUsage.outputTokens;
+          totalCostUsd += session.tokenUsage.estimatedCostUsd;
+          byAgent.push({
+            agentId: session.id,
+            taskId: session.taskId,
+            projectId: session.projectId,
+            usage: session.tokenUsage,
+          });
+        }
+      }
+
+      return {
+        totalInputTokens,
+        totalOutputTokens,
+        totalTokens: totalInputTokens + totalOutputTokens,
+        totalCostUsd: Math.round(totalCostUsd * 10000) / 10000,
+        byAgent,
+      };
     },
 
     dispose() {
