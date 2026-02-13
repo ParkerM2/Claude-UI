@@ -174,6 +174,101 @@ Key rules:
 - Raw color values ONLY in theme variable definitions, never in utility classes
 - `postcss.config.mjs` is required for Tailwind v4 processing via `@tailwindcss/postcss`
 
+## Security — Secret Storage
+
+All sensitive credentials are encrypted using Electron's `safeStorage` API, which provides OS-level encryption:
+- **macOS**: Keychain
+- **Windows**: DPAPI (Data Protection API)
+- **Linux**: libsecret
+
+### What's Encrypted
+
+| Secret Type | Storage Location | Service |
+|-------------|-----------------|---------|
+| OAuth client credentials | `<userData>/oauth-providers.json` | `provider-config.ts` |
+| Webhook secrets (Slack, GitHub) | `<userData>/settings.json` | `settings-service.ts` |
+
+### Encryption Pattern
+
+```typescript
+import { safeStorage } from 'electron';
+
+// Encrypt before saving
+function encryptSecret(value: string): EncryptedSecretEntry {
+  if (safeStorage.isEncryptionAvailable()) {
+    const buffer = safeStorage.encryptString(value);
+    return { encrypted: buffer.toString('base64'), useSafeStorage: true };
+  }
+  // Fallback for CI/testing environments
+  return { encrypted: Buffer.from(value, 'utf-8').toString('base64'), useSafeStorage: false };
+}
+
+// Decrypt on read
+function decryptSecret(entry: EncryptedSecretEntry): string {
+  if (entry.useSafeStorage) {
+    const buffer = Buffer.from(entry.encrypted, 'base64');
+    return safeStorage.decryptString(buffer);
+  }
+  return Buffer.from(entry.encrypted, 'base64').toString('utf-8');
+}
+```
+
+### Migration
+
+Both services automatically migrate plaintext secrets to encrypted format on first read. The `useSafeStorage` flag tracks whether real encryption was used, enabling graceful fallback in environments where safeStorage is unavailable.
+
+## Security — Hub API
+
+The Hub server (`hub/`) includes security hardening for its REST API.
+
+### Bootstrap Secret
+
+The `POST /api/auth/generate-key` endpoint (used to create the first API key) requires the `HUB_BOOTSTRAP_SECRET` environment variable:
+
+```bash
+# .env
+HUB_BOOTSTRAP_SECRET=your-random-secret-here
+```
+
+Clients must include the secret in the `X-Bootstrap-Secret` header. The server validates using `crypto.timingSafeEqual()` to prevent timing attacks.
+
+### Rate Limiting
+
+All Hub endpoints are protected by `@fastify/rate-limit`:
+
+| Scope | Limit | Window |
+|-------|-------|--------|
+| Global (all endpoints) | 100 requests | 1 minute |
+| Auth routes (`/api/auth/*`) | 10 requests | 1 minute |
+
+Rate limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`) are included in responses.
+
+### CORS Validation
+
+CORS is configured via the `HUB_ALLOWED_ORIGINS` environment variable (comma-separated list of allowed origins). If not set, defaults to `origin: true` for development mode.
+
+```bash
+# .env
+HUB_ALLOWED_ORIGINS=https://example.com,http://localhost:5173
+```
+
+### WebSocket First-Message Authentication
+
+WebSocket connections use first-message authentication instead of query parameters (which can be logged by proxies):
+
+1. Client connects to `/ws` without API key in URL
+2. Server expects an auth message within 5 seconds:
+   ```json
+   { "type": "auth", "apiKey": "your-api-key" }
+   ```
+3. Server validates the API key against the database
+4. On success: client is upgraded to `addAuthenticatedClient()` and receives broadcasts
+5. On failure: connection is closed with code 4001 (Unauthorized)
+
+The client implementation (`hub-connection.ts`) sends the auth message immediately upon WebSocket open.
+
+---
+
 ## Build System
 
 - **electron-vite** handles three separate builds:

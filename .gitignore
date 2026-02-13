@@ -9,6 +9,7 @@ release/
 # Environment & local config
 .env
 .env.*
+!.env.example
 settings.json
 
 # Runtime data

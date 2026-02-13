@@ -41,6 +41,38 @@ const STATUS_LABELS: Record<string, string> = {
 
 // ── Sub-components ──────────────────────────────────────────
 
+/** Ping hub health endpoint to validate URL before saving. */
+async function validateHubUrl(url: string): Promise<{ reachable: boolean; error?: string }> {
+  const trimmedUrl = url.replace(/\/+$/, '');
+  const healthUrl = `${trimmedUrl}/api/health`;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 5000);
+
+    const response = await fetch(healthUrl, {
+      method: 'GET',
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return { reachable: false, error: `Server returned ${String(response.status)}` };
+    }
+
+    return { reachable: true };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { reachable: false, error: 'Connection timed out' };
+    }
+    const message = error instanceof Error ? error.message : 'Network error';
+    return { reachable: false, error: message };
+  }
+}
+
 interface ConnectionFormProps {
   isConnecting: boolean;
   connectError: boolean;
@@ -50,11 +82,41 @@ interface ConnectionFormProps {
 function ConnectionForm({ isConnecting, connectError, onConnect }: ConnectionFormProps) {
   const [hubUrl, setHubUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  function handleSubmit() {
-    if (hubUrl && apiKey) {
-      onConnect(hubUrl, apiKey);
+  async function handleSubmit() {
+    if (!hubUrl || !apiKey) {
+      return;
     }
+
+    // Clear previous validation error
+    setValidationError(null);
+    setIsValidating(true);
+
+    // Validate hub URL before proceeding
+    const validation = await validateHubUrl(hubUrl);
+    setIsValidating(false);
+
+    if (!validation.reachable) {
+      setValidationError(validation.error ?? 'Hub server is unreachable');
+      return;
+    }
+
+    // Validation passed, proceed with connection
+    onConnect(hubUrl, apiKey);
+  }
+
+  const isPending = isConnecting || isValidating;
+
+  function getButtonLabel(): string {
+    if (isValidating) {
+      return 'Validating...';
+    }
+    if (isConnecting) {
+      return 'Connecting...';
+    }
+    return 'Connect';
   }
 
   return (
@@ -92,24 +154,32 @@ function ConnectionForm({ isConnecting, connectError, onConnect }: ConnectionFor
       </div>
 
       <button
-        disabled={!hubUrl || !apiKey || isConnecting}
+        disabled={!hubUrl || !apiKey || isPending}
         type="button"
         className={cn(
           BUTTON_BASE,
           'bg-primary text-primary-foreground hover:bg-primary/90',
           'disabled:cursor-not-allowed disabled:opacity-50',
         )}
-        onClick={handleSubmit}
+        onClick={() => {
+          void handleSubmit();
+        }}
       >
-        {isConnecting ? (
+        {isPending ? (
           <Loader2 className={cn(ICON_SIZE, 'animate-spin')} />
         ) : (
           <Cloud className={ICON_SIZE} />
         )}
-        {isConnecting ? 'Connecting...' : 'Connect'}
+        {getButtonLabel()}
       </button>
 
-      {connectError ? (
+      {validationError === null ? null : (
+        <p className="text-destructive text-sm">
+          Hub server unreachable: {validationError}. Please check the URL and try again.
+        </p>
+      )}
+
+      {connectError && validationError === null ? (
         <p className="text-destructive text-sm">Failed to connect. Check your URL and API key.</p>
       ) : null}
     </div>

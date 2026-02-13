@@ -2,17 +2,21 @@ import type { WebSocket } from 'ws';
 
 import type { WsBroadcastMessage } from '../lib/types.js';
 
-const clients = new Set<WebSocket>();
+const authenticatedClients = new Set<WebSocket>();
 
-export function addClient(socket: WebSocket): void {
-  clients.add(socket);
+/**
+ * Add an authenticated client to the broadcast pool.
+ * Only call this after the client has been authenticated via the first-message protocol.
+ */
+export function addAuthenticatedClient(socket: WebSocket): void {
+  authenticatedClients.add(socket);
 
   socket.on('close', () => {
-    clients.delete(socket);
+    authenticatedClients.delete(socket);
   });
 
   socket.on('error', () => {
-    clients.delete(socket);
+    authenticatedClients.delete(socket);
   });
 }
 
@@ -33,7 +37,7 @@ export function broadcast(
 
   const payload = JSON.stringify(message);
 
-  for (const client of clients) {
+  for (const client of authenticatedClients) {
     if (client.readyState === client.OPEN) {
       client.send(payload);
     }
