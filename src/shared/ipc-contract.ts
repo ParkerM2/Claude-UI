@@ -261,7 +261,7 @@ const IdeaSchema = z.object({
   updatedAt: z.string(),
 });
 
-const ChangeTypeSchema = z.enum(['added', 'changed', 'fixed', 'removed']);
+const ChangeTypeSchema = z.enum(['added', 'changed', 'fixed', 'removed', 'security', 'deprecated']);
 
 const ChangeCategorySchema = z.object({
   type: ChangeTypeSchema,
@@ -945,6 +945,14 @@ export const ipcInvokeContract = {
       version: z.string(),
       date: z.string(),
       categories: z.array(ChangeCategorySchema),
+    }),
+    output: ChangelogEntrySchema,
+  },
+  'changelog.generate': {
+    input: z.object({
+      repoPath: z.string(),
+      version: z.string(),
+      fromTag: z.string().optional(),
     }),
     output: ChangelogEntrySchema,
   },
