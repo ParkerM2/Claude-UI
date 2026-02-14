@@ -228,6 +228,23 @@ const WorktreeSchema = z.object({
 
 const RepoStructureSchema = z.enum(['single', 'monorepo', 'polyrepo']);
 
+const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
+
+const ChildRepoSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  relativePath: z.string(),
+  gitUrl: z.string().optional(),
+});
+
+const RepoDetectionResultSchema = z.object({
+  isGitRepo: z.boolean(),
+  repoType: RepoTypeSchema,
+  gitUrl: z.string().optional(),
+  defaultBranch: z.string().optional(),
+  childRepos: z.array(ChildRepoSchema),
+});
+
 const MergeResultSchema = z.object({
   success: z.boolean(),
   conflicts: z.array(z.string()).optional(),
@@ -818,6 +835,33 @@ const BriefingConfigSchema = z.object({
   includeAgentActivity: z.boolean(),
 });
 
+// ─── Workspace Schemas ────────────────────────────────────────
+
+const WorkspaceSettingsSchema = z.object({
+  autoStart: z.boolean(),
+  maxConcurrent: z.number(),
+  defaultBranch: z.string(),
+});
+
+const WorkspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  hostDeviceId: z.string().optional(),
+  projectIds: z.array(z.string()),
+  settings: WorkspaceSettingsSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const DeviceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  platform: z.string(),
+  online: z.boolean(),
+  lastSeen: z.string(),
+});
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -844,6 +888,10 @@ export const ipcInvokeContract = {
   'projects.selectDirectory': {
     input: z.object({}),
     output: z.object({ path: z.string().nullable() }),
+  },
+  'projects.detectRepo': {
+    input: z.object({ path: z.string() }),
+    output: RepoDetectionResultSchema,
   },
 
   // ── Tasks ──
@@ -1906,6 +1954,66 @@ export const ipcInvokeContract = {
     input: z.object({}),
     output: z.array(SuggestionSchema),
   },
+
+  // ── Workspaces ──
+  'workspaces.list': {
+    input: z.object({}),
+    output: z.array(WorkspaceSchema),
+  },
+  'workspaces.create': {
+    input: z.object({ name: z.string(), description: z.string().optional() }),
+    output: WorkspaceSchema,
+  },
+  'workspaces.update': {
+    input: z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      hostDeviceId: z.string().optional(),
+      settings: WorkspaceSettingsSchema.partial().optional(),
+    }),
+    output: WorkspaceSchema,
+  },
+  'workspaces.delete': {
+    input: z.object({ id: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'devices.list': {
+    input: z.object({}),
+    output: z.array(DeviceSchema),
+  },
+
+  // ── Auth ──
+  'auth.login': {
+    input: z.object({ email: z.email(), password: z.string() }),
+    output: z.object({
+      token: z.string(),
+      user: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
+    }),
+  },
+  'auth.register': {
+    input: z.object({
+      email: z.email(),
+      password: z.string(),
+      displayName: z.string(),
+    }),
+    output: z.object({
+      token: z.string(),
+      user: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
+    }),
+  },
+  'auth.me': {
+    input: z.object({ token: z.string() }),
+    output: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
+  },
+  'auth.logout': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean() }),
+  },
+  'auth.refresh': {
+    input: z.object({ token: z.string() }),
+    output: z.object({ token: z.string() }),
+  },
 } as const;
 
 /**
@@ -2246,4 +2354,10 @@ export {
   BriefingConfigSchema,
   TaskSummarySchema,
   AgentActivitySummarySchema,
+  RepoTypeSchema,
+  ChildRepoSchema,
+  RepoDetectionResultSchema,
+  WorkspaceSchema,
+  WorkspaceSettingsSchema,
+  DeviceSchema,
 };

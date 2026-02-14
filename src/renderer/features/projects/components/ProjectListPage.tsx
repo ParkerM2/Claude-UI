@@ -2,8 +2,10 @@
  * ProjectListPage — Shows all projects with add/remove controls
  */
 
+import { useState } from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
-import { FolderOpen, Plus, Trash2, Loader2 } from 'lucide-react';
+import { FolderOpen, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
 
 import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 
@@ -17,6 +19,8 @@ import {
   useSelectDirectory,
 } from '../api/useProjects';
 
+import { ProjectInitWizard } from './ProjectInitWizard';
+
 export function ProjectListPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
@@ -24,6 +28,7 @@ export function ProjectListPage() {
   const removeProject = useRemoveProject();
   const selectDirectory = useSelectDirectory();
   const { addProjectTab } = useLayoutStore();
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   async function handleAddProject() {
     const result = await selectDirectory.mutateAsync();
@@ -35,6 +40,12 @@ export function ProjectListPage() {
   }
 
   function handleOpenProject(projectId: string) {
+    addProjectTab(projectId);
+    void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.KANBAN) });
+  }
+
+  function handleWizardComplete(projectId: string) {
+    setWizardOpen(false);
     addProjectTab(projectId);
     void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.KANBAN) });
   }
@@ -56,18 +67,31 @@ export function ProjectListPage() {
     <div className="mx-auto max-w-3xl p-8">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <button
-          disabled={addProject.isPending}
-          className={cn(
-            'bg-primary text-primary-foreground flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium',
-            'hover:bg-primary/90 transition-colors',
-            'disabled:pointer-events-none disabled:opacity-50',
-          )}
-          onClick={handleAddProject}
-        >
-          <Plus className="h-4 w-4" />
-          Add Project
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={cn(
+              'border-border text-foreground flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium',
+              'hover:bg-accent transition-colors',
+            )}
+            onClick={() => setWizardOpen(true)}
+          >
+            <Wand2 className="h-4 w-4" />
+            Init Wizard
+          </button>
+          <button
+            disabled={addProject.isPending}
+            className={cn(
+              'bg-primary text-primary-foreground flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium',
+              'hover:bg-primary/90 transition-colors',
+              'disabled:pointer-events-none disabled:opacity-50',
+            )}
+            onClick={handleAddProject}
+          >
+            <Plus className="h-4 w-4" />
+            Add Project
+          </button>
+        </div>
       </div>
 
       {projects && projects.length > 0 ? (
@@ -114,6 +138,13 @@ export function ProjectListPage() {
           <p className="text-muted-foreground mt-1 text-sm">Add a project folder to get started</p>
         </div>
       )}
+
+      {wizardOpen ? (
+        <ProjectInitWizard
+          onClose={() => setWizardOpen(false)}
+          onComplete={handleWizardComplete}
+        />
+      ) : null}
     </div>
   );
 }
