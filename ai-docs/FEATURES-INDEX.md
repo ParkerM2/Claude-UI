@@ -9,10 +9,10 @@
 
 | Category | Count |
 |----------|-------|
-| Renderer Features | 21 |
-| Main Process Services | 23 |
-| IPC Handler Files | 22 |
-| IPC Contract Lines | ~1500 |
+| Renderer Features | 25 |
+| Main Process Services | 29 |
+| IPC Handler Files | 30 |
+| IPC Contract Lines | ~2200 |
 
 ---
 
@@ -41,6 +41,12 @@ Location: `src/renderer/features/`
 | **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, WebhookSettings | `settings.*` |
 | **tasks** | Task management | TaskCard, TaskStatusBadge, TaskForm | `tasks.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
+| **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
+| **merge** | Branch merge workflow | ConflictResolver, MergeConfirmModal, MergePreviewPanel | `merge.*` |
+| **my-work** | Cross-project task view | MyWorkPage | `tasks.*` |
+| **onboarding** | First-run setup wizard | OnboardingWizard, ClaudeCliStep, ApiKeyStep | `app.*`, `settings.*` |
+| **screen** | Screen capture | ScreenshotButton, ScreenshotViewer | `screen.*` |
+| **voice** | Voice interface (STT/TTS) | VoiceButton, VoiceSettings | `voice.*` |
 
 ### Feature Module Structure
 
@@ -89,6 +95,14 @@ Location: `src/main/services/`
 | **settings** | App settings persistence | get, update | `event:settings.changed` |
 | **spotify** | Spotify integration | getCurrentTrack, play, pause, skip | - |
 | **terminal** | PTY terminal management | create, sendInput, resize, kill | `event:terminal.*` |
+| **briefing** | Daily briefing & suggestions | generateBriefing, getSuggestions | - |
+| **claude** | Persistent Claude sessions (Anthropic SDK) | sendMessage, getConversation, listConversations | `event:claude.*` |
+| **email** | Email sending (SMTP) | sendEmail, getConfig, testConnection | - |
+| **notifications** | Background Slack/GitHub watchers | startWatching, stopWatching, getNotifications | `event:notification.*` |
+| **screen** | Screen capture (desktopCapturer) | captureScreen, getSources | - |
+| **tasks** | Smart task creation | decompose, importFromGithub | - |
+| **time-parser** | Natural language time parsing | parseTimeExpression | - |
+| **voice** | Voice interface (Web Speech API) | startListening, stopListening, speak | `event:voice.*` |
 
 ---
 
@@ -120,6 +134,14 @@ Location: `src/main/ipc/handlers/`
 | `task-handlers.ts` | tasks.* |
 | `terminal-handlers.ts` | terminals.* |
 | `webhook-settings-handlers.ts` | webhooks.* |
+| `briefing-handlers.ts` | briefing.* |
+| `claude-handlers.ts` | claude.* |
+| `email-handlers.ts` | email.* |
+| `mcp-handlers.ts` | mcp.* |
+| `notification-handlers.ts` | notifications.* |
+| `screen-handlers.ts` | screen.* |
+| `time-handlers.ts` | time.* |
+| `voice-handlers.ts` | voice.* |
 
 ---
 
@@ -142,6 +164,12 @@ Location: `src/main/ipc/handlers/`
 | `settings.ts` | AppSettings, HubConfig, OAuthProvider |
 | `task.ts` | Task, TaskStatus, TaskSpec |
 | `terminal.ts` | TerminalSession |
+| `briefing.ts` | DailyBriefing, Suggestion, SuggestionType |
+| `claude.ts` | ClaudeConversation, ClaudeMessage, ClaudeConfig |
+| `email.ts` | EmailConfig, EmailMessage, SmtpSettings |
+| `notifications.ts` | Notification, NotificationSource, WatcherConfig |
+| `screen.ts` | ScreenCapture, ScreenSource |
+| `voice.ts` | VoiceConfig, SpeechResult, VoiceState |
 
 ### Constants (`src/shared/constants/`)
 
@@ -149,6 +177,8 @@ Location: `src/main/ipc/handlers/`
 |------|-----------|
 | `routes.ts` | ROUTES, ROUTE_PATTERNS, projectViewPath() |
 | `themes.ts` | COLOR_THEMES, COLOR_THEME_LABELS |
+| `agent-patterns.ts` | Agent output parsing patterns |
+| `index.ts` | Barrel exports for all constants |
 
 ### IPC Contract (`src/shared/ipc-contract.ts`)
 
@@ -229,12 +259,12 @@ Claude-UI/
 │   │   ├── ipc/                 # IPC router + handlers
 │   │   ├── mcp/                 # MCP client framework
 │   │   ├── mcp-servers/         # MCP server definitions
-│   │   ├── services/            # Business logic (23 services)
+│   │   ├── services/            # Business logic (29 services)
 │   │   └── tray/                # System tray + hotkeys
 │   ├── preload/                 # Context bridge
 │   ├── renderer/                # React app
 │   │   ├── app/                 # Router, providers, layouts
-│   │   ├── features/            # Feature modules (21 features)
+│   │   ├── features/            # Feature modules (25 features)
 │   │   ├── shared/              # Shared hooks, stores, components
 │   │   └── styles/globals.css   # Theme tokens + Tailwind
 │   └── shared/                  # Shared between main + renderer

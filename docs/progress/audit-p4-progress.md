@@ -6,7 +6,7 @@
 **Feature Branch**: feature/audit-p4-features
 **Design Doc**: docs/plans/2026-02-13-full-codebase-audit.md
 **Started**: 2026-02-13
-**Last Updated**: 2026-02-13
+**Last Updated**: 2026-02-14
 **Updated By**: team-lead
 
 ---
@@ -55,7 +55,7 @@ Given the large scope of P4 items, we'll prioritize by:
 
 ## Task Details
 
-### Task #24: Persistent Claude Session [NOT STARTED]
+### Task #24: Persistent Claude Session [COMPLETE]
 - **Scope**: P4.24
 - **Dependencies**: None
 - **Files to Create**:
@@ -71,7 +71,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - Conversation storage: SQLite vs JSON files
   - Context window management (truncation strategy)
 
-### Task #25: Notification Watchers [NOT STARTED]
+### Task #25: Notification Watchers [COMPLETE]
 - **Scope**: P4.25
 - **Dependencies**: None (can run in parallel with #24)
 - **Files to Create**:
@@ -86,7 +86,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - Which events to watch (mentions, PRs, issues?)
   - Notification aggregation strategy
 
-### Task #26: Voice Interface [NOT STARTED]
+### Task #26: Voice Interface [COMPLETE]
 - **Scope**: P4.26
 - **Dependencies**: #24 (uses Claude for responses)
 - **Files to Create**:
@@ -99,7 +99,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - TTS engine (native vs cloud)
   - Wake word implementation
 
-### Task #27: Screen Capture + Control [NOT STARTED]
+### Task #27: Screen Capture + Control [COMPLETE]
 - **Scope**: P4.27
 - **Dependencies**: #24 (uses Claude Vision API)
 - **Files to Create**:
@@ -111,7 +111,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - robotjs vs nut.js for automation
   - Security boundaries for computer control
 
-### Task #28: Smart Task Creation [NOT STARTED]
+### Task #28: Smart Task Creation [COMPLETE]
 - **Scope**: P4.28
 - **Dependencies**: #24 (uses Claude for decomposition)
 - **Files to Create**:
@@ -121,7 +121,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - `src/renderer/features/tasks/components/TaskCreator.tsx` — Smart mode toggle
   - `src/shared/ipc-contract.ts` — Add tasks.decompose, tasks.importFromGithub
 
-### Task #29: Email Integration [NOT STARTED]
+### Task #29: Email Integration [COMPLETE]
 - **Scope**: P4.29
 - **Dependencies**: None
 - **Files to Create**:
@@ -134,7 +134,7 @@ Given the large scope of P4 items, we'll prioritize by:
   - Read access (IMAP) or send-only?
   - OAuth for Gmail or app passwords?
 
-### Task #30: Proactive Suggestions / Daily Briefing [NOT STARTED]
+### Task #30: Proactive Suggestions / Daily Briefing [COMPLETE]
 - **Scope**: P4.30
 - **Dependencies**: #24 (uses Claude for analysis)
 - **Files to Create**:
