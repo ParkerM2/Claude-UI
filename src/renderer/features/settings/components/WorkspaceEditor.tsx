@@ -19,6 +19,16 @@ interface WorkspaceEditorProps {
   onClose: () => void;
 }
 
+const INPUT_CLASS = cn(
+  'border-border bg-background w-full rounded-lg border px-3 py-2 text-sm',
+  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+);
+
+const SETTINGS_INPUT_CLASS = cn(
+  'border-border bg-background w-16 rounded-md border px-2 py-1 text-center text-sm',
+  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+);
+
 export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
   const isEditing = workspace !== null;
 
@@ -54,21 +64,14 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
     }
   }
 
-  function handleKeyDown(event: React.KeyboardEvent) {
-    if (event.key === 'Escape') {
-      onClose();
-    }
-  }
-
   const isSaving = createWorkspace.isPending || updateWorkspace.isPending;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      role="dialog"
       aria-label={isEditing ? 'Edit workspace' : 'Create workspace'}
       aria-modal="true"
-      onKeyDown={handleKeyDown}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      role="dialog"
     >
       <div className="bg-card border-border mx-4 w-full max-w-md rounded-xl border p-6 shadow-xl">
         {/* Header */}
@@ -94,11 +97,7 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
               Name
             </label>
             <input
-              autoFocus
-              className={cn(
-                'border-border bg-background w-full rounded-lg border px-3 py-2 text-sm',
-                'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-              )}
+              className={INPUT_CLASS}
               id="ws-name"
               placeholder="Workspace name"
               type="text"
@@ -113,10 +112,7 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
               Description
             </label>
             <textarea
-              className={cn(
-                'border-border bg-background w-full resize-none rounded-lg border px-3 py-2 text-sm',
-                'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-              )}
+              className={cn(INPUT_CLASS, 'resize-none')}
               id="ws-desc"
               placeholder="Optional description"
               rows={2}
@@ -127,9 +123,9 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
 
           {/* Device Selector */}
           <div>
-            <label className="text-muted-foreground mb-1 block text-sm font-medium">
+            <span className="text-muted-foreground mb-1 block text-sm font-medium">
               Host Device
-            </label>
+            </span>
             <DeviceSelector value={hostDeviceId} onChange={setHostDeviceId} />
           </div>
 
@@ -146,13 +142,13 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
               </label>
               <button
                 aria-checked={autoStart}
+                id="ws-autostart"
+                role="switch"
+                type="button"
                 className={cn(
                   'relative h-5 w-9 rounded-full transition-colors',
                   autoStart ? 'bg-primary' : 'bg-muted',
                 )}
-                id="ws-autostart"
-                role="switch"
-                type="button"
                 onClick={() => setAutoStart(!autoStart)}
               >
                 <span
@@ -170,13 +166,10 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
                 Max concurrent
               </label>
               <input
-                className={cn(
-                  'border-border bg-background w-16 rounded-md border px-2 py-1 text-center text-sm',
-                  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                )}
+                className={SETTINGS_INPUT_CLASS}
                 id="ws-concurrent"
-                min={1}
                 max={10}
+                min={1}
                 type="number"
                 value={maxConcurrent}
                 onChange={(e) => setMaxConcurrent(Number(e.target.value))}
@@ -189,10 +182,7 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
                 Default branch
               </label>
               <input
-                className={cn(
-                  'border-border bg-background w-28 rounded-md border px-2 py-1 text-sm',
-                  'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
-                )}
+                className={cn(SETTINGS_INPUT_CLASS, 'w-28 text-left')}
                 id="ws-branch"
                 placeholder="main"
                 type="text"
@@ -214,12 +204,12 @@ export function WorkspaceEditor({ workspace, onClose }: WorkspaceEditorProps) {
             Cancel
           </button>
           <button
+            disabled={name.trim().length === 0 || isSaving}
+            type="button"
             className={cn(
               'bg-primary text-primary-foreground rounded-lg px-4 py-2 text-sm font-medium transition-colors',
               'hover:bg-primary/90 disabled:opacity-50',
             )}
-            disabled={name.trim().length === 0 || isSaving}
-            type="button"
             onClick={handleSave}
           >
             {isSaving ? 'Saving...' : 'Save'}

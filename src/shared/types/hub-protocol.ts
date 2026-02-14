@@ -98,22 +98,10 @@ export interface SubProject {
 // ─── Legacy Compatibility (deprecated) ────────────────────────
 
 /** @deprecated Use DeviceCapabilities instead */
-export interface ComputerCapabilities {
-  canExecute: boolean;
-  repos: string[];
-}
+export type ComputerCapabilities = DeviceCapabilities;
 
 /** @deprecated Use Device instead */
-export interface Computer {
-  id: string;
-  machineId: string;
-  machineName: string;
-  deviceType: DeviceType;
-  capabilities: ComputerCapabilities;
-  isOnline: boolean;
-  lastSeen: string;
-  createdAt: string;
-}
+export type Computer = Device;
 
 export interface TaskProgress {
   phase: string;
@@ -204,13 +192,7 @@ export interface DeviceListResponse {
 }
 
 /** @deprecated Use DeviceRegisterRequest instead */
-export interface DeviceAuthRequest {
-  machineId: string;
-  machineName: string;
-  deviceType: DeviceType;
-  capabilities: ComputerCapabilities;
-  appVersion: string;
-}
+export type DeviceAuthRequest = DeviceRegisterRequest;
 
 /** @deprecated Use AuthResponse instead */
 export interface DeviceAuthResponse {
@@ -274,14 +256,12 @@ export interface SubProjectCreateRequest {
 
 // ─── REST API: Task Requests ──────────────────────────────────
 
-export interface ComputerUpdateRequest {
-  machineName?: string;
-  capabilities?: Partial<ComputerCapabilities>;
-  isOnline?: boolean;
-}
+/** @deprecated Use DeviceUpdateRequest instead */
+export type ComputerUpdateRequest = DeviceUpdateRequest;
 
+/** @deprecated Use DeviceListResponse instead */
 export interface ComputerListResponse {
-  computers: Computer[];
+  computers: Device[];
 }
 
 export interface TaskCreateRequest {
@@ -480,7 +460,7 @@ export interface WsProjectDeletedEvent {
 /** @deprecated Use WsDeviceOnlineEvent instead */
 export interface WsComputerOnlineEvent {
   type: 'computer:online';
-  computer: Computer;
+  computer: Device;
 }
 
 /** @deprecated Use WsDeviceOfflineEvent instead */
@@ -552,10 +532,7 @@ export type WsEventFromHub =
   | WsExecuteCommandEvent
   | WsCancelCommandEvent
   // Errors
-  | WsErrorEvent
-  // Deprecated
-  | WsComputerOnlineEvent
-  | WsComputerOfflineEvent;
+  | WsErrorEvent;
 
 export type WsEventFromDevice = WsHeartbeatPing | WsExecutionStartedEvent | WsExecutionAckEvent;
 
@@ -593,9 +570,7 @@ export function isWsProjectEvent(
 }
 
 /** @deprecated Use isWsDeviceEvent instead */
-export function isWsComputerEvent(
-  event: WsEvent,
-): event is WsComputerOnlineEvent | WsComputerOfflineEvent {
+export function isWsComputerEvent(event: WsEvent): boolean {
   return event.type.startsWith('computer:');
 }
 

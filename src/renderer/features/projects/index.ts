@@ -33,3 +33,6 @@ export { ProjectListPage } from './components/ProjectListPage';
 export { WorktreeManager } from './components/WorktreeManager';
 export { BranchSelector } from './components/BranchSelector';
 export { SubprojectSelector } from './components/SubprojectSelector';
+export { ProjectInitWizard } from './components/ProjectInitWizard';
+export { RepoTypeSelector } from './components/RepoTypeSelector';
+export { SubRepoDetector } from './components/SubRepoDetector';

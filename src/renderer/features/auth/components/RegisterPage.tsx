@@ -8,6 +8,9 @@ import { cn } from '@renderer/shared/lib/utils';
 
 import { useRegister } from '../api/useAuth';
 
+const INPUT_CLASS =
+  'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring';
+
 interface RegisterPageProps {
   onNavigateToLogin: () => void;
   onSuccess: () => void;
@@ -36,7 +39,7 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
     confirmPassword.length > 0 &&
     passwordError === null;
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!isFormValid) return;
     register.mutate(
@@ -62,16 +65,12 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
             </label>
             <input
               autoComplete="name"
-              className={cn(
-                'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
-                'placeholder:text-muted-foreground',
-                'focus:outline-none focus:ring-2 focus:ring-ring',
-              )}
+              className={INPUT_CLASS}
               id="register-name"
-              onChange={(e) => { setDisplayName(e.target.value); }}
               placeholder="Your name"
               type="text"
               value={displayName}
+              onChange={(e) => { setDisplayName(e.target.value); }}
             />
           </div>
 
@@ -81,16 +80,12 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
             </label>
             <input
               autoComplete="email"
-              className={cn(
-                'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
-                'placeholder:text-muted-foreground',
-                'focus:outline-none focus:ring-2 focus:ring-ring',
-              )}
+              className={INPUT_CLASS}
               id="register-email"
-              onChange={(e) => { setEmail(e.target.value); }}
               placeholder="you@example.com"
               type="email"
               value={email}
+              onChange={(e) => { setEmail(e.target.value); }}
             />
           </div>
 
@@ -100,16 +95,12 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
             </label>
             <input
               autoComplete="new-password"
-              className={cn(
-                'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
-                'placeholder:text-muted-foreground',
-                'focus:outline-none focus:ring-2 focus:ring-ring',
-              )}
+              className={INPUT_CLASS}
               id="register-password"
-              onChange={(e) => { setPassword(e.target.value); }}
               placeholder="Choose a password"
               type="password"
               value={password}
+              onChange={(e) => { setPassword(e.target.value); }}
             />
           </div>
 
@@ -119,21 +110,19 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
             </label>
             <input
               autoComplete="new-password"
-              className={cn(
-                'w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground',
-                'placeholder:text-muted-foreground',
-                'focus:outline-none focus:ring-2 focus:ring-ring',
-                passwordError !== null ? 'border-destructive' : '',
-              )}
               id="register-confirm"
-              onChange={(e) => { setConfirmPassword(e.target.value); }}
               placeholder="Re-enter your password"
               type="password"
               value={confirmPassword}
+              className={cn(
+                INPUT_CLASS,
+                passwordError === null ? '' : 'border-destructive',
+              )}
+              onChange={(e) => { setConfirmPassword(e.target.value); }}
             />
-            {passwordError !== null ? (
+            {passwordError === null ? null : (
               <p className="text-xs text-destructive">{passwordError}</p>
-            ) : null}
+            )}
           </div>
 
           {register.isError ? (
@@ -143,13 +132,13 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
           ) : null}
 
           <button
+            disabled={!isFormValid || register.isPending}
+            type="submit"
             className={cn(
               'w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground',
               'hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring',
               'disabled:cursor-not-allowed disabled:opacity-50',
             )}
-            disabled={!isFormValid || register.isPending}
-            type="submit"
           >
             {register.isPending ? (
               <span className="flex items-center justify-center gap-2">
@@ -166,8 +155,8 @@ export function RegisterPage({ onNavigateToLogin, onSuccess }: RegisterPageProps
           Already have an account?{' '}
           <button
             className="font-medium text-primary underline-offset-4 hover:underline"
-            onClick={onNavigateToLogin}
             type="button"
+            onClick={onNavigateToLogin}
           >
             Sign in
           </button>

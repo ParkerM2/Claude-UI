@@ -1985,7 +1985,7 @@ export const ipcInvokeContract = {
 
   // ── Auth ──
   'auth.login': {
-    input: z.object({ email: z.string().email(), password: z.string() }),
+    input: z.object({ email: z.email(), password: z.string() }),
     output: z.object({
       token: z.string(),
       user: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
@@ -1993,7 +1993,7 @@ export const ipcInvokeContract = {
   },
   'auth.register': {
     input: z.object({
-      email: z.string().email(),
+      email: z.email(),
       password: z.string(),
       displayName: z.string(),
     }),

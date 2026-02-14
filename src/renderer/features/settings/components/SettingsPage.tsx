@@ -22,6 +22,7 @@ import { HubSettings } from './HubSettings';
 import { OAuthProviderSettings } from './OAuthProviderSettings';
 import { ProfileSection } from './ProfileSection';
 import { WebhookSettings } from './WebhookSettings';
+import { WorkspacesTab } from './WorkspacesTab';
 
 // ── Constants ───────────────────────────────────────────────
 
@@ -162,6 +163,11 @@ export function SettingsPage() {
 
       {/* Profiles */}
       <ProfileSection />
+
+      {/* ── Workspaces ── */}
+      <section className="mb-8">
+        <WorkspacesTab />
+      </section>
 
       {/* About */}
       {/* ── Color Theme ── */}
