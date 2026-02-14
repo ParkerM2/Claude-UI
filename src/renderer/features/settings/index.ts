@@ -22,4 +22,5 @@ export {
   useDevices,
   workspaceKeys,
 } from './api/useWorkspaces';
+export { useWorkspaceEvents } from './hooks/useWorkspaceEvents';
 export { WorkspacesTab } from './components/WorkspacesTab';

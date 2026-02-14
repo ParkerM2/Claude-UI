@@ -1,116 +1,94 @@
 # Team Beta Progress — Frontend Integration
 
-**Status**: NOT STARTED
+**Status**: COMPLETE
 **Branch**: `feature/beta-frontend-integration`
-**Plan**: `docs/plans/2026-02-14-hub-frontend-integration.md`
-**Started**: —
+**Plan**: `docs/plans/TEAM-BETA-HUB-INTEGRATION.md`
+**Started**: 2026-02-14
 **Last Updated**: 2026-02-14
-**Updated By**: —
+**Updated By**: Team Lead (Opus)
+**Team**: `beta-hub-frontend`
+
+---
+
+## Verification
+
+- TypeScript: PASS (zero errors)
+- ESLint: PASS (zero violations)
+- Build: PASS (3.60s)
+
+---
+
+## Wave 0: Schema Prerequisites
+
+### Task 1: Add Hub entity event channels to ipc-contract.ts
+- **Status**: COMPLETE
+- **Files**: `src/shared/ipc-contract.ts`
+- **Events added**: hub.tasks.created/updated/deleted/progress/completed, hub.devices.online/offline, hub.workspaces.updated, hub.projects.updated
 
 ---
 
 ## Wave 1: Event Infrastructure
 
-### 1.1 Hub Event Hook
-- [ ] Create `src/renderer/shared/hooks/useHubEvents.ts`
-- [ ] Generic: `useHubEvent(eventName, callback)`
-- [ ] Cleanup on unmount
-- [ ] Type-safe with hub-events.ts types
+### Task 2: Create useHubEvent hook (1.1)
+- **Status**: COMPLETE
+- **Files**: `src/renderer/shared/hooks/useHubEvents.ts`, `src/renderer/shared/hooks/index.ts`
 
-### 1.2 Query Invalidation Setup
-- [ ] Create `src/renderer/shared/lib/hub-query-sync.ts`
-- [ ] Map hub events to query keys
-- [ ] Auto-invalidate on relevant events
-- [ ] Wire into app initialization
+### Task 3: Create hub-query-sync.ts (1.2)
+- **Status**: COMPLETE
+- **Files**: `src/renderer/shared/lib/hub-query-sync.ts`
 
-### 1.3 Connection Status UI
-- [ ] Create `src/renderer/shared/components/HubStatus.tsx`
-- [ ] Show connected/disconnected/reconnecting
-- [ ] Add to TopBar or create StatusBar
+### Task 4: Wire hub-query-sync into Providers (1.3)
+- **Status**: COMPLETE
+- **Files**: `src/renderer/app/providers.tsx`
+
+### Task 5: Create HubStatus component for TopBar (1.4)
+- **Status**: COMPLETE
+- **Files**: `src/renderer/shared/components/HubStatus.tsx`, `src/renderer/app/layouts/TopBar.tsx`
 
 ---
 
 ## Wave 2: Task Integration
 
-### 2.1 Update Task Hooks
-- [ ] Change `useTasks` to use `hub.tasks.list`
-- [ ] Add workspace_id filter parameter
-- [ ] Handle loading/error states
-
-### 2.2 Update Task Mutations
-- [ ] Change `useCreateTask` to `hub.tasks.create`
-- [ ] Change `useUpdateTaskStatus` to `hub.tasks.updateStatus`
-- [ ] Change `useDeleteTask` to `hub.tasks.delete`
-- [ ] Change `useExecuteTask` to `hub.tasks.execute`
-- [ ] Remove optimistic updates (WebSocket handles)
-
-### 2.3 Task Event Listeners
-- [ ] Update `useTaskEvents.ts` for hub events
-- [ ] Invalidate queries on task events
-- [ ] Show toast on task completion
-
-### 2.4 Progress Display
-- [ ] Listen for `hub.tasks.progress` events
-- [ ] Update TaskTableRow progress bar live
-- [ ] Show current phase/agent info
+### Task 6: Update task hooks for Hub events
+- **Status**: COMPLETE
+- **Files**: `src/renderer/features/tasks/hooks/useTaskEvents.ts`
 
 ---
 
 ## Wave 3: Auth & Workspace Integration
 
-### 3.1 Update Auth Store
-- [ ] Remove mock user from store
-- [ ] Store real user from Hub
-- [ ] Track auth state (loading, authenticated, error)
-
-### 3.2 Update Auth Hooks
-- [ ] Change `useLogin` to `hub.auth.login`
-- [ ] Change `useRegister` to `hub.auth.register`
-- [ ] Change `useLogout` to `hub.auth.logout`
-- [ ] Add `useCurrentUser` with `hub.auth.me`
-
-### 3.3 Auth Flow UI
-- [ ] Redirect to login if not authenticated
-- [ ] Show loading during auth check
-- [ ] Handle auth errors with user feedback
-
-### 3.4 Workspace Hooks
-- [ ] Update `useWorkspaces` to use hub channels
-- [ ] Add device selection for host assignment
-- [ ] Handle workspace switching
+### Task 7: Auth/workspace hook validation + hub events
+- **Status**: COMPLETE
+- **Files**: `src/renderer/features/settings/hooks/useWorkspaceEvents.ts`, `src/renderer/features/settings/index.ts`
 
 ---
 
 ## Wave 4: Polish
 
-### 4.1 Remove Unused Code
-- [ ] Identify dead IPC handlers
-- [ ] Archive or delete unused code
-- [ ] Clean up imports
-
-### 4.2 Loading & Error States
-- [ ] Add skeleton loaders
-- [ ] Meaningful error messages
-- [ ] Retry buttons
-
-### 4.3 Connection Lost Handling
-- [ ] Show banner when disconnected
-- [ ] Disable/queue mutations
-- [ ] Re-enable on reconnect
-
-### 4.4 Testing
-- [ ] Test all flows end-to-end
-- [ ] Verify multi-device sync
-- [ ] Test offline/reconnect
+### Task 8: Offline banner
+- **Status**: COMPLETE
+- **Files**: `src/renderer/app/layouts/RootLayout.tsx`
 
 ---
 
-## Files Created/Modified
+## Files Created
 
-*(Update as work progresses)*
+| File | Purpose |
+|------|---------|
+| `src/renderer/shared/hooks/useHubEvents.ts` | Hub event subscription hook |
+| `src/renderer/shared/lib/hub-query-sync.ts` | Hub event -> React Query invalidation |
+| `src/renderer/shared/components/HubStatus.tsx` | TopBar connection indicator |
+| `src/renderer/features/settings/hooks/useWorkspaceEvents.ts` | Workspace hub event hook |
 
----
+## Files Modified
 
-## Blockers
-
-None.
+| File | Change |
+|------|--------|
+| `src/shared/ipc-contract.ts` | 9 hub entity event channels added |
+| `src/renderer/shared/hooks/index.ts` | Export useHubEvent |
+| `src/renderer/app/providers.tsx` | Wire hub-query-sync |
+| `src/renderer/app/layouts/TopBar.tsx` | Add HubStatus component |
+| `src/renderer/app/layouts/RootLayout.tsx` | Add offline banner |
+| `src/renderer/features/tasks/hooks/useTaskEvents.ts` | Hub task event listeners |
+| `src/renderer/features/settings/index.ts` | Export useWorkspaceEvents |
+| `src/renderer/features/auth/api/useAuth.ts` | Fix auth.me input type |

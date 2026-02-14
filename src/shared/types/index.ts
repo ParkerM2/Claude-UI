@@ -26,7 +26,9 @@ export type * from './voice';
 export type * from './screen';
 export type * from './briefing';
 export type * from './workspace';
+export type * from './hub-events';
 export * from './notifications';
+export { HUB_EVENT_CHANNELS } from './hub-events';
 export { VOICE_LANGUAGES, DEFAULT_VOICE_CONFIG } from './voice';
 
 /**

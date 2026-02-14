@@ -60,6 +60,7 @@ import type { GitService } from '../services/git/git-service';
 import type { WorktreeService } from '../services/git/worktree-service';
 import type { GitHubService } from '../services/github/github-service';
 import type { HubApiClient } from '../services/hub/hub-api-client';
+import type { HubAuthService } from '../services/hub/hub-auth-service';
 import type { HubConnectionManager } from '../services/hub/hub-connection';
 import type { HubSyncService } from '../services/hub/hub-sync';
 import type { IdeasService } from '../services/ideas/ideas-service';
@@ -118,7 +119,8 @@ export interface Services {
   briefingService: BriefingService;
   hotkeyManager: HotkeyManager;
   appUpdateService: AppUpdateService;
-  hubApiClient: HubApiClient | null;
+  hubApiClient: HubApiClient;
+  hubAuthService: HubAuthService;
   taskLauncher: TaskLauncherService;
   dataDir: string;
   providers: Map<string, OAuthConfig>;
@@ -145,7 +147,7 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   });
   registerAgentHandlers(router, services.agentService);
   registerAlertHandlers(router, services.alertService);
-  registerAuthHandlers(router);
+  registerAuthHandlers(router, { hubAuthService: services.hubAuthService });
   registerAppHandlers(router, {
     tokenStore: services.tokenStore,
     providers: services.providers,
@@ -164,7 +166,12 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerSpotifyHandlers(router, services.spotifyService);
   registerGitHandlers(router, services.gitService, services.worktreeService);
   registerGitHubHandlers(router, services.githubService);
-  registerHubHandlers(router, services.hubConnectionManager, services.hubSyncService);
+  registerHubHandlers(
+    router,
+    services.hubConnectionManager,
+    services.hubSyncService,
+    services.hubApiClient,
+  );
   registerMcpHandlers(router, services.mcpManager);
   registerMergeHandlers(router, services.mergeService);
   registerNotificationHandlers(router, services.notificationManager);

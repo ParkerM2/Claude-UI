@@ -10,6 +10,7 @@ import { FolderOpen, Plus, X } from 'lucide-react';
 
 import { ROUTES, PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 
+import { HubStatus } from '@renderer/shared/components/HubStatus';
 import { cn } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
 
@@ -89,9 +90,12 @@ export function TopBar() {
         </button>
       </div>
 
-      {/* Right: Command bar */}
-      <div className="ml-2 w-80 shrink-0">
-        <CommandBar />
+      {/* Right: Hub status + Command bar */}
+      <div className="ml-2 flex shrink-0 items-center gap-2">
+        <HubStatus />
+        <div className="w-80">
+          <CommandBar />
+        </div>
       </div>
     </div>
   );

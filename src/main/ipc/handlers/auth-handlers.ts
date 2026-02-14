@@ -1,35 +1,87 @@
 /**
- * Auth IPC handlers — stub implementation returning mock data
+ * Auth IPC handlers — real Hub API integration
+ *
+ * Handles user authentication via the Hub server.
+ * Tokens are stored securely via the shared TokenStore.
  */
+
+import type { HubAuthService } from '@main/services/hub/hub-auth-service';
 
 import type { IpcRouter } from '../router';
 
-const MOCK_USER = {
-  id: 'usr_mock_001',
-  email: 'user@example.com',
-  displayName: 'Mock User',
-};
+export interface AuthHandlerDependencies {
+  hubAuthService: HubAuthService;
+}
 
-const MOCK_TOKEN = 'mock-jwt-token-stub';
+export function registerAuthHandlers(
+  router: IpcRouter,
+  deps: AuthHandlerDependencies,
+): void {
+  const { hubAuthService } = deps;
 
-export function registerAuthHandlers(router: IpcRouter): void {
-  router.handle('auth.login', ({ email }) =>
-    Promise.resolve({
-      token: MOCK_TOKEN,
-      user: { ...MOCK_USER, email },
-    }),
-  );
+  router.handle('auth.login', async ({ email, password }) => {
+    const result = await hubAuthService.login({ email, password });
 
-  router.handle('auth.register', ({ email, displayName }) =>
-    Promise.resolve({
-      token: MOCK_TOKEN,
-      user: { ...MOCK_USER, email, displayName },
-    }),
-  );
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Login failed');
+    }
 
-  router.handle('auth.me', () => Promise.resolve(MOCK_USER));
+    const { user, accessToken } = result.data;
+    return {
+      token: accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+      },
+    };
+  });
 
-  router.handle('auth.logout', () => Promise.resolve({ success: true }));
+  router.handle('auth.register', async ({ email, password, displayName }) => {
+    const result = await hubAuthService.register({ email, password, displayName });
 
-  router.handle('auth.refresh', () => Promise.resolve({ token: MOCK_TOKEN }));
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Registration failed');
+    }
+
+    const { user, accessToken } = result.data;
+    return {
+      token: accessToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+      },
+    };
+  });
+
+  router.handle('auth.me', async () => {
+    const result = await hubAuthService.getCurrentUser();
+
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Failed to get current user');
+    }
+
+    const user = result.data;
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+    };
+  });
+
+  router.handle('auth.logout', async () => {
+    await hubAuthService.logout();
+    return { success: true };
+  });
+
+  router.handle('auth.refresh', async () => {
+    const result = await hubAuthService.refreshToken();
+
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Token refresh failed');
+    }
+
+    return { token: result.data.accessToken };
+  });
 }

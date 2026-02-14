@@ -1504,6 +1504,75 @@ export const ipcInvokeContract = {
     input: z.object({}),
     output: z.object({ success: z.boolean() }),
   },
+  'hub.ws.status': {
+    input: z.object({}),
+    output: z.object({
+      status: z.enum(['connected', 'disconnected', 'connecting', 'error']),
+      lastConnectedAt: z.string().nullable(),
+      reconnectAttempts: z.number(),
+      error: z.string().nullable(),
+    }),
+  },
+
+  // ── Hub Tasks ──
+  'hub.tasks.list': {
+    input: z.object({
+      projectId: z.string().optional(),
+      workspaceId: z.string().optional(),
+    }),
+    output: z.object({ tasks: z.array(z.unknown()) }),
+  },
+  'hub.tasks.get': {
+    input: z.object({ taskId: z.string() }),
+    output: z.unknown(),
+  },
+  'hub.tasks.create': {
+    input: z.object({
+      projectId: z.string(),
+      workspaceId: z.string().optional(),
+      title: z.string(),
+      description: z.string().optional(),
+      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    }),
+    output: z.unknown(),
+  },
+  'hub.tasks.update': {
+    input: z.object({
+      taskId: z.string(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']).optional(),
+      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      metadata: z.record(z.string(), z.unknown()).optional(),
+    }),
+    output: z.unknown(),
+  },
+  'hub.tasks.updateStatus': {
+    input: z.object({
+      taskId: z.string(),
+      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+    }),
+    output: z.unknown(),
+  },
+  'hub.tasks.delete': {
+    input: z.object({ taskId: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'hub.tasks.execute': {
+    input: z.object({ taskId: z.string() }),
+    output: z.object({ sessionId: z.string(), status: z.enum(['started', 'queued']) }),
+  },
+  'hub.tasks.cancel': {
+    input: z.object({
+      taskId: z.string(),
+      reason: z.string().optional(),
+    }),
+    output: z.object({
+      success: z.boolean(),
+      previousStatus: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+    }),
+  },
 
   // ── GitHub ──
   'github.listPrs': {
@@ -2003,7 +2072,7 @@ export const ipcInvokeContract = {
     }),
   },
   'auth.me': {
-    input: z.object({ token: z.string() }),
+    input: z.object({}),
     output: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
   },
   'auth.logout': {
@@ -2011,7 +2080,7 @@ export const ipcInvokeContract = {
     output: z.object({ success: z.boolean() }),
   },
   'auth.refresh': {
-    input: z.object({ token: z.string() }),
+    input: z.object({}),
     output: z.object({ token: z.string() }),
   },
 
@@ -2189,6 +2258,39 @@ export const ipcEventContract = {
   },
   'event:hub.syncCompleted': {
     payload: z.object({ entities: z.array(z.string()), syncedCount: z.number() }),
+  },
+
+  // ── Hub Entity Events ──
+  'event:hub.tasks.created': {
+    payload: z.object({ taskId: z.string(), projectId: z.string() }),
+  },
+  'event:hub.tasks.updated': {
+    payload: z.object({ taskId: z.string(), projectId: z.string() }),
+  },
+  'event:hub.tasks.deleted': {
+    payload: z.object({ taskId: z.string(), projectId: z.string() }),
+  },
+  'event:hub.tasks.progress': {
+    payload: z.object({ taskId: z.string(), progress: z.number(), phase: z.string() }),
+  },
+  'event:hub.tasks.completed': {
+    payload: z.object({
+      taskId: z.string(),
+      projectId: z.string(),
+      result: z.enum(['success', 'failure']),
+    }),
+  },
+  'event:hub.devices.online': {
+    payload: z.object({ deviceId: z.string(), name: z.string() }),
+  },
+  'event:hub.devices.offline': {
+    payload: z.object({ deviceId: z.string() }),
+  },
+  'event:hub.workspaces.updated': {
+    payload: z.object({ workspaceId: z.string() }),
+  },
+  'event:hub.projects.updated': {
+    payload: z.object({ projectId: z.string() }),
   },
 
   // ── GitHub Events ──

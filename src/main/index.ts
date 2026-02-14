@@ -5,6 +5,7 @@
  * This file stays small — logic lives in services.
  */
 
+import { hostname } from 'node:os';
 import { join } from 'node:path';
 
 import { app, BrowserWindow, shell } from 'electron';
@@ -36,6 +37,8 @@ import { createGitService } from './services/git/git-service';
 import { createPolyrepoService } from './services/git/polyrepo-service';
 import { createWorktreeService } from './services/git/worktree-service';
 import { createGitHubService } from './services/github/github-service';
+import { createHubApiClient } from './services/hub/hub-api-client';
+import { createHubAuthService } from './services/hub/hub-auth-service';
 import { createHubConnectionManager } from './services/hub/hub-connection';
 import { createHubSyncService } from './services/hub/hub-sync';
 import { createWebhookRelay } from './services/hub/webhook-relay';
@@ -65,6 +68,7 @@ import { createQuickInputWindow } from './tray/quick-input';
 
 import type { OAuthConfig } from './auth/types';
 import type { BriefingService } from './services/briefing/briefing-service';
+import type { HubApiClient } from './services/hub/hub-api-client';
 import type { SettingsService } from './services/settings/settings-service';
 import type { HotkeyManager } from './tray/hotkey-manager';
 
@@ -77,6 +81,8 @@ let notificationManagerRef: ReturnType<typeof createNotificationManager> | null 
 let briefingServiceRef: BriefingService | null = null;
 let hotkeyManagerRef: HotkeyManager | null = null;
 let settingsServiceRef: SettingsService | null = null;
+let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
+let registeredDeviceId: string | null = null;
 
 function getMainWindow(): BrowserWindow | null {
   return mainWindow;
@@ -211,10 +217,77 @@ function initializeApp(): void {
   const mcpRegistry = createMcpRegistry();
   const mcpManager = createMcpManager({ registry: mcpRegistry });
 
-  // Hub services — connection manager + sync queue
+  // Hub services — connection manager + sync queue + auth
   const hubConnectionManager = createHubConnectionManager(router);
   hubConnectionManagerRef = hubConnectionManager;
   const hubSyncService = createHubSyncService(hubConnectionManager);
+
+  // Hub auth service — user authentication against the Hub server
+  const hubAuthService = createHubAuthService({
+    tokenStore,
+    getHubUrl: () => hubConnectionManager.getConnection()?.hubUrl ?? null,
+  });
+
+  // Hub API client — typed HTTP helpers for Hub API calls
+  const hubApiClient = createHubApiClient(
+    () => hubConnectionManager.getConnection()?.hubUrl ?? null,
+    () => hubAuthService.getAccessToken(),
+  );
+
+  // Device registration and heartbeat interval (30 seconds)
+  const HEARTBEAT_INTERVAL_MS = 30_000;
+
+  async function registerDeviceAndStartHeartbeat(client: HubApiClient): Promise<void> {
+    const machineId = hostname();
+    const deviceName = `${hostname()} (Desktop)`;
+
+    try {
+      const result = await client.registerDevice({
+        machineId,
+        deviceType: 'desktop',
+        deviceName,
+        capabilities: { canExecute: true, repos: [] },
+        appVersion: app.getVersion(),
+      });
+
+      if (result.ok && result.data) {
+        registeredDeviceId = result.data.id;
+        console.log(`[Hub] Device registered: ${result.data.id}`);
+
+        // Start heartbeat interval
+        if (heartbeatIntervalId !== null) {
+          clearInterval(heartbeatIntervalId);
+        }
+
+        heartbeatIntervalId = setInterval(() => {
+          if (registeredDeviceId) {
+            void client.heartbeat(registeredDeviceId).then((res) => {
+              if (!res.ok) {
+                console.warn('[Hub] Heartbeat failed:', res.error);
+              }
+              return res;
+            });
+          }
+        }, HEARTBEAT_INTERVAL_MS);
+
+        console.log('[Hub] Heartbeat interval started (30s)');
+      } else {
+        console.warn('[Hub] Device registration failed:', result.error);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Hub] Device registration error:', message);
+    }
+  }
+
+  // Register device when Hub connection is established and user is authenticated
+  // This is triggered when the connection status changes to 'connected'
+  hubConnectionManager.onWebSocketMessage(() => {
+    // Only register if not already registered and user is authenticated
+    if (registeredDeviceId === null && hubAuthService.isAuthenticated()) {
+      void registerDeviceAndStartHeartbeat(hubApiClient);
+    }
+  });
 
   // GitHub service — wraps GitHub REST API with OAuth tokens
   const githubService = createGitHubService({ oauthManager, router });
@@ -370,7 +443,8 @@ function initializeApp(): void {
     briefingService,
     hotkeyManager,
     appUpdateService,
-    hubApiClient: null,
+    hubApiClient,
+    hubAuthService,
     taskLauncher,
     dataDir,
     providers,
@@ -405,4 +479,9 @@ app.on('before-quit', () => {
   hubConnectionManagerRef?.dispose();
   notificationManagerRef?.dispose();
   briefingServiceRef?.stopScheduler();
+  // Clear device heartbeat interval
+  if (heartbeatIntervalId !== null) {
+    clearInterval(heartbeatIntervalId);
+    heartbeatIntervalId = null;
+  }
 });

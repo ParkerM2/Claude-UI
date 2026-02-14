@@ -10,12 +10,19 @@ import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 
 import type {
+  DeleteResponse,
+  Device,
+  DeviceCapabilities,
+  DeviceRegisterRequest,
+  DeviceType,
   ProgressPushRequest,
   ProgressPushResponse,
   Task,
+  TaskCancelResponse,
   TaskCreateRequest,
+  TaskExecuteResponse,
+  TaskStatus,
   TaskUpdateRequest,
-  DeleteResponse,
 } from '@shared/types/hub-protocol';
 
 // ─── Result type ────────────────────────────────────────────
@@ -46,6 +53,19 @@ export interface HubApiClient {
     taskId: string,
     body: ProgressPushRequest,
   ) => Promise<HubApiResponse<ProgressPushResponse>>;
+  updateTaskStatus: (taskId: string, status: TaskStatus) => Promise<HubApiResponse<Task>>;
+  executeTask: (taskId: string) => Promise<HubApiResponse<TaskExecuteResponse>>;
+  cancelTask: (taskId: string, reason?: string) => Promise<HubApiResponse<TaskCancelResponse>>;
+
+  // ── Device registration ──
+  registerDevice: (data: {
+    machineId: string;
+    deviceType: DeviceType;
+    deviceName: string;
+    capabilities: DeviceCapabilities;
+    appVersion: string;
+  }) => Promise<HubApiResponse<Device>>;
+  heartbeat: (deviceId: string) => Promise<HubApiResponse<{ success: boolean }>>;
 }
 
 // ─── Internal HTTP helper ───────────────────────────────────
@@ -204,6 +224,33 @@ export function createHubApiClient(
 
     pushProgress(taskId, body) {
       return hubPost(`/api/tasks/${encodeURIComponent(taskId)}/progress`, body);
+    },
+
+    updateTaskStatus(taskId, status) {
+      return hubPatch(`/api/tasks/${encodeURIComponent(taskId)}/status`, { status });
+    },
+
+    executeTask(taskId) {
+      return hubPost(`/api/tasks/${encodeURIComponent(taskId)}/execute`, {});
+    },
+
+    cancelTask(taskId, reason) {
+      return hubPost(`/api/tasks/${encodeURIComponent(taskId)}/cancel`, { reason });
+    },
+
+    registerDevice(data) {
+      const body: DeviceRegisterRequest = {
+        machineId: data.machineId,
+        deviceType: data.deviceType,
+        deviceName: data.deviceName,
+        capabilities: data.capabilities,
+        appVersion: data.appVersion,
+      };
+      return hubPost('/api/devices', body);
+    },
+
+    heartbeat(deviceId) {
+      return hubPost(`/api/devices/${encodeURIComponent(deviceId)}/heartbeat`, {});
     },
   };
 }

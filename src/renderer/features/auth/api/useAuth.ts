@@ -59,7 +59,7 @@ export function useCurrentUser() {
 
   return useQuery({
     queryKey: authKeys.me(),
-    queryFn: () => ipc('auth.me', { token: token ?? '' }),
+    queryFn: () => ipc('auth.me', {}),
     enabled: token !== null,
     staleTime: 300_000,
   });

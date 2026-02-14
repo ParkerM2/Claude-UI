@@ -19,7 +19,7 @@ const activeWatchers = new Map<string, ProgressWatcher>();
 
 export function registerWorkflowHandlers(
   router: IpcRouter,
-  hubApiClient: HubApiClient | null,
+  hubApiClient: HubApiClient,
   taskLauncher: TaskLauncherService,
 ): void {
   router.handle('workflow.watchProgress', ({ projectPath }) => {
@@ -32,13 +32,11 @@ export function registerWorkflowHandlers(
 
     const watcher = createProgressWatcher(projectPath);
 
-    // If hub client is available, wire up the syncer
-    if (hubApiClient) {
-      const syncer = createProgressSyncer(hubApiClient);
-      watcher.onProgress((data) => {
-        void syncer.syncProgress(data.taskId, data);
-      });
-    }
+    // Wire up the syncer for Hub progress sync
+    const syncer = createProgressSyncer(hubApiClient);
+    watcher.onProgress((data) => {
+      void syncer.syncProgress(data.taskId, data);
+    });
 
     // Also emit IPC events for renderer updates
     watcher.onProgress((data) => {
