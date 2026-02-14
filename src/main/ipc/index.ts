@@ -9,8 +9,11 @@ import { registerAgentHandlers } from './handlers/agent-handlers';
 import { registerAlertHandlers } from './handlers/alert-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerAssistantHandlers } from './handlers/assistant-handlers';
+import { registerBriefingHandlers } from './handlers/briefing-handlers';
 import { registerCalendarHandlers } from './handlers/calendar-handlers';
 import { registerChangelogHandlers } from './handlers/changelog-handlers';
+import { registerClaudeHandlers } from './handlers/claude-handlers';
+import { registerEmailHandlers } from './handlers/email-handlers';
 import { registerFitnessHandlers } from './handlers/fitness-handlers';
 import { registerGitHandlers } from './handlers/git-handlers';
 import { registerGitHubHandlers } from './handlers/github-handlers';
@@ -21,13 +24,16 @@ import { registerMcpHandlers } from './handlers/mcp-handlers';
 import { registerMergeHandlers } from './handlers/merge-handlers';
 import { registerMilestonesHandlers } from './handlers/milestones-handlers';
 import { registerNotesHandlers } from './handlers/notes-handlers';
+import { registerNotificationHandlers } from './handlers/notification-handlers';
 import { registerPlannerHandlers } from './handlers/planner-handlers';
 import { registerProjectHandlers } from './handlers/project-handlers';
+import { registerScreenHandlers } from './handlers/screen-handlers';
 import { registerSettingsHandlers } from './handlers/settings-handlers';
 import { registerSpotifyHandlers } from './handlers/spotify-handlers';
 import { registerTaskHandlers } from './handlers/task-handlers';
 import { registerTerminalHandlers } from './handlers/terminal-handlers';
 import { registerTimeHandlers } from './handlers/time-handlers';
+import { registerVoiceHandlers } from './handlers/voice-handlers';
 import { registerWebhookSettingsHandlers } from './handlers/webhook-settings-handlers';
 
 import type { IpcRouter } from './router';
@@ -38,8 +44,11 @@ import type { AgentQueue } from '../services/agent/agent-queue';
 import type { AgentService } from '../services/agent/agent-service';
 import type { AlertService } from '../services/alerts/alert-service';
 import type { AssistantService } from '../services/assistant/assistant-service';
+import type { BriefingService } from '../services/briefing/briefing-service';
 import type { CalendarService } from '../services/calendar/calendar-service';
 import type { ChangelogService } from '../services/changelog/changelog-service';
+import type { ClaudeClient } from '../services/claude';
+import type { EmailService } from '../services/email/email-service';
 import type { FitnessService } from '../services/fitness/fitness-service';
 import type { GitService } from '../services/git/git-service';
 import type { WorktreeService } from '../services/git/worktree-service';
@@ -51,13 +60,18 @@ import type { InsightsService } from '../services/insights/insights-service';
 import type { MergeService } from '../services/merge/merge-service';
 import type { MilestonesService } from '../services/milestones/milestones-service';
 import type { NotesService } from '../services/notes/notes-service';
+import type { NotificationManager } from '../services/notifications';
 import type { PlannerService } from '../services/planner/planner-service';
 import type { ProjectService } from '../services/project/project-service';
 import type { TaskService } from '../services/project/task-service';
+import type { ScreenCaptureService } from '../services/screen/screen-capture-service';
 import type { SettingsService } from '../services/settings/settings-service';
 import type { SpotifyService } from '../services/spotify/spotify-service';
+import type { GithubTaskImporter } from '../services/tasks/github-importer';
+import type { TaskDecomposer } from '../services/tasks/task-decomposer';
 import type { TerminalService } from '../services/terminal/terminal-service';
 import type { TimeParserService } from '../services/time-parser/time-parser-service';
+import type { VoiceService } from '../services/voice/voice-service';
 
 export interface Services {
   projectService: ProjectService;
@@ -66,10 +80,12 @@ export interface Services {
   settingsService: SettingsService;
   agentService: AgentService;
   agentQueue: AgentQueue;
+  claudeClient: ClaudeClient;
   alertService: AlertService;
   assistantService: AssistantService;
   calendarService: CalendarService;
   changelogService: ChangelogService;
+  emailService: EmailService;
   fitnessService: FitnessService;
   hubConnectionManager: HubConnectionManager;
   hubSyncService: HubSyncService;
@@ -78,6 +94,7 @@ export interface Services {
   mcpManager: McpManager;
   milestonesService: MilestonesService;
   notesService: NotesService;
+  notificationManager: NotificationManager;
   plannerService: PlannerService;
   spotifyService: SpotifyService;
   gitService: GitService;
@@ -85,6 +102,11 @@ export interface Services {
   worktreeService: WorktreeService;
   mergeService: MergeService;
   timeParserService: TimeParserService;
+  taskDecomposer: TaskDecomposer;
+  githubImporter: GithubTaskImporter;
+voiceService: VoiceService;
+  screenCaptureService: ScreenCaptureService;
+  briefingService: BriefingService;
   dataDir: string;
   providers: Map<string, OAuthConfig>;
   tokenStore: TokenStore;
@@ -97,6 +119,8 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
     services.taskService,
     services.agentService,
     services.projectService,
+    services.taskDecomposer,
+    services.githubImporter,
   );
   registerTerminalHandlers(router, services.terminalService);
   registerSettingsHandlers(router, services.settingsService, {
@@ -114,7 +138,9 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   });
   registerAssistantHandlers(router, services.assistantService);
   registerCalendarHandlers(router, services.calendarService);
+  registerClaudeHandlers(router, services.claudeClient);
   registerChangelogHandlers(router, services.changelogService);
+  registerEmailHandlers(router, services.emailService);
   registerFitnessHandlers(router, services.fitnessService);
   registerIdeasHandlers(router, services.ideasService);
   registerInsightsHandlers(router, services.insightsService);
@@ -127,6 +153,10 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerHubHandlers(router, services.hubConnectionManager, services.hubSyncService);
   registerMcpHandlers(router, services.mcpManager);
   registerMergeHandlers(router, services.mergeService);
+  registerNotificationHandlers(router, services.notificationManager);
   registerTimeHandlers(router, services.timeParserService);
+  registerVoiceHandlers(router, services.voiceService);
   registerWebhookSettingsHandlers(router, services.settingsService);
+registerScreenHandlers(router, services.screenCaptureService);
+  registerBriefingHandlers(router, services.briefingService);
 }

@@ -12,6 +12,16 @@ release/
 !.env.example
 settings.json
 
+# Certificates and keys (NEVER commit)
+certs/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Security files
+logs/security/
+
 # Runtime data
 .auto-claude/
 

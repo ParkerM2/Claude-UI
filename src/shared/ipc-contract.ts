@@ -75,6 +75,32 @@ const TaskDraftSchema = z.object({
   complexity: z.enum(['simple', 'standard', 'complex']).optional(),
 });
 
+// ── Smart Task Creation Schemas ───────────────────────────────
+
+const EstimatedEffortSchema = z.enum(['small', 'medium', 'large']);
+const SuggestedPrioritySchema = z.enum(['low', 'medium', 'high']);
+
+const TaskSuggestionSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  estimatedEffort: EstimatedEffortSchema,
+  suggestedPriority: SuggestedPrioritySchema,
+});
+
+const TaskDecompositionResultSchema = z.object({
+  originalDescription: z.string(),
+  suggestions: z.array(TaskSuggestionSchema),
+});
+
+const GithubIssueImportSchema = z.object({
+  issueNumber: z.number(),
+  issueUrl: z.string(),
+  title: z.string(),
+  body: z.string(),
+  labels: z.array(z.string()),
+  assignees: z.array(z.string()),
+});
+
 const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -547,6 +573,246 @@ const WebhookConfigSchema = z.object({
   }),
 });
 
+// ─── Claude SDK Schemas ───────────────────────────────────────
+
+const ClaudeMessageSchema = z.object({
+  role: z.enum(['user', 'assistant']),
+  content: z.string(),
+});
+
+const ClaudeConversationSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  messageCount: z.number(),
+});
+
+const ClaudeTokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+});
+
+const ClaudeSendMessageResponseSchema = z.object({
+  conversationId: z.string(),
+  message: z.string(),
+  usage: ClaudeTokenUsageSchema,
+});
+
+const ClaudeStreamChunkSchema = z.object({
+  conversationId: z.string(),
+  type: z.enum(['content_delta', 'message_start', 'message_stop', 'error']),
+  content: z.string().optional(),
+  usage: ClaudeTokenUsageSchema.optional(),
+  error: z.string().optional(),
+});
+
+// ─── Email Schemas ─────────────────────────────────────────────
+
+const EmailAttachmentSchema = z.object({
+  filename: z.string(),
+  content: z.union([z.string(), z.instanceof(Buffer)]),
+  contentType: z.string().optional(),
+  path: z.string().optional(),
+});
+
+const EmailSchema = z.object({
+  to: z.array(z.string()),
+  cc: z.array(z.string()).optional(),
+  bcc: z.array(z.string()).optional(),
+  subject: z.string(),
+  body: z.string(),
+  html: z.string().optional(),
+  attachments: z.array(EmailAttachmentSchema).optional(),
+  replyTo: z.string().optional(),
+});
+
+const SmtpProviderSchema = z.enum(['gmail', 'outlook', 'yahoo', 'custom']);
+
+const SmtpConfigSchema = z.object({
+  host: z.string(),
+  port: z.number(),
+  secure: z.boolean(),
+  auth: z.object({
+    user: z.string(),
+    pass: z.string(),
+  }),
+  from: z.string(),
+  provider: SmtpProviderSchema.optional(),
+});
+
+const EmailSendResultSchema = z.object({
+  success: z.boolean(),
+  messageId: z.string().optional(),
+  error: z.string().optional(),
+});
+
+const EmailStatusSchema = z.enum(['pending', 'sent', 'failed', 'queued']);
+
+const QueuedEmailSchema = z.object({
+  id: z.string(),
+  email: EmailSchema,
+  status: EmailStatusSchema,
+  attempts: z.number(),
+  lastAttempt: z.string().optional(),
+  error: z.string().optional(),
+  createdAt: z.string(),
+});
+
+// ─── Notification Schemas ──────────────────────────────────────
+
+const NotificationSourceSchema = z.enum(['slack', 'github']);
+
+const SlackNotificationTypeSchema = z.enum(['mention', 'dm', 'channel', 'thread_reply']);
+
+const GitHubNotificationTypeSchema = z.enum([
+  'pr_review',
+  'pr_comment',
+  'issue_mention',
+  'ci_status',
+  'pr_merged',
+  'pr_closed',
+  'issue_assigned',
+]);
+
+const NotificationTypeSchema = z.union([SlackNotificationTypeSchema, GitHubNotificationTypeSchema]);
+
+const NotificationMetadataSchema = z.object({
+  channelId: z.string().optional(),
+  channelName: z.string().optional(),
+  userId: z.string().optional(),
+  userName: z.string().optional(),
+  threadTs: z.string().optional(),
+  owner: z.string().optional(),
+  repo: z.string().optional(),
+  prNumber: z.number().optional(),
+  issueNumber: z.number().optional(),
+  ciStatus: z.enum(['pending', 'success', 'failure']).optional(),
+});
+
+const NotificationSchema = z.object({
+  id: z.string(),
+  source: NotificationSourceSchema,
+  type: NotificationTypeSchema,
+  title: z.string(),
+  body: z.string(),
+  url: z.string(),
+  timestamp: z.string(),
+  read: z.boolean(),
+  metadata: NotificationMetadataSchema.optional(),
+});
+
+const NotificationFilterSchema = z.object({
+  sources: z.array(NotificationSourceSchema).optional(),
+  types: z.array(NotificationTypeSchema).optional(),
+  keywords: z.array(z.string()).optional(),
+  unreadOnly: z.boolean().optional(),
+});
+
+const SlackWatcherConfigSchema = z.object({
+  enabled: z.boolean(),
+  pollIntervalSeconds: z.number(),
+  channels: z.array(z.string()),
+  keywords: z.array(z.string()),
+  watchMentions: z.boolean(),
+  watchDms: z.boolean(),
+  watchThreads: z.boolean(),
+});
+
+const GitHubWatcherConfigSchema = z.object({
+  enabled: z.boolean(),
+  pollIntervalSeconds: z.number(),
+  repos: z.array(z.string()),
+  watchPrReviews: z.boolean(),
+  watchPrComments: z.boolean(),
+  watchIssueMentions: z.boolean(),
+  watchCiStatus: z.boolean(),
+});
+
+const NotificationWatcherConfigSchema = z.object({
+  enabled: z.boolean(),
+  slack: SlackWatcherConfigSchema,
+  github: GitHubWatcherConfigSchema,
+});
+
+// ─── Voice Schemas ─────────────────────────────────────────────
+
+const VoiceInputModeSchema = z.enum(['push_to_talk', 'continuous']);
+
+const VoiceConfigSchema = z.object({
+  enabled: z.boolean(),
+  language: z.string(),
+  inputMode: VoiceInputModeSchema,
+});
+
+// ─── Screen Capture Schemas ───────────────────────────────────
+
+const ScreenSourceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  thumbnail: z.string(),
+  display_id: z.string().optional(),
+  appIcon: z.string().optional(),
+});
+
+const ScreenshotSchema = z.object({
+  data: z.string(),
+  timestamp: z.string(),
+  source: ScreenSourceSchema,
+  width: z.number(),
+  height: z.number(),
+});
+
+const ScreenPermissionStatusSchema = z.enum(['granted', 'denied', 'not-determined', 'restricted']);
+
+// ─── Briefing Schemas ──────────────────────────────────────────
+
+const SuggestionTypeSchema = z.enum(['stale_project', 'parallel_tasks', 'blocked_task']);
+
+const SuggestionActionSchema = z.object({
+  label: z.string(),
+  targetId: z.string().optional(),
+  targetType: z.enum(['project', 'task']).optional(),
+});
+
+const SuggestionSchema = z.object({
+  type: SuggestionTypeSchema,
+  title: z.string(),
+  description: z.string(),
+  action: SuggestionActionSchema.optional(),
+});
+
+const TaskSummarySchema = z.object({
+  dueToday: z.number(),
+  completedYesterday: z.number(),
+  overdue: z.number(),
+  inProgress: z.number(),
+});
+
+const AgentActivitySummarySchema = z.object({
+  runningCount: z.number(),
+  completedToday: z.number(),
+  errorCount: z.number(),
+});
+
+const DailyBriefingSchema = z.object({
+  id: z.string(),
+  date: z.string(),
+  summary: z.string(),
+  taskSummary: TaskSummarySchema,
+  agentActivity: AgentActivitySummarySchema,
+  suggestions: z.array(SuggestionSchema),
+  githubNotifications: z.number().optional(),
+  generatedAt: z.string(),
+});
+
+const BriefingConfigSchema = z.object({
+  enabled: z.boolean(),
+  scheduledTime: z.string(),
+  includeGitHub: z.boolean(),
+  includeAgentActivity: z.boolean(),
+});
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -607,6 +873,18 @@ export const ipcInvokeContract = {
   'tasks.listAll': {
     input: z.object({}),
     output: z.array(TaskSchema),
+  },
+  'tasks.decompose': {
+    input: z.object({ description: z.string().min(1) }),
+    output: TaskDecompositionResultSchema,
+  },
+  'tasks.importFromGithub': {
+    input: z.object({ url: z.string(), projectId: z.string() }),
+    output: TaskSchema,
+  },
+  'tasks.listGithubIssues': {
+    input: z.object({ owner: z.string(), repo: z.string() }),
+    output: z.array(GithubIssueImportSchema),
   },
 
   // ── Terminals ──
@@ -1379,6 +1657,200 @@ export const ipcInvokeContract = {
     input: z.object({ server: z.string() }),
     output: z.enum(['disconnected', 'connecting', 'connected', 'error']),
   },
+
+  // ── Claude SDK ──
+  'claude.sendMessage': {
+    input: z.object({
+      conversationId: z.string(),
+      message: z.string(),
+      model: z.string().optional(),
+      maxTokens: z.number().optional(),
+      systemPrompt: z.string().optional(),
+    }),
+    output: ClaudeSendMessageResponseSchema,
+  },
+  'claude.streamMessage': {
+    input: z.object({
+      conversationId: z.string(),
+      message: z.string(),
+      model: z.string().optional(),
+      maxTokens: z.number().optional(),
+      systemPrompt: z.string().optional(),
+    }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'claude.createConversation': {
+    input: z.object({ title: z.string().optional() }),
+    output: z.object({ conversationId: z.string() }),
+  },
+  'claude.listConversations': {
+    input: z.object({}),
+    output: z.array(ClaudeConversationSchema),
+  },
+  'claude.getMessages': {
+    input: z.object({ conversationId: z.string() }),
+    output: z.array(ClaudeMessageSchema),
+  },
+  'claude.clearConversation': {
+    input: z.object({ conversationId: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'claude.isConfigured': {
+    input: z.object({}),
+    output: z.object({ configured: z.boolean() }),
+  },
+
+  // ── Email ──
+  'email.send': {
+    input: EmailSchema,
+    output: EmailSendResultSchema,
+  },
+  'email.getConfig': {
+    input: z.object({}),
+    output: SmtpConfigSchema.nullable(),
+  },
+  'email.updateConfig': {
+    input: SmtpConfigSchema,
+    output: z.object({ success: z.boolean() }),
+  },
+  'email.testConnection': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean(), error: z.string().optional() }),
+  },
+  'email.getQueue': {
+    input: z.object({}),
+    output: z.array(QueuedEmailSchema),
+  },
+  'email.retryQueued': {
+    input: z.object({ emailId: z.string() }),
+    output: EmailSendResultSchema,
+  },
+  'email.removeFromQueue': {
+    input: z.object({ emailId: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+
+  // ── Notifications ──
+  'notifications.list': {
+    input: z.object({
+      filter: NotificationFilterSchema.optional(),
+      limit: z.number().optional(),
+    }),
+    output: z.array(NotificationSchema),
+  },
+  'notifications.markRead': {
+    input: z.object({ id: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'notifications.markAllRead': {
+    input: z.object({ source: NotificationSourceSchema.optional() }),
+    output: z.object({ success: z.boolean(), count: z.number() }),
+  },
+  'notifications.getConfig': {
+    input: z.object({}),
+    output: NotificationWatcherConfigSchema,
+  },
+  'notifications.updateConfig': {
+    input: z.object({
+      enabled: z.boolean().optional(),
+      slack: SlackWatcherConfigSchema.partial().optional(),
+      github: GitHubWatcherConfigSchema.partial().optional(),
+    }),
+    output: NotificationWatcherConfigSchema,
+  },
+  'notifications.startWatching': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean(), watchersStarted: z.array(z.string()) }),
+  },
+  'notifications.stopWatching': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean() }),
+  },
+  'notifications.getWatcherStatus': {
+    input: z.object({}),
+    output: z.object({
+      isWatching: z.boolean(),
+      activeWatchers: z.array(NotificationSourceSchema),
+      lastPollTime: z.record(NotificationSourceSchema, z.string()).optional(),
+      errors: z.record(NotificationSourceSchema, z.string()).optional(),
+    }),
+  },
+
+// ── Voice ──
+  'voice.getConfig': {
+    input: z.object({}),
+    output: VoiceConfigSchema,
+  },
+  'voice.updateConfig': {
+    input: z.object({
+      enabled: z.boolean().optional(),
+      language: z.string().optional(),
+      inputMode: VoiceInputModeSchema.optional(),
+    }),
+    output: VoiceConfigSchema,
+  },
+  'voice.checkPermission': {
+    input: z.object({}),
+    output: z.object({
+      granted: z.boolean(),
+      canRequest: z.boolean(),
+    }),
+  },
+
+  // ── Screen Capture ──
+  'screen.listSources': {
+    input: z.object({
+      types: z.array(z.enum(['screen', 'window'])).optional(),
+      thumbnailSize: z.object({ width: z.number(), height: z.number() }).optional(),
+    }),
+    output: z.array(ScreenSourceSchema),
+  },
+  'screen.capture': {
+    input: z.object({
+      sourceId: z.string(),
+      options: z
+        .object({
+          width: z.number().optional(),
+          height: z.number().optional(),
+        })
+        .optional(),
+    }),
+    output: ScreenshotSchema,
+  },
+  'screen.checkPermission': {
+    input: z.object({}),
+    output: z.object({
+      status: ScreenPermissionStatusSchema,
+      platform: z.string(),
+    }),
+  },
+
+  // ── Briefing ──
+  'briefing.getDaily': {
+    input: z.object({}),
+    output: DailyBriefingSchema.nullable(),
+  },
+  'briefing.generate': {
+    input: z.object({}),
+    output: DailyBriefingSchema,
+  },
+  'briefing.getConfig': {
+    input: z.object({}),
+    output: BriefingConfigSchema,
+  },
+  'briefing.updateConfig': {
+    input: z.object({
+      enabled: z.boolean().optional(),
+      scheduledTime: z.string().optional(),
+      includeGitHub: z.boolean().optional(),
+      includeAgentActivity: z.boolean().optional(),
+    }),
+    output: BriefingConfigSchema,
+  },
+  'briefing.getSuggestions': {
+    input: z.object({}),
+    output: z.array(SuggestionSchema),
+  },
 } as const;
 
 /**
@@ -1459,6 +1931,11 @@ export const ipcEventContract = {
       summary: z.string(),
       timestamp: z.string(),
     }),
+  },
+
+  // ── Claude SDK Events ──
+  'event:claude.streamChunk': {
+    payload: ClaudeStreamChunkSchema,
   },
 
   // ── Webhook Events ──
@@ -1542,6 +2019,57 @@ export const ipcEventContract = {
       retryAfter: z.number().optional(),
     }),
   },
+
+  // ── Email Events ──
+  'event:email.sent': {
+    payload: z.object({
+      messageId: z.string(),
+      to: z.array(z.string()),
+      subject: z.string(),
+    }),
+  },
+  'event:email.failed': {
+    payload: z.object({
+      to: z.array(z.string()),
+      subject: z.string(),
+      error: z.string(),
+    }),
+  },
+
+  // ── Notification Events ──
+  'event:notifications.new': {
+    payload: z.object({
+      notification: NotificationSchema,
+    }),
+  },
+  'event:notifications.watcherError': {
+    payload: z.object({
+      source: NotificationSourceSchema,
+      error: z.string(),
+    }),
+  },
+  'event:notifications.watcherStatusChanged': {
+    payload: z.object({
+      source: NotificationSourceSchema,
+      status: z.enum(['started', 'stopped', 'polling', 'error']),
+    }),
+  },
+
+// ── Voice Events ──
+  'event:voice.transcript': {
+    payload: z.object({
+      transcript: z.string(),
+      isFinal: z.boolean(),
+    }),
+  },
+
+  // ── Briefing Events ──
+  'event:briefing.ready': {
+    payload: z.object({
+      briefingId: z.string(),
+      date: z.string(),
+    }),
+  },
 } as const;
 
 // ─── Type Utilities ───────────────────────────────────────────
@@ -1568,6 +2096,11 @@ export {
   TaskSchema,
   TaskDraftSchema,
   TaskStatusSchema,
+  TaskSuggestionSchema,
+  TaskDecompositionResultSchema,
+  EstimatedEffortSchema,
+  SuggestedPrioritySchema,
+  GithubIssueImportSchema,
   ProjectSchema,
   TerminalSessionSchema,
   AppSettingsSchema,
@@ -1628,4 +2161,34 @@ export {
   WebhookCommandSourceContextSchema,
   WebhookCommandSchema,
   WebhookConfigSchema,
+  ClaudeMessageSchema,
+  ClaudeConversationSchema,
+  ClaudeTokenUsageSchema,
+  ClaudeSendMessageResponseSchema,
+  ClaudeStreamChunkSchema,
+  EmailSchema,
+  EmailAttachmentSchema,
+  EmailSendResultSchema,
+  EmailStatusSchema,
+  QueuedEmailSchema,
+  SmtpConfigSchema,
+  SmtpProviderSchema,
+  NotificationSchema,
+  NotificationSourceSchema,
+  NotificationTypeSchema,
+  NotificationFilterSchema,
+  NotificationWatcherConfigSchema,
+  SlackWatcherConfigSchema,
+  GitHubWatcherConfigSchema,
+VoiceInputModeSchema,
+  VoiceConfigSchema,
+  ScreenSourceSchema,
+  ScreenshotSchema,
+  ScreenPermissionStatusSchema,
+  SuggestionTypeSchema,
+  SuggestionSchema,
+  DailyBriefingSchema,
+  BriefingConfigSchema,
+  TaskSummarySchema,
+  AgentActivitySummarySchema,
 };

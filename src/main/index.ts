@@ -25,8 +25,12 @@ import { createAgentQueue } from './services/agent/agent-queue';
 import { createAgentService } from './services/agent/agent-service';
 import { createAlertService } from './services/alerts/alert-service';
 import { createAssistantService } from './services/assistant/assistant-service';
+import { createBriefingService } from './services/briefing/briefing-service';
+import { createSuggestionEngine } from './services/briefing/suggestion-engine';
 import { createCalendarService } from './services/calendar/calendar-service';
 import { createChangelogService } from './services/changelog/changelog-service';
+import { createClaudeClient } from './services/claude';
+import { createEmailService } from './services/email/email-service';
 import { createFitnessService } from './services/fitness/fitness-service';
 import { createGitService } from './services/git/git-service';
 import { createPolyrepoService } from './services/git/polyrepo-service';
@@ -40,21 +44,32 @@ import { createInsightsService } from './services/insights/insights-service';
 import { createMergeService } from './services/merge/merge-service';
 import { createMilestonesService } from './services/milestones/milestones-service';
 import { createNotesService } from './services/notes/notes-service';
+import {
+  createGitHubWatcher,
+  createNotificationManager,
+  createSlackWatcher,
+} from './services/notifications';
 import { createPlannerService } from './services/planner/planner-service';
 import { createProjectService } from './services/project/project-service';
 import { createTaskService } from './services/project/task-service';
+import { createScreenCaptureService } from './services/screen/screen-capture-service';
 import { createSettingsService } from './services/settings/settings-service';
 import { createSpotifyService } from './services/spotify/spotify-service';
+import { createGithubImporter, createTaskDecomposer } from './services/tasks';
 import { createTerminalService } from './services/terminal/terminal-service';
 import { createTimeParserService } from './services/time-parser/time-parser-service';
+import { createVoiceService } from './services/voice/voice-service';
 
 import type { OAuthConfig } from './auth/types';
+import type { BriefingService } from './services/briefing/briefing-service';
 
 let mainWindow: BrowserWindow | null = null;
 let terminalServiceRef: ReturnType<typeof createTerminalService> | null = null;
 let agentServiceRef: ReturnType<typeof createAgentService> | null = null;
 let alertServiceRef: ReturnType<typeof createAlertService> | null = null;
 let hubConnectionManagerRef: ReturnType<typeof createHubConnectionManager> | null = null;
+let notificationManagerRef: ReturnType<typeof createNotificationManager> | null = null;
+let briefingServiceRef: BriefingService | null = null;
 
 function getMainWindow(): BrowserWindow | null {
   return mainWindow;
@@ -151,6 +166,9 @@ function initializeApp(): void {
   // Fitness service — workouts, measurements, goals
   const fitnessService = createFitnessService({ dataDir, router });
 
+  // Email service — SMTP-based email sending with queue support
+  const emailService = createEmailService({ router });
+
   // Insights — aggregates data from tasks, agents, projects
   const insightsService = createInsightsService({
     taskService,
@@ -203,6 +221,69 @@ function initializeApp(): void {
     webhookRelay.handleHubMessage(data);
   });
 
+  // Claude client — wraps Anthropic SDK with conversation management
+  const claudeClient = createClaudeClient({
+    router,
+    getApiKey: () => settingsService.getSettings().anthropicApiKey,
+  });
+
+  // Notification watchers — background polling for Slack and GitHub
+  const notificationManager = createNotificationManager(router);
+  notificationManagerRef = notificationManager;
+
+  // Create and register Slack watcher
+  const slackWatcher = createSlackWatcher({
+    oauthManager,
+    router,
+    notificationManager,
+    getConfig: () => notificationManager.getConfig().slack,
+  });
+  notificationManager.registerWatcher(slackWatcher);
+
+  // Create and register GitHub watcher
+  const githubWatcher = createGitHubWatcher({
+    oauthManager,
+    router,
+    notificationManager,
+    getConfig: () => notificationManager.getConfig().github,
+  });
+  notificationManager.registerWatcher(githubWatcher);
+
+  // Start watchers if previously enabled
+  const notifConfig = notificationManager.getConfig();
+  if (notifConfig.enabled) {
+    notificationManager.startWatching();
+  }
+
+  // Smart task creation services — decomposition + GitHub import
+  const taskDecomposer = createTaskDecomposer({ claudeClient });
+  const githubImporter = createGithubImporter({ githubService, taskService });
+
+// Voice service — manages voice configuration
+  const voiceService = createVoiceService();
+
+  // Screen capture service — uses Electron desktopCapturer
+  const screenCaptureService = createScreenCaptureService();
+
+  // Briefing service — daily briefings with suggestions
+  const suggestionEngine = createSuggestionEngine({
+    projectService,
+    taskService,
+    agentService,
+  });
+  const briefingService = createBriefingService({
+    router,
+    projectService,
+    taskService,
+    agentService,
+    claudeClient,
+    notificationManager,
+    suggestionEngine,
+  });
+  briefingServiceRef = briefingService;
+  // Start the briefing scheduler
+  briefingService.startScheduler();
+
   const services = {
     projectService,
     taskService,
@@ -210,10 +291,12 @@ function initializeApp(): void {
     settingsService,
     agentService,
     agentQueue,
+    claudeClient,
     alertService,
     assistantService,
     calendarService,
     changelogService,
+    emailService,
     fitnessService,
     hubConnectionManager,
     hubSyncService,
@@ -222,6 +305,7 @@ function initializeApp(): void {
     mcpManager,
     milestonesService,
     notesService,
+    notificationManager,
     plannerService,
     spotifyService,
     gitService,
@@ -229,6 +313,11 @@ function initializeApp(): void {
     worktreeService,
     mergeService,
     timeParserService: createTimeParserService(),
+    taskDecomposer,
+    githubImporter,
+voiceService,
+    screenCaptureService,
+    briefingService,
     dataDir,
     providers,
     tokenStore,
@@ -258,4 +347,6 @@ app.on('before-quit', () => {
   agentServiceRef?.dispose();
   alertServiceRef?.stopChecking();
   hubConnectionManagerRef?.dispose();
+  notificationManagerRef?.dispose();
+  briefingServiceRef?.stopScheduler();
 });
