@@ -10,9 +10,9 @@
 | Category | Count |
 |----------|-------|
 | Renderer Features | 25 |
-| Main Process Services | 29 |
-| IPC Handler Files | 30 |
-| IPC Contract Lines | ~2200 |
+| Main Process Services | 33 |
+| IPC Handler Files | 31 |
+| IPC Contract Lines | ~2300 |
 
 ---
 
@@ -83,7 +83,11 @@ Location: `src/main/services/`
 | **fitness** | Health metrics (manual) | getMetrics, logWorkout | - |
 | **git** | Git operations | getStatus, commit, listBranches, listWorktrees | `event:git.*` |
 | **github** | GitHub API integration | listPRs, listIssues, getRepo | - |
-| **hub** | Hub server connection | connect, disconnect, sync | `event:hub.*` |
+| **hub** | Hub server connection | connect, disconnect, sync, listTasks, createTask, executeTask | `event:hub.*` |
+| **hub/api-client** | Hub REST API client | listTasks, getTask, createTask, updateTask, deleteTask, executeTask, cancelTask | - |
+| **hub/auth-service** | Hub authentication | register, login, logout, refreshToken, getCurrentUser | - |
+| **hub/token-store** | Secure token storage | getTokens, setTokens, clearTokens, getAccessToken | - |
+| **hub/websocket** | Hub WebSocket client | connect, disconnect, send, onMessage | `event:hub.tasks.*`, `event:hub.devices.*` |
 | **ideas** | Idea CRUD | list, create, update, delete | - |
 | **insights** | Analytics aggregation | getMetrics, getTimeSeries | - |
 | **merge** | Branch merge operations | previewDiff, checkConflicts, mergeBranch | - |
