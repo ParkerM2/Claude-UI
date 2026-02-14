@@ -162,7 +162,7 @@ export interface WebhookCommand {
 export interface WsBroadcastMessage {
   type: 'mutation';
   entity: string;
-  action: 'created' | 'updated' | 'deleted';
+  action: 'created' | 'updated' | 'deleted' | 'progress' | 'completed' | 'execute' | 'cancel';
   id: string;
   data: unknown;
   timestamp: string;

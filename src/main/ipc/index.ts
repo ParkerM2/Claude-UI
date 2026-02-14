@@ -7,10 +7,10 @@
 
 import { registerAgentHandlers } from './handlers/agent-handlers';
 import { registerAlertHandlers } from './handlers/alert-handlers';
-import { registerAuthHandlers } from './handlers/auth-handlers';
 import { registerAppHandlers } from './handlers/app-handlers';
 import { registerAppUpdateHandlers } from './handlers/app-update-handlers';
 import { registerAssistantHandlers } from './handlers/assistant-handlers';
+import { registerAuthHandlers } from './handlers/auth-handlers';
 import { registerBriefingHandlers } from './handlers/briefing-handlers';
 import { registerCalendarHandlers } from './handlers/calendar-handlers';
 import { registerChangelogHandlers } from './handlers/changelog-handlers';
@@ -38,6 +38,7 @@ import { registerTerminalHandlers } from './handlers/terminal-handlers';
 import { registerTimeHandlers } from './handlers/time-handlers';
 import { registerVoiceHandlers } from './handlers/voice-handlers';
 import { registerWebhookSettingsHandlers } from './handlers/webhook-settings-handlers';
+import { registerWorkspaceHandlers } from './handlers/workspace-handlers';
 
 import type { IpcRouter } from './router';
 import type { TokenStore } from '../auth/token-store';
@@ -139,6 +140,7 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   });
   registerAgentHandlers(router, services.agentService);
   registerAlertHandlers(router, services.alertService);
+  registerAuthHandlers(router);
   registerAppHandlers(router, {
     tokenStore: services.tokenStore,
     providers: services.providers,
@@ -168,4 +170,5 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerBriefingHandlers(router, services.briefingService);
   registerHotkeyHandlers(router, services.settingsService, services.hotkeyManager);
   registerAppUpdateHandlers(router, services.appUpdateService);
+  registerWorkspaceHandlers(router);
 }

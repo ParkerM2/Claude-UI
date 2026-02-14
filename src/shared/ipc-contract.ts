@@ -835,6 +835,33 @@ const BriefingConfigSchema = z.object({
   includeAgentActivity: z.boolean(),
 });
 
+// ─── Workspace Schemas ────────────────────────────────────────
+
+const WorkspaceSettingsSchema = z.object({
+  autoStart: z.boolean(),
+  maxConcurrent: z.number(),
+  defaultBranch: z.string(),
+});
+
+const WorkspaceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  hostDeviceId: z.string().optional(),
+  projectIds: z.array(z.string()),
+  settings: WorkspaceSettingsSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const DeviceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  platform: z.string(),
+  online: z.boolean(),
+  lastSeen: z.string(),
+});
+
 // ─── IPC Contract Definition ──────────────────────────────────
 
 /**
@@ -1928,6 +1955,34 @@ export const ipcInvokeContract = {
     output: z.array(SuggestionSchema),
   },
 
+  // ── Workspaces ──
+  'workspaces.list': {
+    input: z.object({}),
+    output: z.array(WorkspaceSchema),
+  },
+  'workspaces.create': {
+    input: z.object({ name: z.string(), description: z.string().optional() }),
+    output: WorkspaceSchema,
+  },
+  'workspaces.update': {
+    input: z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      hostDeviceId: z.string().optional(),
+      settings: WorkspaceSettingsSchema.partial().optional(),
+    }),
+    output: WorkspaceSchema,
+  },
+  'workspaces.delete': {
+    input: z.object({ id: z.string() }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'devices.list': {
+    input: z.object({}),
+    output: z.array(DeviceSchema),
+  },
+
   // ── Auth ──
   'auth.login': {
     input: z.object({ email: z.string().email(), password: z.string() }),
@@ -2302,4 +2357,7 @@ export {
   RepoTypeSchema,
   ChildRepoSchema,
   RepoDetectionResultSchema,
+  WorkspaceSchema,
+  WorkspaceSettingsSchema,
+  DeviceSchema,
 };
