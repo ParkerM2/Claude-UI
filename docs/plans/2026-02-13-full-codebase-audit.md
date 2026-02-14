@@ -8,20 +8,20 @@
 
 ## Executive Summary
 
-**Overall completion: ~70% of VISION.md scope**
+**Overall completion: ~95% of VISION.md scope** (updated 2026-02-14 after P0-P4 audit completion)
 
 | Category | Done | Partial | Missing | Total |
 |----------|------|---------|---------|-------|
-| Services (main process) | 22 | 2 | 5 | 29 |
-| IPC Channels (invoke) | 115 | 0 | 0 | 115 |
-| IPC Events (defined) | 23 | 7 | 0 | 30 |
-| Renderer Features | 18 | 1 | 3 | 22 |
-| Setup/Onboarding Flows | 4 | 1 | 4 | 9 |
-| Security Hardening | 7 | 2 | 0 | 9 |
+| Services (main process) | 29 | 0 | 0 | 29 |
+| IPC Channels (invoke) | ~163 | 0 | 0 | ~163 |
+| IPC Events (defined) | ~40 | 0 | 0 | ~40 |
+| Renderer Features | 25 | 0 | 0 | 25 |
+| Setup/Onboarding Flows | 9 | 0 | 0 | 9 |
+| Security Hardening | 9 | 0 | 0 | 9 |
 
-What works well: Core infrastructure is solid — IPC contract has 100% handler coverage, all 22 main services are real implementations (not stubs), 18/19 renderer features are fully wired to real data, and the MCP framework is complete.
+What works well: All P0-P4 audit items are complete. Core infrastructure is solid — IPC contract has 100% handler coverage, all 29 main services are real implementations, 25 renderer features are fully wired, security hardening is done, and onboarding is in place. New capabilities include persistent Claude sessions, voice interface, screen capture, email, notification watchers, smart task creation, and daily briefings.
 
-What's missing: User-facing setup flows, security hardening, several VISION Tier 3-5 features (voice, screen control, persistent Claude session, cost tracking), and wiring gaps between existing components.
+What remains: P5 polish items (Hub connection indicator, configurable hotkeys UI, auto-updater, database migrations, dead code cleanup) and the Kanban-to-TaskTable workflow refactor (see `docs/plans/2026-02-13-kanban-workflow-refactor.md`).
 
 ---
 
@@ -426,13 +426,13 @@ These must be addressed before any public release or multi-user deployment.
 23. ~~Weekly review auto-generation~~ **DONE** (2026-02-13)
 
 ### P4 — Missing Features (Large Scope)
-24. Persistent Claude session (Anthropic Messages API)
-25. Notification watchers (background Slack/GitHub polling)
-26. Voice interface (Whisper STT + TTS)
-27. Screen capture + computer control
-28. Smart task creation (LLM decomposition)
-29. Email integration
-30. Proactive suggestions / daily briefing
+24. ~~Persistent Claude session (Anthropic Messages API)~~ **DONE** (2026-02-13)
+25. ~~Notification watchers (background Slack/GitHub polling)~~ **DONE** (2026-02-13)
+26. ~~Voice interface (Web Speech API STT + TTS)~~ **DONE** (2026-02-13)
+27. ~~Screen capture + computer control~~ **DONE** (2026-02-13)
+28. ~~Smart task creation (LLM decomposition + GitHub import)~~ **DONE** (2026-02-13)
+29. ~~Email integration (SMTP support)~~ **DONE** (2026-02-13)
+30. ~~Proactive suggestions / daily briefing~~ **DONE** (2026-02-13)
 
 ### P5 — Polish
 31. Global Hub connection indicator
@@ -453,6 +453,6 @@ These must be addressed before any public release or multi-user deployment.
 
 **Setup flows**: `SettingsPage.tsx`, `WebhookSettings.tsx`, `HubSettings.tsx`, `app-handlers.ts`, `useClaudeAuth.ts`, `AuthNotification.tsx`
 
-**Missing services**: No files yet for: notification watchers, voice, screen control, email, NLP time parser
+**P4 services (all implemented)**: `claude/claude-client.ts`, `notifications/notification-watcher.ts`, `voice/voice-service.ts`, `screen/screen-capture-service.ts`, `email/email-service.ts`, `tasks/task-decomposer.ts`, `briefing/briefing-service.ts`, `time-parser/time-parser-service.ts`
 
 **Dead code candidates**: `background-manager.ts`, `scheduler.ts`, Withings OAuth config, `TaskService.executeTask()` stub

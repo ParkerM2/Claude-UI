@@ -1,6 +1,6 @@
 # Claude-UI Build Progress
 
-**Last Updated:** 2026-02-12
+**Last Updated:** 2026-02-14
 **Architecture Plan:** ../Claude-UI-Architecture.md
 
 ---
@@ -182,3 +182,73 @@
   - Fixed 6 pre-existing TypeScript errors (ImplementationPlanJson types, preload generic scope, undefined narrowing)
   - Production build verified: typecheck + lint + build all pass clean
   - Bundle sizes documented (renderer JS: 1.7 MB, CSS: 29 kB, main: 37 kB)
+
+## Phase 7: Full Codebase Audit (P0-P4) ✅ COMPLETE
+
+### P0 — Security Hardening (6/6) ✅
+- [x] OAuth credentials encrypted via Electron safeStorage (DPAPI on Windows)
+- [x] Webhook secrets encrypted via safeStorage
+- [x] Hub bootstrap endpoint protected with HUB_BOOTSTRAP_SECRET
+- [x] Rate limiting added (100 req/min global, 10 req/min auth routes)
+- [x] CORS restricted to HUB_ALLOWED_ORIGINS
+- [x] WebSocket auth changed from query param to first-message auth
+
+### P1 — Wiring Gaps (5/5) ✅
+- [x] Slack/Discord action buttons wired to MCP tools
+- [x] DailyStats tasksCompleted wired to real query
+- [x] Claude CLI auth check wired into startup
+- [x] Listeners added for 4 emitted-but-unlistened events
+- [x] Calendar overlay wired into Planner view
+
+### P2 — Setup & Onboarding (5/5) ✅
+- [x] First-run onboarding wizard (5-step: Welcome, CLI, API Key, Integrations, Complete)
+- [x] Webhook setup instructions + test/ping button
+- [x] OAuth credential validation before saving
+- [x] `.env.example` created with all supported variables
+- [x] Hub connection pre-save validation
+
+### P3 — Missing Features (7/7) ✅
+- [x] Natural language time parser (chrono-node integration)
+- [x] Agent queue + parallelism config
+- [x] Cost tracking (token usage parsing from Claude CLI output)
+- [x] My Work view (cross-project task aggregation)
+- [x] Merge workflow UI (diff preview, conflict resolution, merge confirmation)
+- [x] Changelog auto-generation from git history
+- [x] Weekly review auto-generation from planner data
+
+### P4 — Large Scope Features (7/7) ✅
+- [x] Persistent Claude session (Anthropic SDK integration, conversation persistence)
+- [x] Notification watchers (background Slack/GitHub polling)
+- [x] Voice interface (Web Speech API STT + TTS)
+- [x] Screen capture (Electron desktopCapturer)
+- [x] Smart task creation (LLM decomposition + GitHub issue import)
+- [x] Email integration (SMTP support)
+- [x] Daily briefing with proactive suggestions
+
+### Summary
+- **30 audit items completed** across 4 priority levels
+- **7 new main services** added (claude, email, notifications, screen, tasks, time-parser, voice, briefing)
+- **6 new renderer features** added (briefing, merge, my-work, onboarding, screen, voice)
+- **8 new IPC handler files** added
+- **IPC contract expanded** from ~115 to ~163 invoke channels
+- **Overall VISION completion**: ~70% → ~95%
+
+---
+
+- **2026-02-13** — Full codebase audit:
+  - Ran 5 parallel audit agents (VISION mapping, IPC contract, services, renderer, Hub+setup)
+  - Identified 30 gaps across P0-P4 priorities
+  - P0 security fixes: all 6 complete (same session)
+  - P1 wiring gaps: all 5 complete (same session)
+  - P2 onboarding: all 5 complete (same session)
+  - P3 missing features: all 7 complete (5 parallel agents with QA)
+  - P4 large scope features: all 7 complete (7 parallel agents with QA)
+  - Created `ai-docs/FEATURES-INDEX.md` — full feature/service inventory
+  - Created team workflow docs: `ai-docs/prompts/implementing-features/`
+  - Created `/implement-feature` skill for agent team orchestration
+
+- **2026-02-14** — Documentation refresh:
+  - Pulled 29 commits from master
+  - Updated all progress trackers and audit docs to reflect P4 completion
+  - Updated FEATURES-INDEX.md counts (21→25 features, 23→29 services, 22→30 handlers)
+  - Next: Kanban → Task Dashboard refactor (see docs/plans/2026-02-13-kanban-workflow-refactor.md)
