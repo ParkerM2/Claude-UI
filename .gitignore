@@ -10,6 +10,7 @@ release/
 .env
 .env.*
 !.env.example
+.mcp.json
 settings.json
 
 # Certificates and keys (NEVER commit)
