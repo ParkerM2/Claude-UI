@@ -1,5 +1,6 @@
 # Claude UI Architecture Diagram
-# Compact vertical layout with animated data flow
+# Data flows DOWN: External → Main → Bridge → Renderer
+# Based on ai-docs/DATA-FLOW.md
 
 direction: down
 
@@ -11,107 +12,157 @@ vars: {
 }
 
 # ============================================
-# TOP ROW: Renderer + Main Process side by side
+# LAYER 1: EXTERNAL SERVICES & DATA SOURCES
 # ============================================
-processes: "" {
-  direction: right
-  style.fill: transparent
-  style.stroke: transparent
-
-  # RENDERER PROCESS
-  renderer: Renderer Process {
-    style: {
-      fill: "#1a1a2e"
-      stroke: "#4f46e5"
-      stroke-width: 3
-      border-radius: 12
-    }
-
-    react: React 19 {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#61DAFB"
-      style.border-radius: 8
-    }
-
-    router: TanStack Router {
-      style.fill: "#16213e"
-      style.stroke: "#FF4154"
-      style.border-radius: 8
-    }
-
-    query: React Query {
-      style.fill: "#16213e"
-      style.stroke: "#FF4154"
-      style.border-radius: 8
-    }
-
-    zustand: Zustand {
-      style.fill: "#16213e"
-      style.stroke: "#764ABC"
-      style.border-radius: 8
-    }
-
-    features: 25 Features {
-      style.fill: "#16213e"
-      style.stroke: "#22d3ee"
-      style.border-radius: 8
-    }
+external: External Services & Hub {
+  style: {
+    fill: "#1e1e30"
+    stroke: "#f59e0b"
+    stroke-width: 3
+    border-radius: 12
   }
 
-  # MAIN PROCESS
-  main: Main Process {
-    style: {
-      fill: "#1a1a2e"
-      stroke: "#10b981"
-      stroke-width: 3
-      border-radius: 12
-    }
+  hub: Hub Server {
+    icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastify/fastify-original.svg
+    style.fill: "#16213e"
+    style.stroke: "#f59e0b"
+    style.border-radius: 8
+  }
 
-    electron: Electron 39 {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/electron/electron-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#47848F"
-      style.border-radius: 8
-    }
+  sqlite: SQLite {
+    icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sqlite/sqlite-original.svg
+    style.fill: "#16213e"
+    style.stroke: "#003B57"
+    style.border-radius: 8
+  }
 
-    node: Node.js {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#68A063"
-      style.border-radius: 8
-    }
+  anthropic: Anthropic API {
+    style.fill: "#16213e"
+    style.stroke: "#D97706"
+    style.border-radius: 8
+  }
 
-    ipc-router: IPC Router {
-      style.fill: "#16213e"
-      style.stroke: "#f59e0b"
-      style.border-radius: 8
-    }
+  github: GitHub API {
+    icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg
+    style.fill: "#16213e"
+    style.stroke: "#ffffff"
+    style.border-radius: 8
+  }
 
-    services: 29 Services {
-      style.fill: "#16213e"
-      style.stroke: "#10b981"
-      style.border-radius: 8
-    }
+  spotify: Spotify {
+    style.fill: "#16213e"
+    style.stroke: "#1DB954"
+    style.border-radius: 8
+  }
 
-    oauth: OAuth {
-      style.fill: "#16213e"
-      style.stroke: "#a855f7"
-      style.border-radius: 8
-    }
+  calendar: Google Calendar {
+    style.fill: "#16213e"
+    style.stroke: "#4285F4"
+    style.border-radius: 8
+  }
 
-    mcp: MCP Servers {
-      style.fill: "#16213e"
-      style.stroke: "#ec4899"
-      style.border-radius: 8
-    }
+  # Internal connections
+  hub -> sqlite: persist {
+    style.stroke: "#003B57"
+    style.stroke-dash: 3
   }
 }
 
 # ============================================
-# MIDDLE: Preload Bridge (spans width)
+# LAYER 2: MAIN PROCESS (Node.js/Electron)
 # ============================================
-bridge: Preload Bridge {
+main: Main Process (Electron 39 + Node.js) {
+  style: {
+    fill: "#1a1a2e"
+    stroke: "#10b981"
+    stroke-width: 3
+    border-radius: 12
+  }
+
+  # Left column: Core
+  services: 29 Services {
+    style.fill: "#16213e"
+    style.stroke: "#10b981"
+    style.border-radius: 8
+  }
+
+  storage: Local Storage {
+    style.fill: "#16213e"
+    style.stroke: "#8b5cf6"
+    style.border-radius: 8
+  }
+
+  json: JSON Files {
+    style.fill: "#16213e"
+    style.stroke: "#8b5cf6"
+    style.border-radius: 8
+  }
+
+  specs: .auto-claude specs {
+    style.fill: "#16213e"
+    style.stroke: "#8b5cf6"
+    style.border-radius: 8
+  }
+
+  # Middle column: IPC
+  ipc-router: IPC Router {
+    style.fill: "#16213e"
+    style.stroke: "#f59e0b"
+    style.border-radius: 8
+  }
+
+  handlers: Handlers + Zod {
+    style.fill: "#16213e"
+    style.stroke: "#f59e0b"
+    style.border-radius: 8
+  }
+
+  # Right column: Servers
+  mcp: MCP 6 Servers {
+    style.fill: "#16213e"
+    style.stroke: "#ec4899"
+    style.border-radius: 8
+  }
+
+  oauth: OAuth 5 Providers {
+    style.fill: "#16213e"
+    style.stroke: "#a855f7"
+    style.border-radius: 8
+  }
+
+  pty: PTY Terminals {
+    style.fill: "#16213e"
+    style.stroke: "#22d3ee"
+    style.border-radius: 8
+  }
+
+  # Internal flow
+  ipc-router -> handlers: validate {
+    style.stroke: "#f59e0b"
+    style.stroke-dash: 3
+  }
+  handlers -> services: call {
+    style.stroke: "#10b981"
+    style.stroke-dash: 3
+  }
+  services -> storage: read/write {
+    style.stroke: "#8b5cf6"
+    style.stroke-dash: 3
+  }
+  storage -> json {
+    style.stroke: "#8b5cf6"
+    style.stroke-dash: 3
+  }
+  storage -> specs {
+    style.stroke: "#8b5cf6"
+    style.stroke-dash: 3
+  }
+}
+
+# ============================================
+# LAYER 3: PRELOAD BRIDGE
+# ============================================
+bridge: Preload Bridge (Context Isolation) {
   style: {
     fill: "#0f3460"
     stroke: "#e94560"
@@ -119,171 +170,206 @@ bridge: Preload Bridge {
     border-radius: 12
   }
 
-  context: Typed IPC Context {
+  context: contextBridge.exposeInMainWorld {
     style.fill: "#16213e"
     style.stroke: "#e94560"
     style.border-radius: 8
   }
 
-  api: window.api {
+  api-invoke: api.invoke(channel, input) {
     style.fill: "#16213e"
     style.stroke: "#e94560"
     style.border-radius: 8
   }
 
-  context -> api: expose {
+  api-on: api.on(channel, handler) {
+    style.fill: "#16213e"
+    style.stroke: "#e94560"
+    style.border-radius: 8
+  }
+
+  context -> api-invoke {
+    style.stroke: "#e94560"
+    style.stroke-dash: 3
+  }
+  context -> api-on {
     style.stroke: "#e94560"
     style.stroke-dash: 3
   }
 }
 
 # ============================================
-# BOTTOM ROW: External Services + Data Layer
+# LAYER 4: RENDERER PROCESS (React)
 # ============================================
-infra: "" {
-  direction: right
-  style.fill: transparent
-  style.stroke: transparent
-
-  # EXTERNAL SERVICES
-  external: External Services {
-    style: {
-      fill: "#1e1e30"
-      stroke: "#f59e0b"
-      stroke-width: 3
-      border-radius: 12
-    }
-
-    hub: Hub Server {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastify/fastify-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#f59e0b"
-      style.border-radius: 8
-    }
-
-    github: GitHub {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#ffffff"
-      style.border-radius: 8
-    }
-
-    anthropic: Anthropic {
-      style.fill: "#16213e"
-      style.stroke: "#D97706"
-      style.border-radius: 8
-    }
-
-    spotify: Spotify {
-      style.fill: "#16213e"
-      style.stroke: "#1DB954"
-      style.border-radius: 8
-    }
-
-    calendar: Calendar {
-      style.fill: "#16213e"
-      style.stroke: "#4285F4"
-      style.border-radius: 8
-    }
+renderer: Renderer Process (React 19) {
+  style: {
+    fill: "#1a1a2e"
+    stroke: "#4f46e5"
+    stroke-width: 3
+    border-radius: 12
   }
 
-  # DATA LAYER
-  storage: Data Layer {
-    style: {
-      fill: "#1e1e30"
-      stroke: "#8b5cf6"
-      stroke-width: 3
-      border-radius: 12
-    }
+  # Data layer
+  rq-cache: React Query Cache {
+    style.fill: "#16213e"
+    style.stroke: "#FF4154"
+    style.border-radius: 8
+  }
 
-    sqlite: SQLite {
-      icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sqlite/sqlite-original.svg
-      style.fill: "#16213e"
-      style.stroke: "#003B57"
-      style.border-radius: 8
-    }
+  rq-data: "Server State: Projects, Tasks, Agents, Settings" {
+    style.fill: "#16213e"
+    style.stroke: "#FF4154"
+    style.border-radius: 8
+    style.font-size: 12
+  }
 
-    json: JSON Files {
-      style.fill: "#16213e"
-      style.stroke: "#8b5cf6"
-      style.border-radius: 8
-    }
+  zustand: Zustand Stores {
+    style.fill: "#16213e"
+    style.stroke: "#764ABC"
+    style.border-radius: 8
+  }
 
-    specs: Task Specs {
-      style.fill: "#16213e"
-      style.stroke: "#8b5cf6"
-      style.border-radius: 8
-    }
+  zustand-data: "UI State: sidebar, theme, selections" {
+    style.fill: "#16213e"
+    style.stroke: "#764ABC"
+    style.border-radius: 8
+    style.font-size: 12
+  }
+
+  # Hooks
+  ipc-helper: ipc(channel, input) {
+    style.fill: "#16213e"
+    style.stroke: "#61DAFB"
+    style.border-radius: 8
+  }
+
+  hooks: useQuery / useMutation {
+    style.fill: "#16213e"
+    style.stroke: "#FF4154"
+    style.border-radius: 8
+  }
+
+  events: useIpcEvent {
+    style.fill: "#16213e"
+    style.stroke: "#22d3ee"
+    style.border-radius: 8
+  }
+
+  # UI
+  router: TanStack Router {
+    style.fill: "#16213e"
+    style.stroke: "#FF4154"
+    style.border-radius: 8
+  }
+
+  features: 25 Feature Modules {
+    style.fill: "#16213e"
+    style.stroke: "#22d3ee"
+    style.border-radius: 8
+  }
+
+  components: React Components {
+    icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg
+    style.fill: "#16213e"
+    style.stroke: "#61DAFB"
+    style.border-radius: 8
+  }
+
+  # Internal flow
+  rq-cache -> rq-data {
+    style.stroke: "#FF4154"
+    style.stroke-dash: 3
+  }
+  zustand -> zustand-data {
+    style.stroke: "#764ABC"
+    style.stroke-dash: 3
+  }
+  hooks -> rq-cache: updates {
+    style.stroke: "#FF4154"
+    style.stroke-dash: 3
+  }
+  hooks -> ipc-helper: calls {
+    style.stroke: "#61DAFB"
+    style.stroke-dash: 3
+  }
+  events -> rq-cache: invalidates {
+    style.stroke: "#22d3ee"
+    style.stroke-dash: 3
+  }
+  router -> features: renders {
+    style.stroke: "#FF4154"
+    style.stroke-dash: 3
+  }
+  features -> components {
+    style.stroke: "#22d3ee"
+    style.stroke-dash: 3
   }
 }
 
 # ============================================
-# ANIMATED CONNECTIONS
+# CROSS-LAYER ANIMATED CONNECTIONS
 # ============================================
 
-# Renderer -> Bridge
-processes.renderer.query -> bridge.context: invoke() {
-  style.stroke: "#61DAFB"
-  style.stroke-width: 3
-  style.animated: true
-}
-
-# Bridge -> Main
-bridge.api -> processes.main.ipc-router: ipcMain.handle {
-  style.stroke: "#e94560"
-  style.stroke-width: 3
-  style.animated: true
-}
-
-# Main -> Bridge (response)
-processes.main.ipc-router -> bridge.api: IpcResult<T> {
-  style.stroke: "#10b981"
-  style.stroke-width: 2
-  style.animated: true
-}
-
-# Bridge -> Renderer (events)
-bridge.context -> processes.renderer.features: events {
-  style.stroke: "#22d3ee"
-  style.stroke-width: 2
-  style.animated: true
-}
-
-# Main -> External
-processes.main.services -> infra.external.hub: WebSocket {
+# External -> Main (Services fetch from external)
+external.hub -> main.services: WebSocket sync {
   style.stroke: "#f59e0b"
-  style.stroke-width: 2
+  style.stroke-width: 3
   style.animated: true
 }
 
-processes.main.oauth -> infra.external.github: REST {
-  style.stroke: "#ffffff"
-  style.stroke-width: 2
-  style.animated: true
-}
-
-processes.main.services -> infra.external.anthropic: SDK {
+external.anthropic -> main.services: SDK calls {
   style.stroke: "#D97706"
   style.stroke-width: 2
   style.animated: true
 }
 
-# Main -> Storage
-processes.main.services -> infra.storage.json: read/write {
-  style.stroke: "#8b5cf6"
+external.github -> main.oauth: REST API {
+  style.stroke: "#ffffff"
   style.stroke-width: 2
   style.animated: true
 }
 
-processes.main.services -> infra.storage.specs: tasks {
-  style.stroke: "#8b5cf6"
+external.spotify -> main.oauth: OAuth2 {
+  style.stroke: "#1DB954"
   style.stroke-width: 2
   style.animated: true
 }
 
-# External -> Storage
-infra.external.hub -> infra.storage.sqlite: persist {
-  style.stroke: "#003B57"
+external.calendar -> main.oauth: OAuth2 {
+  style.stroke: "#4285F4"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+# Main -> Bridge (IPC responses)
+main.ipc-router -> bridge.api-invoke: ipcMain.handle {
+  style.stroke: "#10b981"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+main.services -> bridge.api-on: router.emit (events) {
+  style.stroke: "#22d3ee"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+# Bridge -> Renderer (data to UI)
+bridge.api-invoke -> renderer.ipc-helper: IpcResult<T> {
+  style.stroke: "#e94560"
+  style.stroke-width: 3
+  style.animated: true
+}
+
+bridge.api-on -> renderer.events: event payload {
+  style.stroke: "#22d3ee"
+  style.stroke-width: 2
+  style.animated: true
+}
+
+# Renderer -> Bridge (requests going UP)
+renderer.ipc-helper -> bridge.api-invoke: invoke() {
+  style.stroke: "#61DAFB"
   style.stroke-width: 2
   style.animated: true
 }
