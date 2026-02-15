@@ -269,6 +269,90 @@ The client implementation (`hub-connection.ts`) sends the auth message immediate
 
 ---
 
+## Hub Connection Layer
+
+The Electron client connects to a self-hosted Hub server for multi-device sync.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  ELECTRON CLIENT                                                     │
+│  ┌─────────────────┐   ┌──────────────────┐   ┌──────────────────┐  │
+│  │ React Hooks     │──▷│ IPC Handlers     │──▷│ Hub Services     │  │
+│  │ (useTasks, etc) │   │ (hub-handlers)   │   │                  │  │
+│  └─────────────────┘   └──────────────────┘   │  ┌────────────┐  │  │
+│          ▲                                     │  │ API Client │  │  │
+│          │                                     │  └─────┬──────┘  │  │
+│  ┌───────┴─────────┐                          │        │         │  │
+│  │ useHubEvent     │◁─────── events ──────────│  ┌─────▼──────┐  │  │
+│  │ hub-query-sync  │                          │  │ WebSocket  │  │  │
+│  └─────────────────┘                          │  └─────┬──────┘  │  │
+│                                               │        │         │  │
+│                                               │  ┌─────▼──────┐  │  │
+│                                               │  │ Token Store│  │  │
+│                                               │  │ Auth Svc   │  │  │
+│                                               │  └────────────┘  │  │
+│                                               └──────────────────┘  │
+└─────────────────────────────────────────────────────────────────────┘
+                              │ REST + WebSocket
+                              ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  HUB SERVER (Docker)                                                 │
+│  ┌─────────────────┐   ┌──────────────────┐   ┌──────────────────┐  │
+│  │ Fastify Routes  │──▷│ SQLite Database  │   │ WS Broadcaster   │  │
+│  │ /api/tasks/*    │   │ (tasks, devices) │   │ (real-time push) │  │
+│  │ /api/auth/*     │   └──────────────────┘   └──────────────────┘  │
+│  └─────────────────┘                                                 │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Services
+
+| Service | Location | Purpose |
+|---------|----------|---------|
+| `hub-api-client.ts` | `src/main/services/hub/` | REST API calls (tasks, auth, devices) |
+| `hub-auth-service.ts` | `src/main/services/hub/` | Login/register/logout + token refresh |
+| `hub-token-store.ts` | `src/main/services/hub/` | safeStorage encrypted token persistence |
+| `hub-websocket.ts` | `src/main/services/hub/` | WebSocket with auto-reconnect |
+| `hub-errors.ts` | `src/main/services/hub/` | Standardized error classes |
+
+### IPC Channels
+
+| Channel | Purpose |
+|---------|---------|
+| `hub.ws.status` | Get WebSocket connection status |
+| `hub.tasks.list` | List tasks from Hub |
+| `hub.tasks.get` | Get single task |
+| `hub.tasks.create` | Create task on Hub |
+| `hub.tasks.update` | Update task |
+| `hub.tasks.updateStatus` | Update task status only |
+| `hub.tasks.delete` | Delete task |
+| `hub.tasks.execute` | Start task execution |
+| `hub.tasks.cancel` | Cancel running task |
+
+### Event Channels (WebSocket → Renderer)
+
+| Channel | Payload | When |
+|---------|---------|------|
+| `event:hub.tasks.created` | `{ taskId, projectId }` | Task created on another device |
+| `event:hub.tasks.updated` | `{ taskId, projectId }` | Task updated on another device |
+| `event:hub.tasks.deleted` | `{ taskId, projectId }` | Task deleted on another device |
+| `event:hub.tasks.progress` | `{ taskId, progress, phase }` | Task progress update |
+| `event:hub.tasks.completed` | `{ taskId, projectId, result }` | Task execution completed |
+| `event:hub.devices.online` | `{ deviceId, name }` | Device came online |
+| `event:hub.devices.offline` | `{ deviceId }` | Device went offline |
+
+### Authentication Flow
+
+1. **Login**: `hub.auth.login` → Hub validates → returns access + refresh tokens
+2. **Token Storage**: Tokens encrypted with `safeStorage` in `hub-token-store.ts`
+3. **Auto-Refresh**: Token store checks expiry, refreshes when < 5 min remaining
+4. **Device Registration**: On startup, registers device with Hub + 30s heartbeat
+5. **WebSocket Auth**: First message after connect is `{ type: "auth", apiKey }`, validated within 5s
+
+---
+
 ## Build System
 
 - **electron-vite** handles three separate builds:

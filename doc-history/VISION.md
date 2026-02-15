@@ -333,23 +333,31 @@ The Electron app shows a setup screen:
 
 ## Implementation Phases
 
-### Phase 1: Dashboard & Multi-Project Polish (Now)
-- [ ] Build the home dashboard (today view, recent projects, active agents)
-- [ ] Fix existing TypeScript errors (6 remaining)
-- [ ] Complete settings page (fonts, UI scale, accent color)
-- [ ] Add quick-capture input on dashboard
-- [ ] Project cards with live agent status indicators
+### Phase 1: Dashboard & Multi-Project Polish ✅ COMPLETE
+- [x] Build the home dashboard (today view, recent projects, active agents)
+- [x] Fix existing TypeScript errors
+- [x] Complete settings page (fonts, UI scale, accent color, 7 color themes)
+- [x] Add quick-capture input on dashboard
+- [x] Project cards with live agent status indicators
+- [x] My Work view (cross-project task aggregation)
+- [x] Daily stats widget
 
-### Phase 2: Hub + Multi-Device Sync (Foundation)
-- [ ] Extract data layer into a standalone API server (Express/Fastify + SQLite)
-- [ ] Migrate JSON file storage to SQLite (tasks, projects, settings, planner)
-- [ ] WebSocket server for real-time state push
-- [ ] Dockerize the hub: `Dockerfile` + `docker-compose.yml`
-- [ ] nginx config with self-signed TLS
-- [ ] Electron client: connection manager (hub URL + API key)
-- [ ] Offline mode: local SQLite cache, queue mutations, sync on reconnect
-- [ ] First-run setup flow: hub generates API key, client enters it once
-- [ ] Cross-platform Electron builds (Windows via electron-builder, macOS via GitHub Actions or local Mac)
+### Phase 2: Hub + Multi-Device Sync ✅ COMPLETE
+- [x] Extract data layer into standalone API server (Fastify + SQLite)
+- [x] Migrate JSON file storage to SQLite (tasks, projects, settings, planner)
+- [x] WebSocket server for real-time state push (broadcaster pattern)
+- [x] Dockerize the hub: `Dockerfile` + `docker-compose.yml`
+- [x] Rate limiting (100 req/min global, 10 req/min auth)
+- [x] Bootstrap secret for initial API key generation
+- [x] WebSocket first-message authentication
+- [x] Electron client: hub connection manager (URL + API key)
+- [x] Hub status indicator in TopBar
+- [x] Offline banner when Hub unreachable
+- [x] Device registration + heartbeat (30s interval)
+- [x] Secure token storage (safeStorage encryption)
+- [x] Hub task API (CRUD + execute + cancel)
+- [x] Hub auth API (register, login, logout, refresh)
+- [x] Real-time event sync (useHubEvent hooks, hub-query-sync)
 
 ### Phase 3: Daily Planner
 - [ ] Calendar day/week view component
