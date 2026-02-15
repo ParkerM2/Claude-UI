@@ -25,22 +25,19 @@ For Agent Spawn Templates, see: [`AGENT-SPAWN-TEMPLATES.md`](./AGENT-SPAWN-TEMPL
 Every feature passes through these phases. No phase may be skipped.
 
 ```
-PLAN ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶ TEST ──▶ QA ──▶ INTEGRATE ──▶ DOCUMENT
-  │         │         │          │         │       │         │             │
-  │         │         │          │         │       │         │             └─ Update ARCHITECTURE.md,
-  │         │         │          │         │       │         │                PATTERNS.md, DATA-FLOW.md
-  │         │         │          │         │       │         │
-  │         │         │          │         │       │         └─ Merge worktrees, FULL TEST SUITE,
-  │         │         │          │         │       │            commit, push, PR
-  │         │         │          │         │       │
-  │         │         │          │         │       └─ QA agent verifies ALL tests pass,
-  │         │         │          │         │          then does visual testing
-  │         │         │          │         │
-  │         │         │          │         └─ MANDATORY: npm run lint && typecheck
-  │         │         │          │            && test && build — ALL MUST PASS
-  │         │         │          │
-  │         │         │          └─ Agents work in isolated worktrees,
-  │         │         │             use superpowers plugin for every action
+PLAN ──▶ TRACK ──▶ ASSIGN ──▶ BUILD+DOCS ──▶ TEST ──▶ QA ──▶ INTEGRATE
+  │         │         │            │              │       │         │
+  │         │         │            │              │       │         └─ Merge worktrees, FULL TEST SUITE,
+  │         │         │            │              │       │            commit, push, PR
+  │         │         │            │              │       │
+  │         │         │            │              │       └─ QA agent verifies ALL tests pass,
+  │         │         │            │              │          then does visual testing
+  │         │         │            │              │
+  │         │         │            │              └─ MANDATORY: npm run lint && typecheck
+  │         │         │            │                 && test && build && check:docs — ALL MUST PASS
+  │         │         │            │
+  │         │         │            └─ Agents write code AND update docs together,
+  │         │         │               use superpowers plugin for every action
   │         │         │
   │         │         └─ TeamCreate, TaskCreate with dependencies,
   │         │            spawn agents with full initialization
@@ -57,14 +54,15 @@ PLAN ──▶ TRACK ──▶ ASSIGN ──▶ BUILD ──▶ TEST ──▶ Q
 **At EVERY transition, the test suite MUST pass:**
 
 ```bash
-# These 4 commands MUST pass before ANY completion claim
+# These 5 commands MUST pass before ANY completion claim
 npm run lint         # Zero violations
 npm run typecheck    # Zero errors
 npm run test         # All tests pass
 npm run build        # Builds successfully
+npm run check:docs   # Documentation updated for source changes
 ```
 
-**Skipping tests = automatic failure. No exceptions. No excuses.**
+**Skipping tests or doc updates = automatic failure. No exceptions. No excuses.**
 
 ---
 
@@ -159,7 +157,7 @@ When a Team Lead agent starts and detects existing progress:
 
 ### The Rule
 
-> Every feature that adds, modifies, or removes files MUST trigger a documentation update as the FINAL step before the feature is considered complete.
+> Documentation updates are part of the same work, not a trailing step. Each coding agent updates docs for their own changes. `npm run check:docs` enforces this.
 
 ### Which Docs to Update
 
@@ -175,21 +173,15 @@ When a Team Lead agent starts and detects existing progress:
 | `CLAUDE.md` | AI agent guidelines | New path alias, new tech stack entry, new convention |
 | `PROGRESS.md` | Build progress tracker | Feature completed or milestone reached |
 
-### How the Team Lead Assigns Documentation Updates
+### How Documentation Updates Work
 
-After all coding tasks and QA pass, the Team Lead:
+Each coding agent is responsible for updating docs alongside their own code changes. The Team Lead verifies completeness:
 
-1. Determines which docs are affected by the feature
-2. Creates a documentation task: `TaskCreate` with subject "Update docs for <feature>"
-3. Assigns it to an agent (typically the `codebase-guardian` or a `general-purpose` agent)
-4. The documentation agent:
-   - Reads ALL files created/modified in the feature
-   - Updates the relevant docs to reflect the new state
-   - Adds new services to ARCHITECTURE.md service list
-   - Adds new IPC channels to DATA-FLOW.md
-   - Adds new patterns to PATTERNS.md
-   - Updates file/folder structure sections
-5. Team Lead verifies docs are accurate before marking feature complete
+1. Each coding agent updates relevant docs as part of their task (not after)
+2. `npm run check:docs` runs as part of the 5-command verification gate
+3. If any coding agent missed doc updates, the check fails and they must fix it
+4. After all tasks + QA pass, the Team Lead runs a final `npm run check:docs` to verify
+5. If gaps remain, the Team Lead can spawn a documentation verification agent to catch misses
 
 ### File/Folder Structure — Current State
 
@@ -443,6 +435,7 @@ npm run lint         # Zero violations
 npm run typecheck    # Zero errors
 npm run test         # All unit + integration tests pass
 npm run build        # Builds successfully
+npm run check:docs   # Documentation updated for source changes
 ```
 
 ### Spawning the QA Review Agent (Coding Agent's Responsibility)
