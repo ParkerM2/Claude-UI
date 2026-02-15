@@ -1,12 +1,12 @@
 # Feature: Gap Remediation (High + Medium Priority)
 
-**Status**: IN_PROGRESS
+**Status**: INTEGRATING
 **Team**: gap-remediation
 **Base Branch**: master
 **Feature Branch**: master (direct, small wiring changes)
 **Design Doc**: docs/plans/2026-02-15-gap-remediation.md
 **Started**: 2026-02-15 18:00
-**Last Updated**: 2026-02-15 18:00
+**Last Updated**: 2026-02-15 18:30
 **Updated By**: team-lead
 
 ---
@@ -15,14 +15,14 @@
 
 | Agent Name | Role | Task ID | Status | QA Round | Notes |
 |------------|------|---------|--------|----------|-------|
-| wave1-confirm-dialog | Component Engineer | #1 | PENDING | 0/3 | ConfirmDialog shared component |
-| wave1-token-refresh | Hook Engineer | #2 | PENDING | 0/3 | Proactive token refresh timer |
-| wave2-user-menu | Component Engineer | #3 | PENDING | 0/3 | Logout button + user menu |
-| wave2-create-task | Component Engineer | #4 | PENDING | 0/3 | Task creation dialog |
-| wave2-dedup-handlers | Service Engineer | #5 | PENDING | 0/3 | Remove duplicate hub.tasks handlers |
-| wave3-project-edit | Component Engineer | #6 | PENDING | 0/3 | Project edit dialog |
-| wave3-delete-confirms | Component Engineer | #7 | PENDING | 0/3 | Wire delete confirmations |
-| wave3-error-toasts | Hook Engineer | #8 | PENDING | 0/3 | Mutation error handling |
+| wave1-confirm-dialog | Component Engineer | #1 | COMPLETE | 0/3 | ConfirmDialog created, lint/test/build pass |
+| wave1-token-refresh | Hook Engineer | #2 | COMPLETE | 0/3 | expiresAt + useTokenRefresh, all 4 checks pass |
+| wave2-user-menu | Component Engineer | #3 | COMPLETE | 0/3 | UserMenu.tsx + Sidebar wired, tests pass |
+| wave2-create-task | Component Engineer | #4 | COMPLETE | 0/3 | CreateTaskDialog + New Task button, all checks pass |
+| wave2-dedup-handlers | Service Engineer | #5 | COMPLETE | 0/3 | Removed 8 duplicate hub.tasks.* from hub-handlers.ts |
+| wave3-project-edit | Component Engineer | #6 | COMPLETE | 0/3 | ProjectEditDialog + edit buttons, tests pass |
+| wave3-delete-confirms | Component Engineer | #7 | COMPLETE | 0/3 | ConfirmDialog wired to TaskControls + ActionsCell |
+| wave3-error-toasts | Hook Engineer | #8 | COMPLETE | 0/3 | Toast store + 11 mutations wired, tests pass |
 
 ---
 

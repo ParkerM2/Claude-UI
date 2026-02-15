@@ -16,6 +16,7 @@ import { ROUTES } from '@shared/constants';
 import { ThemeHydrator } from '@renderer/shared/stores';
 
 import { useAuthInit } from '../hooks/useAuthEvents';
+import { useTokenRefresh } from '../hooks/useTokenRefresh';
 import { useAuthStore } from '../store';
 
 export function AuthGuard() {
@@ -25,6 +26,8 @@ export function AuthGuard() {
 
   // Restore session from localStorage on app startup
   useAuthInit();
+  // Proactively refresh tokens before expiry
+  useTokenRefresh();
 
   useEffect(() => {
     if (isInitializing) return;

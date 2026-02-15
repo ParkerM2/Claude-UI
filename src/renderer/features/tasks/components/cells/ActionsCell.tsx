@@ -1,13 +1,18 @@
 /**
  * ActionsCell — AG-Grid cell renderer with row action buttons.
- * Play/Stop toggle and Delete. Icon-only with aria-labels.
+ * Play/Stop toggle and Delete (with confirmation). Icon-only with aria-labels.
  */
+
+import { useState } from 'react';
 
 import { Play, Square, Trash2 } from 'lucide-react';
 
 import type { TaskStatus } from '@shared/types';
 
+import { ConfirmDialog } from '@renderer/shared/components/ConfirmDialog';
 import { cn } from '@renderer/shared/lib/utils';
+
+import { useDeleteTask } from '../../api/useTaskMutations';
 
 import type { CustomCellRendererProps } from 'ag-grid-react';
 
@@ -24,6 +29,8 @@ interface ActionsCellProps extends CustomCellRendererProps {
 
 export function ActionsCell(props: ActionsCellProps) {
   const data = props.data as ActionsCellData | undefined;
+  const deleteTask = useDeleteTask();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   if (!data) {
     return null;
@@ -41,9 +48,9 @@ export function ActionsCell(props: ActionsCellProps) {
     }
   }
 
-  function handleDelete(event: React.MouseEvent) {
+  function handleDeleteClick(event: React.MouseEvent) {
     event.stopPropagation();
-    props.onDelete?.(taskId);
+    setDeleteConfirmOpen(true);
   }
 
   return (
@@ -61,10 +68,30 @@ export function ActionsCell(props: ActionsCellProps) {
       <button
         aria-label="Delete task"
         className="text-muted-foreground hover:bg-accent hover:text-destructive rounded p-1.5 transition-colors"
-        onClick={handleDelete}
+        onClick={handleDeleteClick}
       >
         <Trash2 className="h-3.5 w-3.5" />
       </button>
+
+      <ConfirmDialog
+        confirmLabel="Delete"
+        description="Are you sure you want to delete this task? This action cannot be undone."
+        loading={deleteTask.isPending}
+        open={deleteConfirmOpen}
+        title="Delete Task"
+        variant="destructive"
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={() => {
+          deleteTask.mutate(
+            { taskId },
+            {
+              onSuccess: () => {
+                setDeleteConfirmOpen(false);
+              },
+            },
+          );
+        }}
+      />
     </div>
   );
 }

@@ -54,8 +54,12 @@ export function useAllTasks() {
 export function useCreateTask() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: { projectId: string; title: string; description?: string }) =>
-      ipc('hub.tasks.create', data),
+    mutationFn: (data: {
+      projectId: string;
+      title: string;
+      description?: string;
+      priority?: 'low' | 'normal' | 'high' | 'urgent';
+    }) => ipc('hub.tasks.create', data),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
     },

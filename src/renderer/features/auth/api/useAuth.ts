@@ -15,12 +15,14 @@ import { authKeys } from './queryKeys';
 /** Login mutation — stores tokens + user on success */
 export function useLogin() {
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setExpiresAt = useAuthStore((s) => s.setExpiresAt);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: LoginInput) => ipc('auth.login', data),
     onSuccess: (result) => {
       setAuth(result.user, result.tokens);
+      setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
       void queryClient.invalidateQueries({ queryKey: authKeys.me() });
     },
   });
@@ -29,12 +31,14 @@ export function useLogin() {
 /** Register mutation — stores tokens + user on success */
 export function useRegister() {
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setExpiresAt = useAuthStore((s) => s.setExpiresAt);
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: RegisterInput) => ipc('auth.register', data),
     onSuccess: (result) => {
       setAuth(result.user, result.tokens);
+      setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
       void queryClient.invalidateQueries({ queryKey: authKeys.me() });
     },
   });
@@ -57,12 +61,14 @@ export function useLogout() {
 /** Refresh token mutation — updates tokens in store */
 export function useRefreshToken() {
   const updateTokens = useAuthStore((s) => s.updateTokens);
+  const setExpiresAt = useAuthStore((s) => s.setExpiresAt);
   const refreshToken = useAuthStore((s) => s.refreshToken);
 
   return useMutation({
     mutationFn: () => ipc('auth.refresh', { refreshToken: refreshToken ?? '' }),
     onSuccess: (result) => {
       updateTokens(result.tokens);
+      setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
     },
   });
 }
