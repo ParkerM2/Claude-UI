@@ -62,10 +62,10 @@ graph TB
 | Feature | Description |
 |---------|-------------|
 | **Agent Orchestration** | Spawn, pause, resume, and terminate multiple Claude CLI agents simultaneously |
-| **Workflow-Driven Taskboard** | Kanban board integrated with `/implement-feature` skill for structured agent workflows |
+| **Workflow-Driven Task Table** | Sortable, filterable task table with customizable agent workflows and `/implement-feature` skill integration |
 | **Agent Queue** | Queue tasks for sequential agent execution with dependency management |
 | **Progress Watching** | Real-time sync of `docs/progress/*.md` files to Hub for crash-safe tracking |
-| **Task Launcher** | Launch Claude CLI sessions directly from task cards with project context |
+| **Task Launcher** | Launch Claude CLI sessions directly from task rows with project context |
 
 ### Project & Workspace Management
 
@@ -104,34 +104,38 @@ graph TB
 
 ---
 
-## Workflow-Driven Taskboard
+## Workflow-Driven Task Table
 
-The Kanban board integrates with the `/implement-feature` Claude skill for structured agent workflows:
+The Task Table provides sortable, filterable task management with customizable agent workflows:
 
 ```mermaid
 graph LR
-    subgraph Taskboard
-        Queue["Queue"] --> InProgress["In Progress"]
-        InProgress --> Review["Review"]
-        Review --> Done["Done"]
+    subgraph TaskTable["Task Table"]
+        Backlog["Backlog"] --> Queue["Queue"]
+        Queue --> InProgress["In Progress"]
+        InProgress --> AIReview["AI Review"]
+        AIReview --> HumanReview["Human Review"]
+        HumanReview --> Done["Done"]
     end
 
     subgraph AgentWorkflow["/implement-feature Workflow"]
         Plan["Phase 1: Plan"] --> Spawn["Phase 2: Spawn Agents"]
         Spawn --> Execute["Phase 3: Execute in Waves"]
-        Execute --> QA["Phase 4: QA Verification"]
-        QA --> Merge["Phase 5: Integration"]
+        Execute --> Test["Phase 4: Test Gate"]
+        Test --> QA["Phase 5: QA Verification"]
+        QA --> Merge["Phase 6: Integration"]
     end
 
-    Taskboard -.-> AgentWorkflow
+    TaskTable -.-> AgentWorkflow
 ```
 
 **How It Works**:
-1. Create a task on the Kanban board with requirements
-2. Launch `/implement-feature` skill from the task card
+1. Create a task in the Task Table with requirements and priority
+2. Launch `/implement-feature` skill from the task row actions
 3. Agents are spawned in waves (Schema → Service → IPC → Components)
-4. Progress syncs to `docs/progress/*.md` for crash recovery
-5. QA agents verify each component before integration
+4. **Mandatory test suite** runs before any work is claimed complete
+5. Progress syncs to `docs/progress/*.md` for crash recovery
+6. QA agents verify each component before integration
 
 ---
 
