@@ -1,279 +1,240 @@
-# Claude UI Architecture Diagram
-# Data flows DOWN: External → Main → Bridge → Renderer
-# Simplified for readability
+# Claude UI Architecture
+# Simple vertical flow: External → Main → Bridge → Renderer
 
 direction: down
 
 vars: {
   d2-config: {
     theme-id: 200
-    layout-engine: dagre
+    layout-engine: elk
   }
 }
 
 # ============================================
-# LAYER 1: EXTERNAL SERVICES & HUB
+# EXTERNAL SERVICES (Top)
 # ============================================
-external: External Services & Hub {
+external: External APIs {
   style: {
     fill: "#1e1e30"
     stroke: "#f59e0b"
-    stroke-width: 4
-    border-radius: 16
-    font-size: 24
+    stroke-width: 5
+    border-radius: 20
+    font-size: 36
+    bold: true
   }
 
-  hub: Hub Server + SQLite {
+  hub: Hub Server {
     icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastify/fastify-original.svg
     style.fill: "#16213e"
     style.stroke: "#f59e0b"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
   anthropic: Anthropic API {
     style.fill: "#16213e"
     style.stroke: "#D97706"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
   github: GitHub API {
     icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg
     style.fill: "#16213e"
     style.stroke: "#ffffff"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
-  integrations: Spotify / Calendar / OAuth {
+  oauth: OAuth Services {
     style.fill: "#16213e"
     style.stroke: "#a855f7"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 }
 
 # ============================================
-# LAYER 2: MAIN PROCESS
+# MAIN PROCESS (Electron Backend)
 # ============================================
-main: Main Process (Electron 39 + Node.js) {
+main: Main Process - Electron + Node.js {
   style: {
     fill: "#1a1a2e"
     stroke: "#10b981"
-    stroke-width: 4
-    border-radius: 16
-    font-size: 24
+    stroke-width: 5
+    border-radius: 20
+    font-size: 36
+    bold: true
   }
 
-  services: 29 Services {
+  services: Backend Services {
     style.fill: "#16213e"
     style.stroke: "#10b981"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
-  ipc: IPC Router + Handlers {
+  ipc: IPC Router {
     style.fill: "#16213e"
     style.stroke: "#f59e0b"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
-  storage: "Local: JSON, .auto-claude specs" {
+  storage: Local Storage {
     style.fill: "#16213e"
     style.stroke: "#8b5cf6"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
-  }
-
-  servers: MCP Servers / PTY {
-    style.fill: "#16213e"
-    style.stroke: "#ec4899"
-    style.border-radius: 12
-    style.font-size: 20
-  }
-
-  # Internal
-  ipc -> services: Zod validate {
-    style.stroke: "#10b981"
-    style.stroke-width: 2
-    style.stroke-dash: 4
-  }
-  services -> storage: read/write {
-    style.stroke: "#8b5cf6"
-    style.stroke-width: 2
-    style.stroke-dash: 4
+    style.font-size: 28
   }
 }
 
 # ============================================
-# LAYER 3: PRELOAD BRIDGE
+# PRELOAD BRIDGE
 # ============================================
-bridge: Preload Bridge {
+bridge: Preload Bridge - window.api {
   style: {
     fill: "#0f3460"
     stroke: "#e94560"
-    stroke-width: 4
-    border-radius: 16
-    font-size: 24
+    stroke-width: 5
+    border-radius: 20
+    font-size: 36
+    bold: true
   }
 
-  invoke: api.invoke(channel, input) {
+  invoke: api.invoke() {
     style.fill: "#16213e"
     style.stroke: "#e94560"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
-  events: api.on(channel, handler) {
+  events: api.on() {
     style.fill: "#16213e"
-    style.stroke: "#e94560"
+    style.stroke: "#22d3ee"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 }
 
 # ============================================
-# LAYER 4: RENDERER PROCESS
+# RENDERER (React Frontend)
 # ============================================
-renderer: Renderer Process (React 19) {
+renderer: Renderer - React 19 {
   style: {
     fill: "#1a1a2e"
     stroke: "#4f46e5"
-    stroke-width: 4
-    border-radius: 16
-    font-size: 24
+    stroke-width: 5
+    border-radius: 20
+    font-size: 36
+    bold: true
   }
 
-  cache: React Query Cache {
+  query: React Query {
     style.fill: "#16213e"
     style.stroke: "#FF4154"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
-  }
-
-  server-state: "Server State: Projects, Tasks, Agents" {
-    style.fill: "#16213e"
-    style.stroke: "#FF4154"
-    style.border-radius: 12
-    style.font-size: 18
+    style.font-size: 28
   }
 
   zustand: Zustand Stores {
     style.fill: "#16213e"
     style.stroke: "#764ABC"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
+    style.font-size: 28
   }
 
-  ui-state: "UI State: sidebar, theme, selections" {
-    style.fill: "#16213e"
-    style.stroke: "#764ABC"
-    style.border-radius: 12
-    style.font-size: 18
-  }
-
-  hooks: useQuery / useMutation / useIpcEvent {
-    style.fill: "#16213e"
-    style.stroke: "#61DAFB"
-    style.border-radius: 12
-    style.font-size: 20
-  }
-
-  ui: Router + 25 Features + Components {
+  components: UI Components {
     icon: https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg
     style.fill: "#16213e"
     style.stroke: "#61DAFB"
+    style.stroke-width: 3
     style.border-radius: 12
-    style.font-size: 20
-  }
-
-  # Internal
-  cache -> server-state {
-    style.stroke: "#FF4154"
-    style.stroke-width: 2
-    style.stroke-dash: 4
-  }
-  zustand -> ui-state {
-    style.stroke: "#764ABC"
-    style.stroke-width: 2
-    style.stroke-dash: 4
-  }
-  hooks -> cache: updates {
-    style.stroke: "#FF4154"
-    style.stroke-width: 2
-    style.stroke-dash: 4
+    style.font-size: 28
   }
 }
 
 # ============================================
-# CROSS-LAYER CONNECTIONS (ANIMATED)
+# CONNECTIONS - All flow DOWN
 # ============================================
 
-# External -> Main
+# External → Main Services (straight down)
 external.hub -> main.services: WebSocket {
   style.stroke: "#f59e0b"
   style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
 external.anthropic -> main.services: SDK {
   style.stroke: "#D97706"
-  style.stroke-width: 3
+  style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
 external.github -> main.services: REST {
   style.stroke: "#ffffff"
-  style.stroke-width: 3
+  style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
-external.integrations -> main.services: OAuth2 {
+external.oauth -> main.services: OAuth2 {
   style.stroke: "#a855f7"
-  style.stroke-width: 3
+  style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
-# Main -> Bridge
-main.ipc -> bridge.invoke: ipcMain.handle {
+# Main → Bridge
+main.ipc -> bridge.invoke {
   style.stroke: "#10b981"
   style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
 }
 
-main.services -> bridge.events: router.emit {
+main.services -> bridge.events: emit {
   style.stroke: "#22d3ee"
-  style.stroke-width: 3
+  style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
-# Bridge -> Renderer
-bridge.invoke -> renderer.hooks: IpcResult<T> {
+# Bridge → Renderer
+bridge.invoke -> renderer.query {
   style.stroke: "#e94560"
   style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
 }
 
-bridge.events -> renderer.hooks: event data {
+bridge.events -> renderer.query: events {
   style.stroke: "#22d3ee"
-  style.stroke-width: 3
+  style.stroke-width: 4
   style.animated: true
-  style.font-size: 16
+  style.font-size: 24
 }
 
-# Renderer -> Bridge (requests UP)
-renderer.hooks -> bridge.invoke: invoke() {
-  style.stroke: "#61DAFB"
+# Internal renderer flow
+renderer.query -> renderer.components {
+  style.stroke: "#FF4154"
   style.stroke-width: 3
-  style.animated: true
-  style.font-size: 16
+  style.stroke-dash: 5
+}
+
+renderer.zustand -> renderer.components {
+  style.stroke: "#764ABC"
+  style.stroke-width: 3
+  style.stroke-dash: 5
 }
