@@ -42,10 +42,10 @@ export interface PublicUser {
   id: string;
   email: string;
   displayName: string;
-  avatarUrl?: string;
+  avatarUrl: string | null;
   settings?: unknown;
   createdAt: string;
-  lastLoginAt?: string;
+  lastLoginAt: string | null;
 }
 
 /** Result from register or login operations. */
@@ -93,19 +93,13 @@ function formatUser(row: UserRow): PublicUser {
     id: row.id,
     email: row.email,
     displayName: row.display_name,
+    avatarUrl: row.avatar_url ?? null,
     createdAt: row.created_at,
+    lastLoginAt: row.last_login_at ?? null,
   };
-
-  if (row.avatar_url) {
-    user.avatarUrl = row.avatar_url;
-  }
 
   if (row.settings) {
     user.settings = JSON.parse(row.settings) as unknown;
-  }
-
-  if (row.last_login_at) {
-    user.lastLoginAt = row.last_login_at;
   }
 
   return user;

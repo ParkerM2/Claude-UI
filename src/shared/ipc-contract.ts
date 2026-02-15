@@ -101,6 +101,52 @@ const GithubIssueImportSchema = z.object({
   assignees: z.array(z.string()),
 });
 
+// ── Hub Task Schemas (Hub API shape — distinct from legacy TaskSchema) ──
+
+const HubTaskStatusSchema = z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']);
+
+const HubTaskPrioritySchema = z.enum(['low', 'normal', 'high', 'urgent']);
+
+const HubTaskProgressSchema = z
+  .object({
+    phase: z.string(),
+    phaseIndex: z.number(),
+    totalPhases: z.number(),
+    currentAgent: z.string().nullable(),
+    filesChanged: z.number(),
+    lastActivity: z.string(),
+    logs: z.array(z.string()),
+  })
+  .optional();
+
+const HubTaskSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  workspaceId: z.string().optional(),
+  subProjectId: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  status: HubTaskStatusSchema,
+  priority: HubTaskPrioritySchema,
+  assignedDeviceId: z.string().optional(),
+  createdByDeviceId: z.string().optional(),
+  executionSessionId: z.string().optional(),
+  progress: HubTaskProgressSchema,
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  subtasks: z.array(z.unknown()).optional(),
+  agentName: z.string().optional(),
+  activityHistory: z.array(z.unknown()).optional(),
+  costTokens: z.number().optional(),
+  costUsd: z.number().optional(),
+  prNumber: z.number().optional(),
+  prState: z.string().optional(),
+  prCiStatus: z.string().optional(),
+  prUrl: z.string().optional(),
+  completedAt: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
 
 const ProjectSchema = z.object({
@@ -1620,11 +1666,11 @@ export const ipcInvokeContract = {
       projectId: z.string().optional(),
       workspaceId: z.string().optional(),
     }),
-    output: z.object({ tasks: z.array(z.unknown()) }),
+    output: z.object({ tasks: z.array(HubTaskSchema) }),
   },
   'hub.tasks.get': {
     input: z.object({ taskId: z.string() }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.create': {
     input: z.object({
@@ -1632,28 +1678,28 @@ export const ipcInvokeContract = {
       workspaceId: z.string().optional(),
       title: z.string(),
       description: z.string().optional(),
-      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      priority: HubTaskPrioritySchema.optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.update': {
     input: z.object({
       taskId: z.string(),
       title: z.string().optional(),
       description: z.string().optional(),
-      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']).optional(),
-      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      status: HubTaskStatusSchema.optional(),
+      priority: HubTaskPrioritySchema.optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.updateStatus': {
     input: z.object({
       taskId: z.string(),
-      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+      status: HubTaskStatusSchema,
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.delete': {
     input: z.object({ taskId: z.string() }),
@@ -1670,7 +1716,7 @@ export const ipcInvokeContract = {
     }),
     output: z.object({
       success: z.boolean(),
-      previousStatus: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+      previousStatus: HubTaskStatusSchema,
     }),
   },
 
@@ -2498,6 +2544,10 @@ export type EventPayload<T extends EventChannel> = z.infer<(typeof ipcEventContr
 
 // Re-export schemas for use in handlers
 export {
+  HubTaskSchema,
+  HubTaskStatusSchema,
+  HubTaskPrioritySchema,
+  HubTaskProgressSchema,
   TaskSchema,
   TaskDraftSchema,
   TaskStatusSchema,

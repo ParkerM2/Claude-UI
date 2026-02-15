@@ -88,6 +88,9 @@ export function registerHubHandlers(
   router.handle('hub.tasks.get', async ({ taskId }) => {
     const response = await hubApiClient.getTask(taskId);
     throwIfError(response, 'Failed to get task');
+    if (!response.data) {
+      throw new HubApiError(500, 'No data returned from get task');
+    }
     return response.data;
   });
 
@@ -99,6 +102,9 @@ export function registerHubHandlers(
       priority: priority as TaskPriority | undefined,
     });
     throwIfError(response, 'Failed to create task');
+    if (!response.data) {
+      throw new HubApiError(500, 'No data returned from create task');
+    }
     return response.data;
   });
 
@@ -110,12 +116,18 @@ export function registerHubHandlers(
       status: status as TaskStatus | undefined,
     });
     throwIfError(response, 'Failed to update task');
+    if (!response.data) {
+      throw new HubApiError(500, 'No data returned from update task');
+    }
     return response.data;
   });
 
   router.handle('hub.tasks.updateStatus', async ({ taskId, status }) => {
     const response = await hubApiClient.updateTaskStatus(taskId, status as TaskStatus);
     throwIfError(response, 'Failed to update task status');
+    if (!response.data) {
+      throw new HubApiError(500, 'No data returned from update task status');
+    }
     return response.data;
   });
 

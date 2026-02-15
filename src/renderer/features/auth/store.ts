@@ -41,10 +41,12 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  isInitializing: boolean;
   setAuth: (user: User, tokens: AuthTokens) => void;
   clearAuth: () => void;
   setUser: (user: User) => void;
   updateTokens: (tokens: AuthTokens) => void;
+  setInitializing: (value: boolean) => void;
 }
 
 const stored = loadStoredAuth();
@@ -54,6 +56,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   accessToken: stored?.accessToken ?? null,
   refreshToken: stored?.refreshToken ?? null,
   isAuthenticated: stored !== null,
+  isInitializing: stored !== null,
 
   setAuth: (user, tokens) => {
     persistAuth(user, tokens.accessToken, tokens.refreshToken);
@@ -94,5 +97,9 @@ export const useAuthStore = create<AuthState>()((set) => ({
         refreshToken: tokens.refreshToken,
       };
     });
+  },
+
+  setInitializing: (value) => {
+    set({ isInitializing: value });
   },
 }));

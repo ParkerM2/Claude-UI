@@ -103,7 +103,11 @@ export function registerAuthHandlers(
     return { success: true };
   });
 
-  router.handle('auth.refresh', async ({ refreshToken }) => {
+  // Main process is the authoritative token owner — it stores tokens in the
+  // secure TokenStore and uses its own stored refresh token for rotation.
+  // The renderer's refreshToken input is ignored; the rotated token from
+  // the Hub response is returned so the renderer can update its local copy.
+  router.handle('auth.refresh', async (_input) => {
     const result = await hubAuthService.refreshToken();
 
     if (!result.ok || !result.data) {
@@ -113,7 +117,7 @@ export function registerAuthHandlers(
     return {
       tokens: {
         accessToken: result.data.accessToken,
-        refreshToken,
+        refreshToken: result.data.refreshToken,
         expiresIn: expiresAtToExpiresIn(result.data.expiresAt),
       },
     };

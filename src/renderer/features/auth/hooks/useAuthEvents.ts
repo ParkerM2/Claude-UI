@@ -26,11 +26,18 @@ export function useAuthInit(): void {
   const setUser = useAuthStore((s) => s.setUser);
   const updateTokens = useAuthStore((s) => s.updateTokens);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const setInitializing = useAuthStore((s) => s.setInitializing);
   const queryClient = useQueryClient();
   const hasRun = useRef(false);
 
   useEffect(() => {
-    if (hasRun.current || !isAuthenticated) return;
+    if (hasRun.current) return;
+
+    if (!isAuthenticated) {
+      setInitializing(false);
+      return;
+    }
+
     hasRun.current = true;
 
     void (async () => {
@@ -54,7 +61,9 @@ export function useAuthInit(): void {
         } catch {
           clearAuth();
         }
+      } finally {
+        setInitializing(false);
       }
     })();
-  }, [isAuthenticated, refreshToken, setUser, updateTokens, clearAuth, queryClient]);
+  }, [isAuthenticated, refreshToken, setUser, updateTokens, clearAuth, setInitializing, queryClient]);
 }

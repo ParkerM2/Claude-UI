@@ -35,6 +35,13 @@ interface TaskRow {
 
 // ─── Helpers ──────────────────────────────────────────────────
 
+const PRIORITY_NUMBER_TO_STRING: Record<number, string> = {
+  0: 'low',
+  1: 'normal',
+  2: 'high',
+  3: 'urgent',
+};
+
 function formatTask(row: TaskRow) {
   return {
     id: row.id,
@@ -44,7 +51,7 @@ function formatTask(row: TaskRow) {
     title: row.title,
     description: row.description,
     status: row.status,
-    priority: row.priority,
+    priority: PRIORITY_NUMBER_TO_STRING[row.priority] ?? 'normal',
     assignedDeviceId: row.assigned_device_id ?? undefined,
     createdByDeviceId: row.created_by_device_id ?? undefined,
     executionSessionId: row.execution_session_id ?? undefined,
@@ -114,7 +121,7 @@ export async function taskRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const tasks = db.prepare(query).all(...params) as TaskRow[];
-    return tasks.map(formatTask);
+    return { tasks: tasks.map(formatTask) };
   });
 
   // ─────────────────────────────────────────────────────────────

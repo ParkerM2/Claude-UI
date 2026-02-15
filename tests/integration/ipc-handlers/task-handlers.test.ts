@@ -289,7 +289,8 @@ describe('Task IPC Handlers', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(hubApiClient.updateTaskStatus).toHaveBeenCalledWith('status-task', 'in_progress');
+      // Local 'in_progress' maps to Hub 'running' at the IPC boundary
+      expect(hubApiClient.updateTaskStatus).toHaveBeenCalledWith('status-task', 'running');
     });
 
     it('validates input with Zod - invalid status', async () => {

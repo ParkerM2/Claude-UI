@@ -240,7 +240,20 @@ export function createHubAuthService(deps: HubAuthServiceDeps): HubAuthService {
       }
 
       const baseUrl = getBaseUrl();
-      return await makeRequest<User>(baseUrl, 'GET', '/api/auth/me', undefined, tokens.accessToken);
+      // Hub returns { user: User, device?: Device } — extract the user field
+      const result = await makeRequest<{ user: User }>(
+        baseUrl,
+        'GET',
+        '/api/auth/me',
+        undefined,
+        tokens.accessToken,
+      );
+
+      if (result.ok && result.data) {
+        return { ok: true, data: result.data.user, statusCode: result.statusCode };
+      }
+
+      return { ok: result.ok, error: result.error, statusCode: result.statusCode };
     },
 
     async refreshToken() {
@@ -258,10 +271,10 @@ export function createHubAuthService(deps: HubAuthServiceDeps): HubAuthService {
       );
 
       if (result.ok && result.data) {
-        // Update only the access token and expiry, keep the refresh token
+        // Store the rotated refresh token from the Hub response
         tokenStore.setTokens(HUB_PROVIDER, {
           accessToken: result.data.accessToken,
-          refreshToken: tokens.refreshToken,
+          refreshToken: result.data.refreshToken,
           expiresAt: result.data.expiresAt,
           tokenType: 'Bearer',
         });

@@ -7,7 +7,7 @@
  */
 
 import type { InvokeOutput } from '@shared/ipc-contract';
-import type { TaskStatus as HubTaskStatus, TaskUpdateRequest } from '@shared/types/hub-protocol';
+import type { Task as HubTask, TaskStatus as HubTaskStatus, TaskUpdateRequest } from '@shared/types/hub-protocol';
 
 import type { HubApiClient } from '../../services/hub/hub-api-client';
 import type { GithubTaskImporter } from '../../services/tasks/github-importer';
@@ -18,6 +18,86 @@ import type { IpcRouter } from '../router';
 // Legacy channels cast Hub responses through unknown at this boundary.
 type LegacyTask = InvokeOutput<'tasks.get'>;
 type LegacyTaskList = InvokeOutput<'tasks.list'>;
+
+// ─── Status Mapping ─────────────────────────────────────────────
+
+/** Maps Hub task statuses to local (legacy) task statuses */
+const HUB_TO_LOCAL_STATUS: Partial<Record<string, string>> = {
+  backlog: 'backlog',
+  queued: 'queue',
+  running: 'in_progress',
+  paused: 'in_progress',
+  review: 'ai_review',
+  done: 'done',
+  error: 'error',
+};
+
+/** Maps local task statuses to Hub task statuses */
+const LOCAL_TO_HUB_STATUS: Partial<Record<string, HubTaskStatus>> = {
+  backlog: 'backlog',
+  queue: 'queued',
+  in_progress: 'running',
+  ai_review: 'review',
+  human_review: 'review',
+  done: 'done',
+  pr_created: 'done',
+  error: 'error',
+};
+
+function mapHubStatusToLocal(hubStatus: string): string {
+  return HUB_TO_LOCAL_STATUS[hubStatus] ?? hubStatus;
+}
+
+function mapLocalStatusToHub(localStatus: string): HubTaskStatus {
+  return LOCAL_TO_HUB_STATUS[localStatus] ?? (localStatus as HubTaskStatus);
+}
+
+// ─── Hub → Local Task Transform ─────────────────────────────────
+
+/**
+ * Transforms a Hub API task response into the local (legacy) Task shape.
+ * Hub returns flat fields; local expects nested structures.
+ */
+function transformHubTask(hubTask: HubTask): LegacyTask {
+  const metadata: Record<string, unknown> = {
+    ...(hubTask.metadata ?? {}),
+  };
+
+  // Map Hub flat cost fields into metadata
+  const hubRaw = hubTask as unknown as Record<string, unknown>;
+  if (hubRaw.costUsd !== undefined) {
+    metadata.costUsd = hubRaw.costUsd;
+  }
+  if (hubRaw.costTokens !== undefined) {
+    metadata.costTokens = hubRaw.costTokens;
+  }
+  if (hubRaw.agentName !== undefined) {
+    metadata.agentName = hubRaw.agentName;
+  }
+
+  // Map Hub flat PR fields into prStatus-like metadata
+  if (hubRaw.prNumber !== undefined || hubRaw.prUrl !== undefined) {
+    metadata.prUrl = hubRaw.prUrl;
+    metadata.prNumber = hubRaw.prNumber;
+    metadata.prState = hubRaw.prState;
+    metadata.prCiStatus = hubRaw.prCiStatus;
+  }
+
+  return {
+    id: hubTask.id,
+    title: hubTask.title,
+    description: hubTask.description,
+    status: mapHubStatusToLocal(hubTask.status) as LegacyTask['status'],
+    subtasks: [],
+    metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+    createdAt: hubTask.createdAt,
+    updatedAt: hubTask.updatedAt,
+  };
+}
+
+function transformHubTaskList(hubTasks: HubTask[]): LegacyTaskList {
+  return hubTasks.map(transformHubTask);
+}
 
 export interface TaskHandlerDeps {
   hubApiClient: HubApiClient;
@@ -145,7 +225,7 @@ export function registerTaskHandlers(
       throw new Error(result.error ?? 'Failed to fetch tasks');
     }
 
-    return result.data.tasks as unknown as LegacyTaskList;
+    return transformHubTaskList(result.data.tasks);
   });
 
   router.handle('tasks.get', async ({ projectId: _projectId, taskId }) => {
@@ -155,21 +235,22 @@ export function registerTaskHandlers(
       throw new Error(result.error ?? `Failed to fetch task ${taskId}`);
     }
 
-    return result.data as unknown as LegacyTask;
+    return transformHubTask(result.data);
   });
 
-  router.handle('tasks.create', async ({ title, description, projectId }) => {
+  router.handle('tasks.create', async ({ title, description, projectId, complexity }) => {
     const result = await hubApiClient.createTask({
       title,
       description,
       projectId,
+      metadata: complexity ? { complexity } : undefined,
     });
 
     if (!result.ok || !result.data) {
       throw new Error(result.error ?? 'Failed to create task');
     }
 
-    return result.data as unknown as LegacyTask;
+    return transformHubTask(result.data);
   });
 
   router.handle('tasks.update', async ({ taskId, updates }) => {
@@ -179,18 +260,18 @@ export function registerTaskHandlers(
       throw new Error(result.error ?? `Failed to update task ${taskId}`);
     }
 
-    return result.data as unknown as LegacyTask;
+    return transformHubTask(result.data);
   });
 
   router.handle('tasks.updateStatus', async ({ taskId, status }) => {
-    // Legacy status values may differ from Hub — cast at boundary
-    const result = await hubApiClient.updateTaskStatus(taskId, status as HubTaskStatus);
+    const hubStatus = mapLocalStatusToHub(status);
+    const result = await hubApiClient.updateTaskStatus(taskId, hubStatus);
 
     if (!result.ok || !result.data) {
       throw new Error(result.error ?? `Failed to update task status ${taskId}`);
     }
 
-    return result.data as unknown as LegacyTask;
+    return transformHubTask(result.data);
   });
 
   router.handle('tasks.delete', async ({ taskId, projectId: _projectId }) => {
@@ -220,7 +301,7 @@ export function registerTaskHandlers(
       throw new Error(result.error ?? 'Failed to fetch tasks');
     }
 
-    return result.data.tasks as unknown as LegacyTaskList;
+    return transformHubTaskList(result.data.tasks);
   });
 
   // ── Smart Task Creation (local services) ────────────────────

@@ -167,6 +167,7 @@ export interface AuthRefreshRequest {
 
 export interface AuthRefreshResponse {
   accessToken: string;
+  refreshToken: string;
   expiresAt: string;
 }
 
