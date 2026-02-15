@@ -9,7 +9,7 @@
 
 | Category | Count |
 |----------|-------|
-| Renderer Features | 25 |
+| Renderer Features | 28 |
 | Main Process Services | 30 |
 | IPC Handler Files | 35 |
 | IPC Contract Lines | ~2500 |
@@ -39,7 +39,7 @@ Location: `src/renderer/features/`
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager | `projects.*` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
 | **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, WebhookSettings | `settings.*` |
-| **tasks** | Task management (table-based dashboard) | TaskTable, TaskTableRow, TaskTableHeader, TaskTableFilters, TaskCard, TaskStatusBadge | `tasks.*` |
+| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge | `hub.tasks.*`, `tasks.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
 | **merge** | Branch merge workflow | ConflictResolver, MergeConfirmModal, MergePreviewPanel | `merge.*` |
@@ -47,6 +47,9 @@ Location: `src/renderer/features/`
 | **onboarding** | First-run setup wizard | OnboardingWizard, ClaudeCliStep, ApiKeyStep | `app.*`, `settings.*` |
 | **screen** | Screen capture | ScreenshotButton, ScreenshotViewer | `screen.*` |
 | **voice** | Voice interface (STT/TTS) | VoiceButton, VoiceSettings | `voice.*` |
+| **workflow** | Task execution & progress watching | (hooks only — no UI components) | `workflow.*` |
+| **devices** | Device registration & heartbeat | DeviceCard, DeviceSelector | `devices.*` |
+| **workspaces** | Workspace management | WorkspaceCard, WorkspacesTab, WorkspaceEditor | `workspaces.*` |
 
 ### Feature Module Structure
 
@@ -108,6 +111,8 @@ Location: `src/main/services/`
 | **time-parser** | Natural language time parsing | parseTimeExpression | - |
 | **voice** | Voice interface (Web Speech API) | startListening, stopListening, speak | `event:voice.*` |
 | **workflow** | Workflow execution & progress | launchWorkflow, watchProgress | `event:workflow.*` |
+| **device** | Device registration & heartbeat via Hub API | registerDevice, updateDevice, sendHeartbeat | `event:hub.devices.*` |
+| **device/heartbeat** | Periodic heartbeat pings to Hub | start, stop | - |
 
 ---
 
@@ -152,6 +157,7 @@ Location: `src/main/ipc/handlers/`
 | `workflow-handlers.ts` | workflow.* |
 | `workspace-handlers.ts` | workspace.* |
 | `auth-handlers.ts` | auth.* |
+| `device-handlers.ts` | devices.* |
 
 ---
 
@@ -184,6 +190,7 @@ Location: `src/main/ipc/handlers/`
 | `hub-connection.ts` | HubConnection types |
 | `hub-events.ts` | Hub event payload types |
 | `hub-protocol.ts` | Hub protocol contract types |
+| `auth.ts` | AuthUser, LoginCredentials, RegisterData, AuthTokens |
 
 ### Constants (`src/shared/constants/`)
 
@@ -278,7 +285,7 @@ Claude-UI/
 │   ├── preload/                 # Context bridge
 │   ├── renderer/                # React app
 │   │   ├── app/                 # Router, providers, layouts
-│   │   ├── features/            # Feature modules (25 features)
+│   │   ├── features/            # Feature modules (28 features)
 │   │   ├── shared/              # Shared hooks, stores, components
 │   │   └── styles/globals.css   # Theme tokens + Tailwind
 │   └── shared/                  # Shared between main + renderer
