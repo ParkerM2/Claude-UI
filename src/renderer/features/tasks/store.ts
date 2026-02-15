@@ -16,6 +16,7 @@ interface TaskUIState {
   searchQuery: string;
   expandedRowIds: Set<string>;
   gridSearchText: string;
+  createDialogOpen: boolean;
 
   selectTask: (id: string | null) => void;
   setFilterStatus: (status: TaskStatus | null) => void;
@@ -25,6 +26,7 @@ interface TaskUIState {
   clearFilters: () => void;
   toggleRowExpansion: (taskId: string) => void;
   setGridSearchText: (text: string) => void;
+  setCreateDialogOpen: (open: boolean) => void;
 }
 
 export const useTaskUI = create<TaskUIState>((set) => ({
@@ -34,6 +36,7 @@ export const useTaskUI = create<TaskUIState>((set) => ({
   searchQuery: '',
   expandedRowIds: new Set<string>(),
   gridSearchText: '',
+  createDialogOpen: false,
 
   selectTask: (id) => set({ selectedTaskId: id }),
   setFilterStatus: (status) => set({ filterStatus: status }),
@@ -59,4 +62,5 @@ export const useTaskUI = create<TaskUIState>((set) => ({
       return { expandedRowIds: next };
     }),
   setGridSearchText: (text) => set({ gridSearchText: text }),
+  setCreateDialogOpen: (open) => set({ createDialogOpen: open }),
 }));

@@ -2,10 +2,13 @@
  * TaskControls -- Action buttons for task detail: Run, Stop, Retry, Delete
  */
 
+import { useState } from 'react';
+
 import { Play, RefreshCw, Square, Trash2 } from 'lucide-react';
 
 import type { Task } from '@shared/types';
 
+import { ConfirmDialog } from '@renderer/shared/components/ConfirmDialog';
 import { cn } from '@renderer/shared/lib/utils';
 
 import { useCancelTask, useDeleteTask, useExecuteTask } from '../../api/useTaskMutations';
@@ -21,6 +24,7 @@ export function TaskControls({ task }: TaskControlsProps) {
   const executeTask = useExecuteTask();
   const cancelTask = useCancelTask();
   const deleteTask = useDeleteTask();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isRunning = task.status === 'in_progress';
   const isDone = task.status === 'done';
@@ -36,10 +40,6 @@ export function TaskControls({ task }: TaskControlsProps) {
 
   function handleRetry() {
     executeTask.mutate({ taskId: task.id });
-  }
-
-  function handleDelete() {
-    deleteTask.mutate({ taskId: task.id });
   }
 
   return (
@@ -83,11 +83,33 @@ export function TaskControls({ task }: TaskControlsProps) {
       <button
         aria-label="Delete task"
         className={cn('bg-destructive/10 text-destructive hover:bg-destructive/20', CONTROL_BUTTON_BASE)}
-        onClick={handleDelete}
+        onClick={() => {
+          setDeleteConfirmOpen(true);
+        }}
       >
         <Trash2 className="h-3.5 w-3.5" />
         Delete
       </button>
+
+      <ConfirmDialog
+        confirmLabel="Delete"
+        description={`Are you sure you want to delete "${task.title}"? This action cannot be undone.`}
+        loading={deleteTask.isPending}
+        open={deleteConfirmOpen}
+        title="Delete Task"
+        variant="destructive"
+        onOpenChange={setDeleteConfirmOpen}
+        onConfirm={() => {
+          deleteTask.mutate(
+            { taskId: task.id },
+            {
+              onSuccess: () => {
+                setDeleteConfirmOpen(false);
+              },
+            },
+          );
+        }}
+      />
     </div>
   );
 }

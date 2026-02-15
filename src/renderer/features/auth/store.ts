@@ -15,6 +15,7 @@ interface StoredAuth {
   accessToken: string;
   refreshToken: string;
   user: User;
+  expiresAt: number | null;
 }
 
 function loadStoredAuth(): StoredAuth | null {
@@ -27,8 +28,13 @@ function loadStoredAuth(): StoredAuth | null {
   }
 }
 
-function persistAuth(user: User, accessToken: string, refreshToken: string): void {
-  const data: StoredAuth = { accessToken, refreshToken, user };
+function persistAuth(
+  user: User,
+  accessToken: string,
+  refreshToken: string,
+  expiresAt: number | null,
+): void {
+  const data: StoredAuth = { accessToken, expiresAt, refreshToken, user };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -40,12 +46,14 @@ interface AuthState {
   user: User | null;
   accessToken: string | null;
   refreshToken: string | null;
+  expiresAt: number | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
   setAuth: (user: User, tokens: AuthTokens) => void;
   clearAuth: () => void;
   setUser: (user: User) => void;
   updateTokens: (tokens: AuthTokens) => void;
+  setExpiresAt: (expiresAt: number | null) => void;
   setInitializing: (value: boolean) => void;
 }
 
@@ -55,11 +63,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: stored?.user ?? null,
   accessToken: stored?.accessToken ?? null,
   refreshToken: stored?.refreshToken ?? null,
+  expiresAt: stored?.expiresAt ?? null,
   isAuthenticated: stored !== null,
   isInitializing: stored !== null,
 
   setAuth: (user, tokens) => {
-    persistAuth(user, tokens.accessToken, tokens.refreshToken);
+    persistAuth(user, tokens.accessToken, tokens.refreshToken, null);
     set({
       user,
       accessToken: tokens.accessToken,
@@ -74,6 +83,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       user: null,
       accessToken: null,
       refreshToken: null,
+      expiresAt: null,
       isAuthenticated: false,
     });
   },
@@ -81,7 +91,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
   setUser: (user) => {
     set((state) => {
       if (state.accessToken && state.refreshToken) {
-        persistAuth(user, state.accessToken, state.refreshToken);
+        persistAuth(user, state.accessToken, state.refreshToken, state.expiresAt);
       }
       return { user };
     });
@@ -90,12 +100,21 @@ export const useAuthStore = create<AuthState>()((set) => ({
   updateTokens: (tokens) => {
     set((state) => {
       if (state.user) {
-        persistAuth(state.user, tokens.accessToken, tokens.refreshToken);
+        persistAuth(state.user, tokens.accessToken, tokens.refreshToken, state.expiresAt);
       }
       return {
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
       };
+    });
+  },
+
+  setExpiresAt: (expiresAt) => {
+    set((state) => {
+      if (state.user && state.accessToken && state.refreshToken) {
+        persistAuth(state.user, state.accessToken, state.refreshToken, expiresAt);
+      }
+      return { expiresAt };
     });
   },
 

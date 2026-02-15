@@ -34,6 +34,8 @@ import { HubConnectionIndicator } from '@renderer/shared/components/HubConnectio
 import { cn } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
 
+import { UserMenu } from './UserMenu';
+
 interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -154,8 +156,9 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer: Hub indicator + Settings */}
+      {/* Footer: User menu + Hub indicator + Settings */}
       <div className="border-border border-t p-2">
+        <UserMenu collapsed={sidebarCollapsed} />
         <HubConnectionIndicator collapsed={sidebarCollapsed} />
         <button
           title={sidebarCollapsed ? 'Settings' : undefined}

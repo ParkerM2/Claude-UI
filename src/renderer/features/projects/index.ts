@@ -33,6 +33,7 @@ export { projectKeys } from './api/queryKeys';
 export { useProjectEvents } from './hooks/useProjectEvents';
 
 // Components
+export { ProjectEditDialog } from './components/ProjectEditDialog';
 export { ProjectListPage } from './components/ProjectListPage';
 export { WorktreeManager } from './components/WorktreeManager';
 export { BranchSelector } from './components/BranchSelector';

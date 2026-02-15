@@ -16,6 +16,7 @@ import { Loader2 } from 'lucide-react';
 import { AppUpdateNotification } from '@renderer/shared/components/AppUpdateNotification';
 import { AuthNotification } from '@renderer/shared/components/AuthNotification';
 import { HubNotification } from '@renderer/shared/components/HubNotification';
+import { MutationErrorToast } from '@renderer/shared/components/MutationErrorToast';
 import { WebhookNotification } from '@renderer/shared/components/WebhookNotification';
 import { useIpcEvent } from '@renderer/shared/hooks';
 import { ThemeHydrator } from '@renderer/shared/stores';
@@ -78,6 +79,7 @@ export function RootLayout() {
       <AppUpdateNotification />
       <AuthNotification />
       <HubNotification />
+      <MutationErrorToast />
       <WebhookNotification />
     </div>
   );

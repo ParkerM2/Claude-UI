@@ -25,6 +25,7 @@ export function useAuthInit(): void {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const setUser = useAuthStore((s) => s.setUser);
   const updateTokens = useAuthStore((s) => s.updateTokens);
+  const setExpiresAt = useAuthStore((s) => s.setExpiresAt);
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const setInitializing = useAuthStore((s) => s.setInitializing);
   const queryClient = useQueryClient();
@@ -54,6 +55,7 @@ export function useAuthInit(): void {
         try {
           const result = await ipc('auth.refresh', { refreshToken });
           updateTokens(result.tokens);
+          setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
 
           const user = await ipc('auth.me', {});
           setUser(user);
@@ -65,5 +67,5 @@ export function useAuthInit(): void {
         setInitializing(false);
       }
     })();
-  }, [isAuthenticated, refreshToken, setUser, updateTokens, clearAuth, setInitializing, queryClient]);
+  }, [isAuthenticated, refreshToken, setUser, updateTokens, setExpiresAt, clearAuth, setInitializing, queryClient]);
 }

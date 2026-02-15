@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 
-import { Search, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 
 import type { TaskStatus } from '@shared/types';
 
@@ -13,6 +13,7 @@ import { cn } from '@renderer/shared/lib/utils';
 
 import { useTaskUI } from '../store';
 
+import { CreateTaskDialog } from './CreateTaskDialog';
 import { TaskStatusBadge } from './TaskStatusBadge';
 
 const ALL_STATUSES: TaskStatus[] = [
@@ -137,53 +138,69 @@ export function TaskFiltersToolbar() {
   const setGridSearchText = useTaskUI((s) => s.setGridSearchText);
   const toggleFilterStatus = useTaskUI((s) => s.toggleFilterStatus);
   const clearFilters = useTaskUI((s) => s.clearFilters);
+  const createDialogOpen = useTaskUI((s) => s.createDialogOpen);
+  const setCreateDialogOpen = useTaskUI((s) => s.setCreateDialogOpen);
 
   const hasActiveFilters = filterStatuses.length > 0 || gridSearchText.length > 0;
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3">
-      {/* Search input */}
-      <div className="relative flex-1">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-        <input
-          aria-label="Search tasks"
-          placeholder="Search tasks..."
-          type="text"
-          value={gridSearchText}
-          className={cn(
-            'bg-card border-border text-foreground placeholder:text-muted-foreground',
-            'h-9 w-full rounded-md border py-2 pr-3 pl-9 text-sm',
-            'focus:border-primary focus:ring-ring focus:ring-1 focus:outline-none',
+    <>
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* New Task button */}
+        <button
+          className="bg-primary text-primary-foreground flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium transition-opacity hover:opacity-90"
+          type="button"
+          onClick={() => setCreateDialogOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Task</span>
+        </button>
+
+        {/* Search input */}
+        <div className="relative flex-1">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <input
+            aria-label="Search tasks"
+            placeholder="Search tasks..."
+            type="text"
+            value={gridSearchText}
+            className={cn(
+              'bg-card border-border text-foreground placeholder:text-muted-foreground',
+              'h-9 w-full rounded-md border py-2 pr-3 pl-9 text-sm',
+              'focus:border-primary focus:ring-ring focus:ring-1 focus:outline-none',
+            )}
+            onChange={(e) => setGridSearchText(e.target.value)}
+          />
+        </div>
+
+        {/* Status multi-select */}
+        <FilterDropdown
+          label="Status"
+          options={ALL_STATUSES}
+          selectedOptions={filterStatuses}
+          renderOption={(status) => (
+            <TaskStatusBadge status={status as TaskStatus} />
           )}
-          onChange={(e) => setGridSearchText(e.target.value)}
+          onToggle={(status) => toggleFilterStatus(status as TaskStatus)}
         />
+
+        {/* Clear filters */}
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            className={cn(
+              'text-muted-foreground hover:text-foreground',
+              'flex h-9 items-center gap-1 rounded-md px-2 text-sm transition-colors',
+            )}
+            onClick={clearFilters}
+          >
+            <X className="h-4 w-4" />
+            <span>Clear</span>
+          </button>
+        ) : null}
       </div>
 
-      {/* Status multi-select */}
-      <FilterDropdown
-        label="Status"
-        options={ALL_STATUSES}
-        selectedOptions={filterStatuses}
-        renderOption={(status) => (
-          <TaskStatusBadge status={status as TaskStatus} />
-        )}
-        onToggle={(status) => toggleFilterStatus(status as TaskStatus)}
-      />
-
-      {/* Clear filters */}
-      {hasActiveFilters ? (
-        <button
-          type="button"
-          className={cn(
-            'text-muted-foreground hover:text-foreground',
-            'flex h-9 items-center gap-1 rounded-md px-2 text-sm transition-colors',
-          )}
-          onClick={clearFilters}
-        >
-          <X className="h-4 w-4" />
-          <span>Clear</span>
-        </button>
-      ) : null}
-    </div>
+      <CreateTaskDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+    </>
   );
 }

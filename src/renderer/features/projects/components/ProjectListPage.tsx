@@ -5,7 +5,7 @@
 import { useState } from 'react';
 
 import { useNavigate } from '@tanstack/react-router';
-import { FolderOpen, Layers, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { FolderOpen, Layers, Pencil, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
 
 import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 import type { Project, RepoType } from '@shared/types';
@@ -21,6 +21,7 @@ import {
   useSubProjects,
 } from '../api/useProjects';
 
+import { ProjectEditDialog } from './ProjectEditDialog';
 import { ProjectInitWizard } from './ProjectInitWizard';
 
 function repoStructureBadgeClass(structure: RepoType): string {
@@ -37,11 +38,12 @@ function repoStructureLabel(structure: RepoType): string {
 
 interface ProjectRowProps {
   project: Project;
+  onEdit: (e: React.MouseEvent | React.KeyboardEvent, project: Project) => void;
   onOpen: (projectId: string) => void;
   onRemove: (e: React.MouseEvent | React.KeyboardEvent, projectId: string) => void;
 }
 
-function ProjectRow({ project, onOpen, onRemove }: ProjectRowProps) {
+function ProjectRow({ project, onEdit, onOpen, onRemove }: ProjectRowProps) {
   const { data: subProjects } = useSubProjects(project.id);
   const subCount = subProjects?.length ?? 0;
 
@@ -83,6 +85,19 @@ function ProjectRow({ project, onOpen, onRemove }: ProjectRowProps) {
           {formatRelativeTime(project.updatedAt)}
         </span>
         <span
+          aria-label={`Edit ${project.name}`}
+          className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1"
+          role="button"
+          tabIndex={0}
+          onClick={(e) => onEdit(e, project)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onEdit(e, project);
+          }}
+        >
+          <Pencil className="h-4 w-4" />
+        </span>
+        <span
+          aria-label={`Remove ${project.name}`}
           className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
           role="button"
           tabIndex={0}
@@ -105,6 +120,7 @@ export function ProjectListPage() {
   const removeProject = useRemoveProject();
   const selectDirectory = useSelectDirectory();
   const { addProjectTab } = useLayoutStore();
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
   async function handleAddProject() {
@@ -125,6 +141,11 @@ export function ProjectListPage() {
     setWizardOpen(false);
     addProjectTab(projectId);
     void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.TASKS) });
+  }
+
+  function handleEditProject(e: React.MouseEvent | React.KeyboardEvent, project: Project) {
+    e.stopPropagation();
+    setEditingProject(project);
   }
 
   function handleRemoveProject(e: React.MouseEvent | React.KeyboardEvent, projectId: string) {
@@ -177,6 +198,7 @@ export function ProjectListPage() {
             <ProjectRow
               key={project.id}
               project={project}
+              onEdit={handleEditProject}
               onOpen={handleOpenProject}
               onRemove={handleRemoveProject}
             />
@@ -196,6 +218,11 @@ export function ProjectListPage() {
           onComplete={handleWizardComplete}
         />
       ) : null}
+
+      <ProjectEditDialog
+        project={editingProject}
+        onClose={() => setEditingProject(null)}
+      />
     </div>
   );
 }
