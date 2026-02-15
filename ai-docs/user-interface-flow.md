@@ -1094,6 +1094,11 @@ Complete list of all registered IPC channels by domain:
 | G-12 | Voice feature no UI | Low | Voice | `voice.*` IPC channels exist but no visible microphone UI in any page |
 | G-13 | `/assistant` route defined but not wired | Low | Navigation | `ROUTES.ASSISTANT` constant exists in `routes.ts` but no route is registered in `router.tsx` — dead constant |
 | G-14 | `/briefing` not in sidebar | Low | Navigation | `BriefingPage` has a registered route but is not listed in the sidebar `topLevelItems` array — only accessible via direct URL |
+| G-15 | No project edit/settings page | Medium | Projects | `projects.update` IPC exists and `useUpdateProject()` hook works, but no dedicated UI for editing project name/description/gitUrl after creation |
+| G-16 | No delete confirmation dialogs | Medium | Projects | Project and sub-project delete actions fire immediately with no "Are you sure?" prompt — accidental data loss risk |
+| G-17 | `projects.initialize` is a skeleton | Low | Projects | Handler returns hardcoded `{ success: true }` — not wired to any real initialization logic |
+| G-18 | No project description field in wizard | Low | Projects | Project type supports `description` but the init wizard never asks for one |
+| G-19 | Workspace assignment not editable | Low | Projects | Workspace set during creation but no UI to change it afterward |
 
 ### Recommended MCP Test Scenarios
 
