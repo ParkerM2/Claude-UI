@@ -23,35 +23,28 @@ Claude UI is a desktop application for orchestrating fleets of autonomous Claude
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph Renderer["Renderer (React 19)"]
-        Router["TanStack Router"]
-        Features["25 Feature Modules"]
-        RQ["React Query"]
-        Zustand["Zustand Stores"]
-    end
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture.svg">
+    <img alt="Claude UI Architecture" src="docs/images/architecture.svg" width="100%">
+  </picture>
+</div>
 
-    subgraph Preload["Preload Bridge"]
-        Bridge["Typed IPC"]
-    end
+<details>
+<summary><strong>Architecture Overview</strong></summary>
 
-    subgraph Main["Main Process (Node.js)"]
-        IPC["IPC Router"]
-        Services["29 Services"]
-        OAuth["OAuth (5 providers)"]
-        MCP["MCP (6 servers)"]
-    end
+| Layer | Components | Technology |
+|-------|------------|------------|
+| **Renderer** | React Components, TanStack Router, React Query, Zustand | React 19, TypeScript |
+| **Preload Bridge** | Typed IPC Context, window.api | Electron contextBridge |
+| **Main Process** | IPC Router, 29 Services, OAuth, MCP Servers, PTY | Node.js, Electron 39 |
+| **External** | Hub Server, GitHub/Spotify/Calendar APIs, Anthropic SDK | REST, WebSocket, OAuth2 |
+| **Storage** | SQLite (Hub), JSON Files (Local), Task Specs | File system, SQLite |
 
-    subgraph External["External"]
-        Hub["Hub Server"]
-        APIs["GitHub/Spotify/Calendar"]
-    end
+**Data Flow**: React Query hooks call `ipc()` → Preload bridge → IPC Router → Services → External APIs/Storage
 
-    Renderer <--> Bridge
-    Bridge <--> Main
-    Main <--> External
-```
+</details>
 
 ---
 
