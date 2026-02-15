@@ -1099,6 +1099,7 @@ Complete list of all registered IPC channels by domain:
 | G-17 | `projects.initialize` is a skeleton | Low | Projects | Handler returns hardcoded `{ success: true }` — not wired to any real initialization logic |
 | G-18 | No project description field in wizard | Low | Projects | Project type supports `description` but the init wizard never asks for one |
 | G-19 | Workspace assignment not editable | Low | Projects | Workspace set during creation but no UI to change it afterward |
+| G-20 | Profile API keys stored in plaintext | Medium | Settings/Security | Profile `apiKey` saved as plaintext in `userData/settings.json` while webhook secrets use Electron `safeStorage` encryption — inconsistent security posture |
 
 ### Recommended MCP Test Scenarios
 
