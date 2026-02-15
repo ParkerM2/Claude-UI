@@ -32,7 +32,7 @@ export function createInsightsService(deps: {
 
   return {
     getMetrics(projectId) {
-      const projects = projectService.listProjects();
+      const projects = projectService.listProjectsSync();
       const projectIds = projectId ? [projectId] : projects.map((p) => p.id);
 
       let totalTasks = 0;
@@ -65,7 +65,7 @@ export function createInsightsService(deps: {
     },
 
     getTimeSeries(projectId, days = 7) {
-      const projects = projectService.listProjects();
+      const projects = projectService.listProjectsSync();
       const projectIds = projectId ? [projectId] : projects.map((p) => p.id);
       const result: InsightTimeSeries[] = [];
 
@@ -93,7 +93,7 @@ export function createInsightsService(deps: {
     },
 
     getTaskDistribution(projectId) {
-      const projects = projectService.listProjects();
+      const projects = projectService.listProjectsSync();
       const projectIds = projectId ? [projectId] : projects.map((p) => p.id);
 
       const statusCounts: Record<string, number> = {};
@@ -115,7 +115,7 @@ export function createInsightsService(deps: {
     },
 
     getProjectBreakdown() {
-      const projects = projectService.listProjects();
+      const projects = projectService.listProjectsSync();
 
       return projects.map((project) => {
         const tasks = taskService.listTasks(project.id);

@@ -21,4 +21,10 @@ export function useProjectEvents() {
     void queryClient.invalidateQueries({ queryKey: gitKeys.worktrees(projectId) });
     void queryClient.invalidateQueries({ queryKey: gitKeys.all });
   });
+
+  useIpcEvent('event:hub.projects.updated', ({ projectId }) => {
+    void queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
+    void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+    void queryClient.invalidateQueries({ queryKey: projectKeys.subProjects(projectId) });
+  });
 }

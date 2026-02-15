@@ -12,11 +12,11 @@ import { basename, join } from 'node:path';
 
 import { v4 as uuid } from 'uuid';
 
-import type { RepoStructure, SubProject } from '@shared/types';
+import type { DetectedSubProject, RepoStructure } from '@shared/types';
 
 export interface PolyrepoService {
   detectStructure: (repoPath: string) => RepoStructure;
-  listSubprojects: (repoPath: string) => SubProject[];
+  listSubprojects: (repoPath: string) => DetectedSubProject[];
 }
 
 /** Check if a directory contains a package.json */
@@ -36,11 +36,11 @@ function readPackageName(dirPath: string): string {
 }
 
 /** Scan workspace directories for subprojects */
-function scanWorkspaceDir(repoPath: string, dirName: string): SubProject[] {
+function scanWorkspaceDir(repoPath: string, dirName: string): DetectedSubProject[] {
   const dirPath = join(repoPath, dirName);
   if (!existsSync(dirPath)) return [];
 
-  const subprojects: SubProject[] = [];
+  const subprojects: DetectedSubProject[] = [];
 
   try {
     const entries = readdirSync(dirPath, { withFileTypes: true });
@@ -78,8 +78,8 @@ function isNestedGitRepo(repoPath: string, dirName: string): boolean {
 }
 
 /** Scan for nested git repos and return as subprojects */
-function scanNestedGitRepos(repoPath: string): SubProject[] {
-  const subprojects: SubProject[] = [];
+function scanNestedGitRepos(repoPath: string): DetectedSubProject[] {
+  const subprojects: DetectedSubProject[] = [];
 
   try {
     const entries = readdirSync(repoPath, { withFileTypes: true });

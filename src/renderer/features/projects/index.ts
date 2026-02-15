@@ -8,6 +8,10 @@ export {
   useAddProject,
   useRemoveProject,
   useSelectDirectory,
+  useUpdateProject,
+  useSubProjects,
+  useCreateSubProject,
+  useDeleteSubProject,
 } from './api/useProjects';
 export {
   gitKeys,

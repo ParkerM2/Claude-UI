@@ -101,13 +101,30 @@ const GithubIssueImportSchema = z.object({
   assignees: z.array(z.string()),
 });
 
+const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
+
 const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
   autoBuildPath: z.string().optional(),
+  workspaceId: z.string().optional(),
+  gitUrl: z.string().optional(),
+  repoStructure: RepoTypeSchema.optional(),
+  defaultBranch: z.string().optional(),
+  description: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+const SubProjectSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  name: z.string(),
+  relativePath: z.string(),
+  gitUrl: z.string().optional(),
+  defaultBranch: z.string(),
+  createdAt: z.string(),
 });
 
 const TerminalSessionSchema = z.object({
@@ -227,8 +244,6 @@ const WorktreeSchema = z.object({
 });
 
 const RepoStructureSchema = z.enum(['single', 'monorepo', 'polyrepo']);
-
-const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
 
 const ChildRepoSchema = z.object({
   name: z.string(),
@@ -949,6 +964,34 @@ export const ipcInvokeContract = {
   'projects.detectRepo': {
     input: z.object({ path: z.string() }),
     output: RepoDetectionResultSchema,
+  },
+  'projects.update': {
+    input: z.object({
+      projectId: z.string(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      gitUrl: z.string().optional(),
+      defaultBranch: z.string().optional(),
+    }),
+    output: ProjectSchema,
+  },
+  'projects.getSubProjects': {
+    input: z.object({ projectId: z.string() }),
+    output: z.array(SubProjectSchema),
+  },
+  'projects.createSubProject': {
+    input: z.object({
+      projectId: z.string(),
+      name: z.string(),
+      relativePath: z.string(),
+      gitUrl: z.string().optional(),
+      defaultBranch: z.string().optional(),
+    }),
+    output: SubProjectSchema,
+  },
+  'projects.deleteSubProject': {
+    input: z.object({ projectId: z.string(), subProjectId: z.string() }),
+    output: z.object({ success: z.boolean() }),
   },
 
   // ── Tasks ──
@@ -2464,6 +2507,7 @@ export {
   SuggestedPrioritySchema,
   GithubIssueImportSchema,
   ProjectSchema,
+  SubProjectSchema,
   TerminalSessionSchema,
   AppSettingsSchema,
   AgentSessionSchema,

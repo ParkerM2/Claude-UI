@@ -17,7 +17,9 @@ import { Check, ChevronLeft, ChevronRight, FolderOpen, Loader2, X } from 'lucide
 import { ipc } from '@renderer/shared/lib/ipc';
 import { cn } from '@renderer/shared/lib/utils';
 
-import { useAddProject } from '../api/useProjects';
+import { useWorkspaces } from '@features/workspaces';
+
+import { useAddProject, useCreateSubProject } from '../api/useProjects';
 
 import { RepoTypeSelector } from './RepoTypeSelector';
 import { SubRepoDetector } from './SubRepoDetector';
@@ -81,13 +83,21 @@ function StepFolder({ selectedPath, isPending, onSelect }: StepFolderProps) {
   );
 }
 
+interface WorkspaceOption {
+  id: string;
+  name: string;
+}
+
 interface StepConfigureProps {
   projectName: string;
   selectedPath: string | null;
   repoType: string;
   hasChildRepos: boolean;
   selectedReposSize: number;
+  workspaceId: string | null;
+  workspaces: WorkspaceOption[];
   onNameChange: (name: string) => void;
+  onWorkspaceChange: (id: string | null) => void;
 }
 
 function StepConfigure({
@@ -96,7 +106,10 @@ function StepConfigure({
   repoType,
   hasChildRepos,
   selectedReposSize,
+  workspaceId,
+  workspaces,
   onNameChange,
+  onWorkspaceChange,
 }: StepConfigureProps) {
   return (
     <div className="space-y-4">
@@ -117,6 +130,29 @@ function StepConfigure({
           onChange={(e) => onNameChange(e.target.value)}
         />
       </div>
+      {workspaces.length > 0 ? (
+        <div>
+          <label className="text-muted-foreground mb-1 block text-sm" htmlFor="wizard-workspace">
+            Workspace
+          </label>
+          <select
+            id="wizard-workspace"
+            value={workspaceId ?? ''}
+            className={cn(
+              'border-border bg-background w-full rounded-lg border px-3 py-2 text-sm',
+              'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',
+            )}
+            onChange={(e) => onWorkspaceChange(e.target.value || null)}
+          >
+            <option value="">No workspace</option>
+            {workspaces.map((ws) => (
+              <option key={ws.id} value={ws.id}>
+                {ws.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       <div className="text-muted-foreground text-sm">
         <p className="mb-1">
           <span className="font-medium">Path:</span> {selectedPath}
@@ -143,8 +179,11 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
   const [repoType, setRepoType] = useState('single');
   const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set());
   const [projectName, setProjectName] = useState('');
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
 
   const addProject = useAddProject();
+  const createSubProject = useCreateSubProject();
+  const { data: workspaces } = useWorkspaces();
 
   const selectDirectory = useMutation({
     mutationFn: () => ipc('projects.selectDirectory', {}),
@@ -193,13 +232,26 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
     }
   }
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!selectedPath) return;
-    addProject.mutate(selectedPath, {
-      onSuccess: (project) => {
-        onComplete(project.id);
-      },
-    });
+    const project = await addProject.mutateAsync(selectedPath);
+
+    // Create sub-projects from selected repos
+    if (selectedRepos.size > 0 && detection.data) {
+      const repos = detection.data.childRepos.filter((r) => selectedRepos.has(r.path));
+      await Promise.all(
+        repos.map((repo) =>
+          createSubProject.mutateAsync({
+            projectId: project.id,
+            name: repo.name,
+            relativePath: repo.relativePath,
+            gitUrl: repo.gitUrl,
+          }),
+        ),
+      );
+    }
+
+    onComplete(project.id);
   }
 
   return (
@@ -303,7 +355,10 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
               repoType={repoType}
               selectedPath={selectedPath}
               selectedReposSize={selectedRepos.size}
+              workspaceId={workspaceId}
+              workspaces={workspaces ?? []}
               onNameChange={setProjectName}
+              onWorkspaceChange={setWorkspaceId}
             />
           ) : null}
 
@@ -322,6 +377,14 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
                       {selectedPath}
                     </dd>
                   </div>
+                  {workspaceId ? (
+                    <div className="flex justify-between">
+                      <dt className="text-muted-foreground">Workspace</dt>
+                      <dd className="font-medium">
+                        {workspaces?.find((ws) => ws.id === workspaceId)?.name ?? workspaceId}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Repo type</dt>
                     <dd className="font-medium">{repoType}</dd>
@@ -361,15 +424,19 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
 
           {isLastStep ? (
             <button
-              disabled={addProject.isPending || projectName.trim().length === 0}
               type="button"
               className={cn(
                 'bg-primary text-primary-foreground rounded-lg px-5 py-2 text-sm font-medium transition-colors',
                 'hover:bg-primary/90 disabled:opacity-50',
               )}
+              disabled={
+                addProject.isPending ||
+                createSubProject.isPending ||
+                projectName.trim().length === 0
+              }
               onClick={handleConfirm}
             >
-              {addProject.isPending ? (
+              {addProject.isPending || createSubProject.isPending ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Creating...

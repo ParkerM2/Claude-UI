@@ -42,7 +42,7 @@ export function createSuggestionEngine(deps: SuggestionEngineDeps): SuggestionEn
 
   function getStaleProjectSuggestions(): Suggestion[] {
     const suggestions: Suggestion[] = [];
-    const projects = projectService.listProjects();
+    const projects = projectService.listProjectsSync();
     const now = Date.now();
     const staleThreshold = STALE_PROJECT_DAYS * 24 * 60 * 60 * 1000;
 
@@ -71,7 +71,7 @@ export function createSuggestionEngine(deps: SuggestionEngineDeps): SuggestionEn
 
   function getParallelTaskSuggestions(): Suggestion[] {
     const suggestions: Suggestion[] = [];
-    const projects = projectService.listProjects();
+    const projects = projectService.listProjectsSync();
     const runningAgents = agentService.listAllAgents();
     const maxConcurrent = 3; // Could be fetched from settings
 
@@ -122,7 +122,7 @@ export function createSuggestionEngine(deps: SuggestionEngineDeps): SuggestionEn
 
   function getBlockedTaskSuggestions(): Suggestion[] {
     const suggestions: Suggestion[] = [];
-    const projects = projectService.listProjects();
+    const projects = projectService.listProjectsSync();
 
     for (const project of projects) {
       const tasks = taskService.listTasks(project.id);
