@@ -1092,6 +1092,8 @@ Complete list of all registered IPC channels by domain:
 | G-10 | CommandBar not wired | Low | Navigation | `CommandBar.tsx` renders in TopBar but may not be connected to assistant functionality |
 | G-11 | Calendar feature no OAuth | Low | Calendar | `calendar.*` IPC channels exist but no OAuth setup for Google Calendar in settings |
 | G-12 | Voice feature no UI | Low | Voice | `voice.*` IPC channels exist but no visible microphone UI in any page |
+| G-13 | `/assistant` route defined but not wired | Low | Navigation | `ROUTES.ASSISTANT` constant exists in `routes.ts` but no route is registered in `router.tsx` — dead constant |
+| G-14 | `/briefing` not in sidebar | Low | Navigation | `BriefingPage` has a registered route but is not listed in the sidebar `topLevelItems` array — only accessible via direct URL |
 
 ### Recommended MCP Test Scenarios
 
