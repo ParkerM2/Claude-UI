@@ -101,13 +101,76 @@ const GithubIssueImportSchema = z.object({
   assignees: z.array(z.string()),
 });
 
+// ── Hub Task Schemas (Hub API shape — distinct from legacy TaskSchema) ──
+
+const HubTaskStatusSchema = z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']);
+
+const HubTaskPrioritySchema = z.enum(['low', 'normal', 'high', 'urgent']);
+
+const HubTaskProgressSchema = z
+  .object({
+    phase: z.string(),
+    phaseIndex: z.number(),
+    totalPhases: z.number(),
+    currentAgent: z.string().nullable(),
+    filesChanged: z.number(),
+    lastActivity: z.string(),
+    logs: z.array(z.string()),
+  })
+  .optional();
+
+const HubTaskSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  workspaceId: z.string().optional(),
+  subProjectId: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  status: HubTaskStatusSchema,
+  priority: HubTaskPrioritySchema,
+  assignedDeviceId: z.string().optional(),
+  createdByDeviceId: z.string().optional(),
+  executionSessionId: z.string().optional(),
+  progress: HubTaskProgressSchema,
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  subtasks: z.array(z.unknown()).optional(),
+  agentName: z.string().optional(),
+  activityHistory: z.array(z.unknown()).optional(),
+  costTokens: z.number().optional(),
+  costUsd: z.number().optional(),
+  prNumber: z.number().optional(),
+  prState: z.string().optional(),
+  prCiStatus: z.string().optional(),
+  prUrl: z.string().optional(),
+  completedAt: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
+
 const ProjectSchema = z.object({
   id: z.string(),
   name: z.string(),
   path: z.string(),
   autoBuildPath: z.string().optional(),
+  workspaceId: z.string().optional(),
+  gitUrl: z.string().optional(),
+  repoStructure: RepoTypeSchema.optional(),
+  defaultBranch: z.string().optional(),
+  description: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+const SubProjectSchema = z.object({
+  id: z.string(),
+  projectId: z.string(),
+  name: z.string(),
+  relativePath: z.string(),
+  gitUrl: z.string().optional(),
+  defaultBranch: z.string(),
+  createdAt: z.string(),
 });
 
 const TerminalSessionSchema = z.object({
@@ -227,8 +290,6 @@ const WorktreeSchema = z.object({
 });
 
 const RepoStructureSchema = z.enum(['single', 'monorepo', 'polyrepo']);
-
-const RepoTypeSchema = z.enum(['single', 'monorepo', 'multi-repo', 'none']);
 
 const ChildRepoSchema = z.object({
   name: z.string(),
@@ -835,6 +896,52 @@ const BriefingConfigSchema = z.object({
   includeAgentActivity: z.boolean(),
 });
 
+// ─── Auth Schemas ─────────────────────────────────────────────
+
+const UserSchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string(),
+  avatarUrl: z.string().nullable(),
+  createdAt: z.string(),
+  lastLoginAt: z.string().nullable(),
+});
+
+const AuthTokensSchema = z.object({
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  expiresIn: z.number(),
+});
+
+const LoginInputSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+});
+
+const LoginOutputSchema = z.object({
+  user: UserSchema,
+  tokens: AuthTokensSchema,
+});
+
+const RegisterInputSchema = z.object({
+  email: z.string(),
+  password: z.string(),
+  displayName: z.string(),
+});
+
+const RegisterOutputSchema = z.object({
+  user: UserSchema,
+  tokens: AuthTokensSchema,
+});
+
+const RefreshInputSchema = z.object({
+  refreshToken: z.string(),
+});
+
+const RefreshOutputSchema = z.object({
+  tokens: AuthTokensSchema,
+});
+
 // ─── Workspace Schemas ────────────────────────────────────────
 
 const WorkspaceSettingsSchema = z.object({
@@ -848,18 +955,29 @@ const WorkspaceSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   hostDeviceId: z.string().optional(),
-  projectIds: z.array(z.string()),
   settings: WorkspaceSettingsSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
+const DeviceCapabilitiesSchema = z.object({
+  canExecute: z.boolean(),
+  repos: z.array(z.string()),
+});
+
+const DeviceTypeSchema = z.enum(['desktop', 'mobile', 'web']);
+
 const DeviceSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  platform: z.string(),
-  online: z.boolean(),
-  lastSeen: z.string(),
+  machineId: z.string().optional(),
+  userId: z.string(),
+  deviceType: DeviceTypeSchema,
+  deviceName: z.string(),
+  capabilities: DeviceCapabilitiesSchema,
+  isOnline: z.boolean(),
+  lastSeen: z.string().optional(),
+  appVersion: z.string().optional(),
+  createdAt: z.string(),
 });
 
 // ─── IPC Contract Definition ──────────────────────────────────
@@ -892,6 +1010,34 @@ export const ipcInvokeContract = {
   'projects.detectRepo': {
     input: z.object({ path: z.string() }),
     output: RepoDetectionResultSchema,
+  },
+  'projects.update': {
+    input: z.object({
+      projectId: z.string(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      gitUrl: z.string().optional(),
+      defaultBranch: z.string().optional(),
+    }),
+    output: ProjectSchema,
+  },
+  'projects.getSubProjects': {
+    input: z.object({ projectId: z.string() }),
+    output: z.array(SubProjectSchema),
+  },
+  'projects.createSubProject': {
+    input: z.object({
+      projectId: z.string(),
+      name: z.string(),
+      relativePath: z.string(),
+      gitUrl: z.string().optional(),
+      defaultBranch: z.string().optional(),
+    }),
+    output: SubProjectSchema,
+  },
+  'projects.deleteSubProject': {
+    input: z.object({ projectId: z.string(), subProjectId: z.string() }),
+    output: z.object({ success: z.boolean() }),
   },
 
   // ── Tasks ──
@@ -1520,11 +1666,11 @@ export const ipcInvokeContract = {
       projectId: z.string().optional(),
       workspaceId: z.string().optional(),
     }),
-    output: z.object({ tasks: z.array(z.unknown()) }),
+    output: z.object({ tasks: z.array(HubTaskSchema) }),
   },
   'hub.tasks.get': {
     input: z.object({ taskId: z.string() }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.create': {
     input: z.object({
@@ -1532,28 +1678,28 @@ export const ipcInvokeContract = {
       workspaceId: z.string().optional(),
       title: z.string(),
       description: z.string().optional(),
-      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      priority: HubTaskPrioritySchema.optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.update': {
     input: z.object({
       taskId: z.string(),
       title: z.string().optional(),
       description: z.string().optional(),
-      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']).optional(),
-      priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+      status: HubTaskStatusSchema.optional(),
+      priority: HubTaskPrioritySchema.optional(),
       metadata: z.record(z.string(), z.unknown()).optional(),
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.updateStatus': {
     input: z.object({
       taskId: z.string(),
-      status: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+      status: HubTaskStatusSchema,
     }),
-    output: z.unknown(),
+    output: HubTaskSchema,
   },
   'hub.tasks.delete': {
     input: z.object({ taskId: z.string() }),
@@ -1570,7 +1716,7 @@ export const ipcInvokeContract = {
     }),
     output: z.object({
       success: z.boolean(),
-      previousStatus: z.enum(['backlog', 'queued', 'running', 'paused', 'review', 'done', 'error']),
+      previousStatus: HubTaskStatusSchema,
     }),
   },
 
@@ -2051,37 +2197,51 @@ export const ipcInvokeContract = {
     input: z.object({}),
     output: z.array(DeviceSchema),
   },
+  'devices.register': {
+    input: z.object({
+      machineId: z.string(),
+      deviceName: z.string(),
+      deviceType: DeviceTypeSchema,
+      capabilities: DeviceCapabilitiesSchema,
+      appVersion: z.string(),
+    }),
+    output: DeviceSchema,
+  },
+  'devices.heartbeat': {
+    input: z.object({ deviceId: z.string() }),
+    output: z.object({ success: z.boolean(), lastSeen: z.string() }),
+  },
+  'devices.update': {
+    input: z.object({
+      deviceId: z.string(),
+      deviceName: z.string().optional(),
+      capabilities: DeviceCapabilitiesSchema.optional(),
+      isOnline: z.boolean().optional(),
+      appVersion: z.string().optional(),
+    }),
+    output: DeviceSchema,
+  },
 
   // ── Auth ──
-  'auth.login': {
-    input: z.object({ email: z.email(), password: z.string() }),
-    output: z.object({
-      token: z.string(),
-      user: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
-    }),
-  },
   'auth.register': {
-    input: z.object({
-      email: z.email(),
-      password: z.string(),
-      displayName: z.string(),
-    }),
-    output: z.object({
-      token: z.string(),
-      user: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
-    }),
+    input: RegisterInputSchema,
+    output: RegisterOutputSchema,
   },
-  'auth.me': {
-    input: z.object({}),
-    output: z.object({ id: z.string(), email: z.string(), displayName: z.string() }),
+  'auth.login': {
+    input: LoginInputSchema,
+    output: LoginOutputSchema,
   },
   'auth.logout': {
     input: z.object({}),
     output: z.object({ success: z.boolean() }),
   },
   'auth.refresh': {
+    input: RefreshInputSchema,
+    output: RefreshOutputSchema,
+  },
+  'auth.me': {
     input: z.object({}),
-    output: z.object({ token: z.string() }),
+    output: UserSchema,
   },
 
   // ── Workflow ──
@@ -2384,6 +2544,10 @@ export type EventPayload<T extends EventChannel> = z.infer<(typeof ipcEventContr
 
 // Re-export schemas for use in handlers
 export {
+  HubTaskSchema,
+  HubTaskStatusSchema,
+  HubTaskPrioritySchema,
+  HubTaskProgressSchema,
   TaskSchema,
   TaskDraftSchema,
   TaskStatusSchema,
@@ -2393,6 +2557,7 @@ export {
   SuggestedPrioritySchema,
   GithubIssueImportSchema,
   ProjectSchema,
+  SubProjectSchema,
   TerminalSessionSchema,
   AppSettingsSchema,
   AgentSessionSchema,
@@ -2488,4 +2653,14 @@ export {
   WorkspaceSchema,
   WorkspaceSettingsSchema,
   DeviceSchema,
+  DeviceCapabilitiesSchema,
+  DeviceTypeSchema,
+  UserSchema,
+  AuthTokensSchema,
+  LoginInputSchema,
+  LoginOutputSchema,
+  RegisterInputSchema,
+  RegisterOutputSchema,
+  RefreshInputSchema,
+  RefreshOutputSchema,
 };

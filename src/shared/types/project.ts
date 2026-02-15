@@ -7,8 +7,23 @@ export interface Project {
   name: string;
   path: string;
   autoBuildPath?: string;
+  workspaceId?: string;
+  gitUrl?: string;
+  repoStructure?: RepoType;
+  defaultBranch?: string;
+  description?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface SubProject {
+  id: string;
+  projectId: string;
+  name: string;
+  relativePath: string;
+  gitUrl?: string;
+  defaultBranch: string;
+  createdAt: string;
 }
 
 export interface ProjectSettings {

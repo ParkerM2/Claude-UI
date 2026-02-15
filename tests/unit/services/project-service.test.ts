@@ -1,400 +1,459 @@
 /**
- * Unit Tests — ProjectService
+ * Unit Tests — ProjectService (Hub API proxy)
  *
- * Tests CRUD operations and file persistence for project management.
+ * Tests CRUD operations, sub-project management, and local cache behavior.
+ * The service proxies to Hub API via HubApiClient.
  */
 
-import { createFsFromVolume, Volume } from 'memfs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { Project } from '@shared/types';
+import type { Project, SubProject } from '@shared/types';
+import type { HubApiClient, HubApiResponse } from '@main/services/hub/hub-api-client';
 
-// ─── Shared Volume ────────────────────────────────────────────────────
-// Create a shared volume instance that will be used by both the mock and tests
-let sharedVol = Volume.fromJSON({});
+// ─── Mock Hub API Client ─────────────────────────────────────────────
 
-// ─── Mocks ────────────────────────────────────────────────────────────
-
-// Mock node:fs with memfs using the shared volume
-vi.mock('node:fs', () => {
-  const fs = createFsFromVolume(sharedVol);
+function createMockHubApiClient(): HubApiClient {
   return {
-    ...fs,
-    default: fs,
+    hubGet: vi.fn(),
+    hubPost: vi.fn(),
+    hubPatch: vi.fn(),
+    hubPut: vi.fn(),
+    hubDelete: vi.fn(),
+    listTasks: vi.fn(),
+    getTask: vi.fn(),
+    createTask: vi.fn(),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    pushProgress: vi.fn(),
+    updateTaskStatus: vi.fn(),
+    executeTask: vi.fn(),
+    cancelTask: vi.fn(),
+    registerDevice: vi.fn(),
+    heartbeat: vi.fn(),
   };
-});
+}
 
-vi.mock('node:fs/promises', () => {
-  const fs = createFsFromVolume(sharedVol);
-  return {
-    ...fs.promises,
-    default: fs.promises,
-  };
-});
+function okResponse<T>(data: T): HubApiResponse<T> {
+  return { ok: true, data, statusCode: 200 };
+}
 
-// Mock uuid to return predictable IDs
-let uuidCounter = 0;
-vi.mock('uuid', () => ({
-  v4: vi.fn(() => `test-uuid-${++uuidCounter}`),
-}));
+function errorResponse(error: string, statusCode = 500): HubApiResponse<never> {
+  return { ok: false, error, statusCode };
+}
 
 // ─── Test Suite ───────────────────────────────────────────────────────
 
 describe('ProjectService', () => {
-  const MOCK_USER_DATA = '/mock/userData';
-  const PROJECTS_FILE = `${MOCK_USER_DATA}/projects.json`;
+  let hubApiClient: HubApiClient;
 
   beforeEach(() => {
-    // Reset the shared volume and create fresh fs mock
-    sharedVol = Volume.fromJSON({});
-    sharedVol.mkdirSync(MOCK_USER_DATA, { recursive: true });
-
-    // Reset uuid counter
-    uuidCounter = 0;
-
-    // Clear all mocks
+    hubApiClient = createMockHubApiClient();
     vi.clearAllMocks();
-
-    // Reset modules so the service gets fresh fs mock
-    vi.resetModules();
-
-    // Re-apply the fs mock with fresh volume
-    vi.doMock('node:fs', () => {
-      const fs = createFsFromVolume(sharedVol);
-      return {
-        ...fs,
-        default: fs,
-      };
-    });
-
-    vi.doMock('node:fs/promises', () => {
-      const fs = createFsFromVolume(sharedVol);
-      return {
-        ...fs.promises,
-        default: fs.promises,
-      };
-    });
   });
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  /**
-   * Helper to dynamically import project service with fresh module state
-   */
   async function createFreshService() {
+    vi.resetModules();
     const { createProjectService } = await import(
       '@main/services/project/project-service'
     );
-    return createProjectService();
+    return createProjectService({ hubApiClient });
   }
 
   // ─── listProjects Tests ─────────────────────────────────────────────
 
   describe('listProjects()', () => {
-    it('returns empty array when no projects exist', async () => {
-      // No projects.json file exists
-      const service = await createFreshService();
-
-      const projects = service.listProjects();
-
-      expect(projects).toEqual([]);
-      expect(Array.isArray(projects)).toBe(true);
-    });
-
-    it('returns empty array when projects.json is empty array', async () => {
-      // Create empty projects file
-      sharedVol.writeFileSync(PROJECTS_FILE, '[]', { encoding: 'utf-8' });
-
-      const service = await createFreshService();
-      const projects = service.listProjects();
-
-      expect(projects).toEqual([]);
-    });
-
-    it('returns projects from JSON file', async () => {
-      const existingProjects: Project[] = [
+    it('returns projects from Hub API', async () => {
+      const projects: Project[] = [
         {
           id: 'proj-1',
           name: 'Project One',
-          path: '/path/to/project-one',
+          path: '/path/to/one',
           createdAt: '2026-01-01T00:00:00.000Z',
           updatedAt: '2026-01-01T00:00:00.000Z',
         },
-        {
-          id: 'proj-2',
-          name: 'Project Two',
-          path: '/path/to/project-two',
-          createdAt: '2026-01-02T00:00:00.000Z',
-          updatedAt: '2026-01-02T00:00:00.000Z',
-        },
       ];
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify(existingProjects),
-        { encoding: 'utf-8' }
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ projects }),
       );
 
       const service = await createFreshService();
-      const projects = service.listProjects();
+      const result = await service.listProjects();
 
-      expect(projects).toHaveLength(2);
-      expect(projects[0]?.id).toBe('proj-1');
-      expect(projects[0]?.name).toBe('Project One');
-      expect(projects[1]?.id).toBe('proj-2');
-      expect(projects[1]?.name).toBe('Project Two');
+      expect(result).toHaveLength(1);
+      expect(result[0]?.id).toBe('proj-1');
+      expect(hubApiClient.hubGet).toHaveBeenCalledWith('/api/projects');
     });
 
-    it('returns empty array when projects.json is corrupted', async () => {
-      // Write invalid JSON
-      sharedVol.writeFileSync(PROJECTS_FILE, 'not valid json {{{', { encoding: 'utf-8' });
+    it('uses workspace-scoped endpoint when workspaceId provided', async () => {
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ projects: [] }),
+      );
 
       const service = await createFreshService();
-      const projects = service.listProjects();
+      await service.listProjects('ws-123');
 
-      expect(projects).toEqual([]);
+      expect(hubApiClient.hubGet).toHaveBeenCalledWith(
+        '/api/workspaces/ws-123/projects',
+      );
+    });
+
+    it('throws on Hub API error', async () => {
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        errorResponse('Hub unreachable'),
+      );
+
+      const service = await createFreshService();
+      await expect(service.listProjects()).rejects.toThrow('Hub unreachable');
+    });
+
+    it('populates local cache for getProjectPath', async () => {
+      const projects: Project[] = [
+        {
+          id: 'proj-1',
+          name: 'Project One',
+          path: '/path/to/one',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ];
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ projects }),
+      );
+
+      const service = await createFreshService();
+      await service.listProjects();
+
+      expect(service.getProjectPath('proj-1')).toBe('/path/to/one');
     });
   });
 
   // ─── addProject Tests ───────────────────────────────────────────────
 
   describe('addProject()', () => {
-    it('creates project with ID and name derived from directory', async () => {
-      const service = await createFreshService();
-
-      const project = service.addProject('/path/to/my-awesome-project');
-
-      expect(project.id).toBe('test-uuid-1');
-      expect(project.name).toBe('my-awesome-project');
-      expect(project.path).toBe('/path/to/my-awesome-project');
-      expect(project.createdAt).toBeDefined();
-      expect(project.updatedAt).toBeDefined();
-    });
-
-    it('persists project to JSON file', async () => {
-      const service = await createFreshService();
-
-      service.addProject('/path/to/test-project');
-
-      // Verify file was written
-      const fileContent = sharedVol.readFileSync(
-        PROJECTS_FILE,
-        'utf-8'
-      ) as string;
-      const savedProjects = JSON.parse(fileContent) as Project[];
-
-      expect(savedProjects).toHaveLength(1);
-      expect(savedProjects[0]?.name).toBe('test-project');
-      expect(savedProjects[0]?.path).toBe('/path/to/test-project');
-    });
-
-    it('returns existing project if path already registered', async () => {
-      const existingProject: Project = {
-        id: 'existing-id',
-        name: 'existing-project',
-        path: '/path/to/existing-project',
+    it('sends project data to Hub API', async () => {
+      const newProject: Project = {
+        id: 'proj-new',
+        name: 'New Project',
+        path: '/path/to/new',
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
       };
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify([existingProject]),
-        { encoding: 'utf-8' }
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(
+        okResponse(newProject),
       );
 
       const service = await createFreshService();
-      const project = service.addProject('/path/to/existing-project');
+      const result = await service.addProject({ path: '/path/to/new' });
 
-      // Should return existing project, not create new one
-      expect(project.id).toBe('existing-id');
-      expect(project.name).toBe('existing-project');
-
-      // Verify no duplicate was added
-      const projects = service.listProjects();
-      expect(projects).toHaveLength(1);
+      expect(result.id).toBe('proj-new');
+      expect(hubApiClient.hubPost).toHaveBeenCalledWith('/api/projects', {
+        path: '/path/to/new',
+        name: undefined,
+        repoStructure: undefined,
+        gitUrl: undefined,
+        defaultBranch: undefined,
+        subProjects: undefined,
+      });
     });
 
-    it('sets createdAt and updatedAt to current ISO timestamp', async () => {
-      // Mock Date.now() for consistent timestamps
-      const mockDate = new Date('2026-02-14T12:00:00.000Z');
-      vi.useFakeTimers();
-      vi.setSystemTime(mockDate);
+    it('uses workspace-scoped endpoint when workspaceId provided', async () => {
+      const newProject: Project = {
+        id: 'proj-ws',
+        name: 'WS Project',
+        path: '/path/to/ws',
+        workspaceId: 'ws-1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(
+        okResponse(newProject),
+      );
 
       const service = await createFreshService();
-      const project = service.addProject('/path/to/timed-project');
+      await service.addProject({ path: '/path/to/ws', workspaceId: 'ws-1' });
 
-      expect(project.createdAt).toBe('2026-02-14T12:00:00.000Z');
-      expect(project.updatedAt).toBe('2026-02-14T12:00:00.000Z');
+      expect(hubApiClient.hubPost).toHaveBeenCalledWith(
+        '/api/workspaces/ws-1/projects',
+        expect.objectContaining({ path: '/path/to/ws' }),
+      );
+    });
 
-      vi.useRealTimers();
+    it('caches added project for sync access', async () => {
+      const newProject: Project = {
+        id: 'proj-cached',
+        name: 'Cached Project',
+        path: '/path/to/cached',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(
+        okResponse(newProject),
+      );
+
+      const service = await createFreshService();
+      await service.addProject({ path: '/path/to/cached' });
+
+      expect(service.getProjectPath('proj-cached')).toBe('/path/to/cached');
+    });
+
+    it('throws on Hub API error', async () => {
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(
+        errorResponse('Duplicate project'),
+      );
+
+      const service = await createFreshService();
+      await expect(
+        service.addProject({ path: '/path/to/dup' }),
+      ).rejects.toThrow('Duplicate project');
     });
   });
 
   // ─── removeProject Tests ────────────────────────────────────────────
 
   describe('removeProject()', () => {
-    it('removes project by ID', async () => {
-      const existingProjects: Project[] = [
-        {
-          id: 'proj-to-remove',
-          name: 'Project To Remove',
-          path: '/path/to/remove',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-        {
-          id: 'proj-to-keep',
-          name: 'Project To Keep',
-          path: '/path/to/keep',
-          createdAt: '2026-01-02T00:00:00.000Z',
-          updatedAt: '2026-01-02T00:00:00.000Z',
-        },
-      ];
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify(existingProjects),
-        { encoding: 'utf-8' }
+    it('deletes project via Hub API', async () => {
+      vi.mocked(hubApiClient.hubDelete).mockResolvedValueOnce({
+        ok: true,
+        statusCode: 204,
+      });
+
+      const service = await createFreshService();
+      const result = await service.removeProject('proj-del');
+
+      expect(result.success).toBe(true);
+      expect(hubApiClient.hubDelete).toHaveBeenCalledWith('/api/projects/proj-del');
+    });
+
+    it('removes project from local cache', async () => {
+      // First add a project to the cache
+      const project: Project = {
+        id: 'proj-cache-del',
+        name: 'Cache Del',
+        path: '/path/to/del',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(okResponse(project));
+      vi.mocked(hubApiClient.hubDelete).mockResolvedValueOnce({
+        ok: true,
+        statusCode: 204,
+      });
+
+      const service = await createFreshService();
+      await service.addProject({ path: '/path/to/del' });
+      expect(service.getProjectPath('proj-cache-del')).toBe('/path/to/del');
+
+      await service.removeProject('proj-cache-del');
+      expect(service.getProjectPath('proj-cache-del')).toBeUndefined();
+    });
+
+    it('throws on Hub API error', async () => {
+      vi.mocked(hubApiClient.hubDelete).mockResolvedValueOnce(
+        errorResponse('Not found', 404),
       );
 
       const service = await createFreshService();
-      const result = service.removeProject('proj-to-remove');
-
-      expect(result.success).toBe(true);
-
-      const remaining = service.listProjects();
-      expect(remaining).toHaveLength(1);
-      expect(remaining[0]?.id).toBe('proj-to-keep');
+      await expect(service.removeProject('proj-nf')).rejects.toThrow('Not found');
     });
+  });
 
-    it('persists removal to JSON file', async () => {
-      const existingProjects: Project[] = [
-        {
-          id: 'proj-1',
-          name: 'Project One',
-          path: '/path/one',
-          createdAt: '2026-01-01T00:00:00.000Z',
-          updatedAt: '2026-01-01T00:00:00.000Z',
-        },
-      ];
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify(existingProjects),
-        { encoding: 'utf-8' }
-      );
+  // ─── updateProject Tests ────────────────────────────────────────────
+
+  describe('updateProject()', () => {
+    it('patches project via Hub API', async () => {
+      const updated: Project = {
+        id: 'proj-upd',
+        name: 'Updated Name',
+        path: '/path/to/upd',
+        description: 'New description',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPatch).mockResolvedValueOnce(okResponse(updated));
 
       const service = await createFreshService();
-      service.removeProject('proj-1');
+      const result = await service.updateProject({
+        projectId: 'proj-upd',
+        name: 'Updated Name',
+        description: 'New description',
+      });
 
-      // Read file directly to verify persistence
-      const fileContent = sharedVol.readFileSync(
-        PROJECTS_FILE,
-        'utf-8'
-      ) as string;
-      const savedProjects = JSON.parse(fileContent) as Project[];
-
-      expect(savedProjects).toHaveLength(0);
+      expect(result.name).toBe('Updated Name');
+      expect(hubApiClient.hubPatch).toHaveBeenCalledWith('/api/projects/proj-upd', {
+        name: 'Updated Name',
+        description: 'New description',
+      });
     });
 
-    it('succeeds silently when project ID does not exist', async () => {
+    it('updates local cache on success', async () => {
+      const updated: Project = {
+        id: 'proj-upd-cache',
+        name: 'Updated',
+        path: '/new/path',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-02-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPatch).mockResolvedValueOnce(okResponse(updated));
+
       const service = await createFreshService();
+      await service.updateProject({ projectId: 'proj-upd-cache', name: 'Updated' });
 
-      // Should not throw, returns success
-      const result = service.removeProject('non-existent-id');
-
-      expect(result.success).toBe(true);
+      expect(service.getProjectPath('proj-upd-cache')).toBe('/new/path');
     });
   });
 
   // ─── getProjectPath Tests ───────────────────────────────────────────
 
   describe('getProjectPath()', () => {
-    it('returns project path by ID', async () => {
-      const existingProject: Project = {
-        id: 'proj-1',
-        name: 'Project One',
-        path: '/path/to/project-one',
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      };
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify([existingProject]),
-        { encoding: 'utf-8' }
+    it('returns undefined when cache is empty', async () => {
+      const service = await createFreshService();
+      expect(service.getProjectPath('unknown')).toBeUndefined();
+    });
+
+    it('returns cached path after listProjects', async () => {
+      const projects: Project[] = [
+        {
+          id: 'proj-path',
+          name: 'Path Project',
+          path: '/my/project',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ];
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ projects }),
       );
 
       const service = await createFreshService();
-      const path = service.getProjectPath('proj-1');
+      await service.listProjects();
 
-      expect(path).toBe('/path/to/project-one');
-    });
-
-    it('returns undefined for unknown project ID', async () => {
-      const service = await createFreshService();
-
-      const path = service.getProjectPath('unknown-id');
-
-      expect(path).toBeUndefined();
+      expect(service.getProjectPath('proj-path')).toBe('/my/project');
     });
   });
 
-  // ─── initializeProject Tests ────────────────────────────────────────
+  // ─── listProjectsSync Tests ─────────────────────────────────────────
 
-  describe('initializeProject()', () => {
-    it('creates .claude-ui directory in project path', async () => {
-      const projectPath = '/path/to/init-project';
-      sharedVol.mkdirSync(projectPath, { recursive: true });
+  describe('listProjectsSync()', () => {
+    it('returns empty array when cache is empty', async () => {
+      const service = await createFreshService();
+      expect(service.listProjectsSync()).toEqual([]);
+    });
 
-      const existingProject: Project = {
-        id: 'proj-init',
-        name: 'Init Project',
-        path: projectPath,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      };
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify([existingProject]),
-        { encoding: 'utf-8' }
+    it('returns cached projects after listProjects call', async () => {
+      const projects: Project[] = [
+        {
+          id: 'proj-sync',
+          name: 'Sync Project',
+          path: '/sync',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        },
+      ];
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ projects }),
       );
 
       const service = await createFreshService();
-      const result = service.initializeProject('proj-init');
+      await service.listProjects();
 
-      expect(result.success).toBe(true);
-      expect(sharedVol.existsSync(`${projectPath}/.claude-ui`)).toBe(true);
+      const syncResult = service.listProjectsSync();
+      expect(syncResult).toHaveLength(1);
+      expect(syncResult[0]?.id).toBe('proj-sync');
     });
+  });
 
-    it('returns error when project not found', async () => {
-      const service = await createFreshService();
+  // ─── Sub-project Tests ──────────────────────────────────────────────
 
-      const result = service.initializeProject('non-existent-project');
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Project not found');
-    });
-
-    it('succeeds when .claude-ui directory already exists', async () => {
-      const projectPath = '/path/to/existing-init';
-      sharedVol.mkdirSync(`${projectPath}/.claude-ui`, { recursive: true });
-
-      const existingProject: Project = {
-        id: 'proj-existing-init',
-        name: 'Existing Init',
-        path: projectPath,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      };
-      sharedVol.writeFileSync(
-        PROJECTS_FILE,
-        JSON.stringify([existingProject]),
-        { encoding: 'utf-8' }
+  describe('getSubProjects()', () => {
+    it('fetches sub-projects from Hub API', async () => {
+      const subProjects: SubProject[] = [
+        {
+          id: 'sub-1',
+          projectId: 'proj-1',
+          name: 'Frontend',
+          relativePath: 'packages/frontend',
+          defaultBranch: 'main',
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+      ];
+      vi.mocked(hubApiClient.hubGet).mockResolvedValueOnce(
+        okResponse({ subProjects }),
       );
 
       const service = await createFreshService();
-      const result = service.initializeProject('proj-existing-init');
+      const result = await service.getSubProjects('proj-1');
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.name).toBe('Frontend');
+      expect(hubApiClient.hubGet).toHaveBeenCalledWith(
+        '/api/projects/proj-1/sub-projects',
+      );
+    });
+  });
+
+  describe('createSubProject()', () => {
+    it('creates sub-project via Hub API', async () => {
+      const subProject: SubProject = {
+        id: 'sub-new',
+        projectId: 'proj-1',
+        name: 'Backend',
+        relativePath: 'packages/backend',
+        defaultBranch: 'main',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      };
+      vi.mocked(hubApiClient.hubPost).mockResolvedValueOnce(
+        okResponse(subProject),
+      );
+
+      const service = await createFreshService();
+      const result = await service.createSubProject({
+        projectId: 'proj-1',
+        name: 'Backend',
+        relativePath: 'packages/backend',
+        defaultBranch: 'main',
+      });
+
+      expect(result.name).toBe('Backend');
+      expect(hubApiClient.hubPost).toHaveBeenCalledWith(
+        '/api/projects/proj-1/sub-projects',
+        {
+          name: 'Backend',
+          relativePath: 'packages/backend',
+          defaultBranch: 'main',
+        },
+      );
+    });
+  });
+
+  describe('deleteSubProject()', () => {
+    it('deletes sub-project via Hub API', async () => {
+      vi.mocked(hubApiClient.hubDelete).mockResolvedValueOnce({
+        ok: true,
+        statusCode: 204,
+      });
+
+      const service = await createFreshService();
+      const result = await service.deleteSubProject('proj-1', 'sub-1');
 
       expect(result.success).toBe(true);
+      expect(hubApiClient.hubDelete).toHaveBeenCalledWith(
+        '/api/projects/proj-1/sub-projects/sub-1',
+      );
+    });
+
+    it('throws on Hub API error', async () => {
+      vi.mocked(hubApiClient.hubDelete).mockResolvedValueOnce(
+        errorResponse('Sub-project not found', 404),
+      );
+
+      const service = await createFreshService();
+      await expect(
+        service.deleteSubProject('proj-1', 'sub-nf'),
+      ).rejects.toThrow('Sub-project not found');
     });
   });
 
@@ -402,16 +461,14 @@ describe('ProjectService', () => {
 
   describe('selectDirectory()', () => {
     it('returns selected path from dialog', async () => {
-      // Dialog mock is configured in tests/setup/mocks/electron.ts
       const service = await createFreshService();
-
       const result = await service.selectDirectory();
 
+      // Dialog mock is configured in tests/setup/mocks/electron.ts
       expect(result.path).toBe('/mock/path');
     });
 
     it('returns null when dialog is canceled', async () => {
-      // Override dialog mock for this test
       const { dialog } = await import('electron');
       vi.mocked(dialog.showOpenDialog).mockResolvedValueOnce({
         canceled: true,

@@ -466,15 +466,15 @@ handleNav(path)                            Sidebar.tsx
   |
   v
 navigate({ to: projectViewPath(id, path) })
-  |  e.g., '/projects/abc-123/kanban'
+  |  e.g., '/projects/abc-123/tasks'
   v
 TanStack Router matches route pattern
-  |  ROUTE_PATTERNS.PROJECT_KANBAN = '/projects/$projectId/kanban'
+  |  ROUTE_PATTERNS.PROJECT_TASKS = '/projects/$projectId/tasks'
   v
 Route component renders                   router.tsx
-  |  component: KanbanBoard
+  |  component: TaskTable
   v
-KanbanBoard mounts
+TaskTable mounts
   |
   v
 useTasks(projectId) fires query
@@ -486,7 +486,7 @@ ipc('tasks.list', { projectId })
 TaskService.listTasks(projectId)
   |
   v
-Tasks returned, KanbanBoard renders columns
+Tasks returned, TaskTable renders filterable/sortable rows
 ```
 
 ### Route Hierarchy
@@ -494,10 +494,18 @@ Tasks returned, KanbanBoard renders columns
 ```
 / (RootLayout)
 ├── /dashboard              -> DashboardPage
+├── /my-work                -> MyWorkPage
+├── /alerts                 -> AlertsPage
+├── /briefing               -> BriefingPage
+├── /communications         -> CommunicationsPage
+├── /fitness                -> FitnessPage
+├── /notes                  -> NotesPage
+├── /planner                -> PlannerPage
+├── /planner/weekly         -> WeeklyReviewPage
+├── /productivity           -> ProductivityPage
 ├── /projects               -> ProjectListPage
-├── /projects/$projectId    -> redirect to /kanban
-│   ├── /kanban             -> KanbanBoard
-│   ├── /tasks              -> TaskListView
+├── /projects/$projectId    -> redirect to /tasks
+│   ├── /tasks              -> TaskDataGrid
 │   ├── /terminals          -> TerminalGrid
 │   ├── /agents             -> AgentDashboard
 │   ├── /roadmap            -> RoadmapPage
@@ -505,5 +513,180 @@ Tasks returned, KanbanBoard renders columns
 │   ├── /github             -> GitHubPage
 │   ├── /changelog          -> ChangelogPage
 │   └── /insights           -> InsightsPage
+├── /login                  -> LoginPage (unauthenticated)
+├── /register               -> RegisterPage (unauthenticated)
 └── /settings               -> SettingsPage
+```
+
+---
+
+## 11. Auth Flow (Login -> JWT -> Refresh -> IPC)
+
+```
+User submits login form
+  |
+  v
+useLogin().mutate({ email, password })
+  |
+  v
+ipc('auth.login', { email, password })
+  |
+  v
+                              auth-handlers.ts
+                                |
+                                v
+                              hubAuthService.login(email, password)
+                                |  src/main/services/hub/hub-auth-service.ts
+                                v
+                              POST /api/auth/login
+                                { email, password }
+                                                                  |
+                                                                  v
+                                                              Validate credentials
+                                                              Generate JWT access + refresh tokens
+                                                                  |
+                                                                  v
+                              <---- { accessToken, refreshToken, user } ---
+                                |
+                                v
+                              tokenStore.setTokens({ accessToken, refreshToken })
+                                |  Encrypted via safeStorage
+                                v
+                              Return { user } to renderer
+                                |
+                                v
+useAuthStore.setUser(user)
+  |
+  v
+AuthGuard allows navigation to protected routes
+```
+
+### Token Refresh
+
+```
+API call returns 401 Unauthorized
+  |
+  v
+hubApiClient interceptor detects expired token
+  |
+  v
+hubAuthService.refreshToken()
+  |
+  v
+POST /api/auth/refresh { refreshToken }
+  |
+  v
+New { accessToken, refreshToken } returned
+  |
+  v
+tokenStore.setTokens(newTokens)
+  |
+  v
+Original API call retried with new token
+```
+
+---
+
+## 12. Hub-First Task Execution Flow (UI -> Hub -> Dispatch -> Device -> Progress -> UI)
+
+```
+User clicks "Execute" on task
+  |
+  v
+useExecuteTask().mutate(taskId)
+  |
+  v
+ipc('hub.tasks.execute', { taskId })
+  |
+  v
+                              hub-handlers.ts
+                                |
+                                v
+                              hubApiClient.executeTask(taskId)
+                                |
+                                v
+                              POST /api/tasks/:id/execute
+                                                                  |
+                                                                  v
+                                                              Hub dispatches to target device
+                                                              WS: { type: 'task.executing', taskId }
+                                                                  |
+                              <---- WS event --------<-----------+
+                                |
+                                v
+                              workflowService.launch({ taskId, projectPath })
+                                |
+                                v
+                              Spawn Claude CLI as PTY process
+                                |
+                                v
+                              progressWatcher.start(projectPath)
+                                |
+                                +--> Parse progress files every 2s
+                                |     |
+                                |     v
+                                |   progressSyncer.push(taskId, progress)
+                                |     |
+                                |     v
+                                |   PUT /api/tasks/:id/progress
+                                |                                   |
+                                |                                   v
+                                |                               WS broadcast: task.progress
+                                |                                   |
+                              router.emit('event:hub.tasks.progress')
+                                |
+                                v
+                              React receives progress events
+                                |
+                                v
+                              queryClient.setQueryData() patches task cache
+                                |
+                                v
+                              AG-Grid ProgressBarCell re-renders
+```
+
+---
+
+## 13. Device Heartbeat Flow
+
+```
+APP STARTUP
+  |
+  v
+app.whenReady()
+  |
+  v
+deviceService.registerDevice({
+  machineId, deviceName, deviceType, capabilities, appVersion
+})
+  |
+  v
+POST /api/devices/register
+  |
+  v
+Hub returns { deviceId }
+Hub broadcasts: { type: 'device.online', deviceId, name }
+  |
+  v
+heartbeatService.start(deviceId)
+  |
+  v
+setInterval(tick, 30_000)
+  |
+  v (every 30 seconds)
+  +--- deviceService.sendHeartbeat(deviceId)
+  |      |
+  |      v
+  |    POST /api/devices/:id/heartbeat
+  |      |
+  |      v
+  |    Hub updates last_seen_at
+  |
+  +--- On error: log warning, continue heartbeat timer
+  |
+  v (on app quit)
+heartbeatService.stop()
+  |
+  v
+clearInterval(timer)
 ```

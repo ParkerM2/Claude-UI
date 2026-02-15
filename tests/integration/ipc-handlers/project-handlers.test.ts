@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ipcInvokeContract, type InvokeChannel } from '@shared/ipc-contract';
-import type { Project } from '@shared/types';
+import type { Project, SubProject } from '@shared/types';
 
 import type { IpcRouter } from '@main/ipc/router';
 import type { ProjectService } from '@main/services/project/project-service';
@@ -27,11 +27,23 @@ function createMockProject(overrides: Partial<Project> = {}): Project {
   };
 }
 
+function createMockSubProject(overrides: Partial<SubProject> = {}): SubProject {
+  return {
+    id: 'sub-1',
+    projectId: 'test-project-1',
+    name: 'Sub Project',
+    relativePath: 'packages/sub',
+    defaultBranch: 'main',
+    createdAt: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
 function createMockProjectService(projectStore: Map<string, Project>): ProjectService {
   return {
-    listProjects: vi.fn(() => Array.from(projectStore.values())),
-    addProject: vi.fn((path: string) => {
-      const existing = Array.from(projectStore.values()).find((p) => p.path === path);
+    listProjects: vi.fn(async () => [...projectStore.values()]),
+    addProject: vi.fn(async ({ path }: { path: string }) => {
+      const existing = [...projectStore.values()].find((p) => p.path === path);
       if (existing) return existing;
 
       const now = new Date().toISOString();
@@ -45,17 +57,28 @@ function createMockProjectService(projectStore: Map<string, Project>): ProjectSe
       projectStore.set(project.id, project);
       return project;
     }),
-    removeProject: vi.fn((projectId: string) => {
+    removeProject: vi.fn(async (projectId: string) => {
       projectStore.delete(projectId);
       return { success: true };
     }),
-    initializeProject: vi.fn((projectId: string) => {
+    updateProject: vi.fn(async ({ projectId, ...updates }) => {
       const project = projectStore.get(projectId);
-      if (!project) return { success: false, error: 'Project not found' };
-      return { success: true };
+      if (!project) throw new Error(`Project ${projectId} not found`);
+      const updated = { ...project, ...updates, updatedAt: new Date().toISOString() };
+      projectStore.set(projectId, updated);
+      return updated;
     }),
-    selectDirectory: vi.fn(() => Promise.resolve({ path: '/mock/selected/path' })),
+    selectDirectory: vi.fn(async () => ({ path: '/mock/selected/path' })),
     getProjectPath: vi.fn((projectId: string) => projectStore.get(projectId)?.path),
+    listProjectsSync: vi.fn(() => [...projectStore.values()]),
+    getSubProjects: vi.fn(async () => []),
+    createSubProject: vi.fn(async (data) => createMockSubProject({
+      projectId: data.projectId,
+      name: data.name,
+      relativePath: data.relativePath,
+      defaultBranch: data.defaultBranch ?? 'main',
+    })),
+    deleteSubProject: vi.fn(async () => ({ success: true })),
   };
 }
 
@@ -176,7 +199,7 @@ describe('Project IPC Handlers', () => {
         path: '/mock/new/project',
         name: 'project',
       });
-      expect(projectService.addProject).toHaveBeenCalledWith('/mock/new/project');
+      expect(projectService.addProject).toHaveBeenCalledWith({ path: '/mock/new/project' });
     });
 
     it('validates input with Zod - missing path', async () => {
@@ -245,22 +268,11 @@ describe('Project IPC Handlers', () => {
   // ─── projects.initialize ─────────────────────────────────────
 
   describe('projects.initialize', () => {
-    it('initializes existing project', async () => {
-      const project = createMockProject({ id: 'init-me' });
-      projectStore.set(project.id, project);
-
+    it('returns success (no-op in Hub proxy mode)', async () => {
       const result = await invoke('projects.initialize', { projectId: 'init-me' });
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ success: true });
-      expect(projectService.initializeProject).toHaveBeenCalledWith('init-me');
-    });
-
-    it('returns error for non-existent project', async () => {
-      const result = await invoke('projects.initialize', { projectId: 'non-existent' });
-
-      expect(result.success).toBe(true);
-      expect(result.data).toEqual({ success: false, error: 'Project not found' });
     });
 
     it('validates input with Zod - missing projectId', async () => {
@@ -306,6 +318,107 @@ describe('Project IPC Handlers', () => {
 
     it('validates input with Zod - path must be string', async () => {
       const result = await invoke('projects.detectRepo', { path: 42 });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ─── projects.update ─────────────────────────────────────────
+
+  describe('projects.update', () => {
+    it('updates project and returns it', async () => {
+      const project = createMockProject({ id: 'upd-1' });
+      projectStore.set(project.id, project);
+
+      const result = await invoke('projects.update', {
+        projectId: 'upd-1',
+        name: 'Updated Name',
+        description: 'New description',
+      });
+
+      expect(result.success).toBe(true);
+      expect((result.data as Project).name).toBe('Updated Name');
+      expect(projectService.updateProject).toHaveBeenCalledWith({
+        projectId: 'upd-1',
+        name: 'Updated Name',
+        description: 'New description',
+      });
+    });
+
+    it('validates input with Zod - missing projectId', async () => {
+      const result = await invoke('projects.update', { name: 'Test' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error).toContain('projectId');
+    });
+  });
+
+  // ─── projects.getSubProjects ─────────────────────────────────
+
+  describe('projects.getSubProjects', () => {
+    it('returns sub-projects for a project', async () => {
+      const result = await invoke('projects.getSubProjects', { projectId: 'proj-1' });
+
+      expect(result.success).toBe(true);
+      expect(Array.isArray(result.data)).toBe(true);
+      expect(projectService.getSubProjects).toHaveBeenCalledWith('proj-1');
+    });
+
+    it('validates input with Zod - missing projectId', async () => {
+      const result = await invoke('projects.getSubProjects', {});
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ─── projects.createSubProject ───────────────────────────────
+
+  describe('projects.createSubProject', () => {
+    it('creates sub-project and returns it', async () => {
+      const result = await invoke('projects.createSubProject', {
+        projectId: 'proj-1',
+        name: 'Frontend',
+        relativePath: 'packages/frontend',
+        defaultBranch: 'main',
+      });
+
+      expect(result.success).toBe(true);
+      expect((result.data as SubProject).name).toBe('Frontend');
+      expect(projectService.createSubProject).toHaveBeenCalledWith({
+        projectId: 'proj-1',
+        name: 'Frontend',
+        relativePath: 'packages/frontend',
+        defaultBranch: 'main',
+      });
+    });
+
+    it('validates input with Zod - missing required fields', async () => {
+      const result = await invoke('projects.createSubProject', { projectId: 'proj-1' });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  // ─── projects.deleteSubProject ───────────────────────────────
+
+  describe('projects.deleteSubProject', () => {
+    it('deletes sub-project and returns success', async () => {
+      const result = await invoke('projects.deleteSubProject', {
+        projectId: 'proj-1',
+        subProjectId: 'sub-1',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ success: true });
+      expect(projectService.deleteSubProject).toHaveBeenCalledWith('proj-1', 'sub-1');
+    });
+
+    it('validates input with Zod - missing subProjectId', async () => {
+      const result = await invoke('projects.deleteSubProject', { projectId: 'proj-1' });
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();

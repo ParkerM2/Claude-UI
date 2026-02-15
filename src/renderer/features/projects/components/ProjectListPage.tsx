@@ -5,9 +5,10 @@
 import { useState } from 'react';
 
 import { useNavigate } from '@tanstack/react-router';
-import { FolderOpen, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { FolderOpen, Layers, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
 
 import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
+import type { Project, RepoType } from '@shared/types';
 
 import { cn, formatRelativeTime } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
@@ -17,9 +18,85 @@ import {
   useAddProject,
   useRemoveProject,
   useSelectDirectory,
+  useSubProjects,
 } from '../api/useProjects';
 
 import { ProjectInitWizard } from './ProjectInitWizard';
+
+function repoStructureBadgeClass(structure: RepoType): string {
+  if (structure === 'monorepo') return 'bg-info/10 text-info';
+  if (structure === 'multi-repo') return 'bg-warning/10 text-warning';
+  return 'bg-muted text-muted-foreground';
+}
+
+function repoStructureLabel(structure: RepoType): string {
+  if (structure === 'monorepo') return 'monorepo';
+  if (structure === 'multi-repo') return 'multi-repo';
+  return 'single';
+}
+
+interface ProjectRowProps {
+  project: Project;
+  onOpen: (projectId: string) => void;
+  onRemove: (e: React.MouseEvent | React.KeyboardEvent, projectId: string) => void;
+}
+
+function ProjectRow({ project, onOpen, onRemove }: ProjectRowProps) {
+  const { data: subProjects } = useSubProjects(project.id);
+  const subCount = subProjects?.length ?? 0;
+
+  return (
+    <button
+      className={cn(
+        'border-border flex w-full items-center justify-between rounded-lg border p-4',
+        'hover:bg-accent text-left transition-colors',
+      )}
+      onClick={() => onOpen(project.id)}
+    >
+      <div className="flex items-center gap-3">
+        <FolderOpen className="text-muted-foreground h-5 w-5" />
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{project.name}</p>
+            {project.repoStructure ? (
+              <span
+                className={cn(
+                  'rounded-full px-2 py-0.5 text-xs font-medium',
+                  repoStructureBadgeClass(project.repoStructure),
+                )}
+              >
+                {repoStructureLabel(project.repoStructure)}
+              </span>
+            ) : null}
+            {subCount > 0 ? (
+              <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                <Layers className="h-3 w-3" />
+                {String(subCount)} sub-project{subCount === 1 ? '' : 's'}
+              </span>
+            ) : null}
+          </div>
+          <p className="text-muted-foreground text-xs">{project.path}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-muted-foreground text-xs">
+          {formatRelativeTime(project.updatedAt)}
+        </span>
+        <span
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
+          role="button"
+          tabIndex={0}
+          onClick={(e) => onRemove(e, project.id)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onRemove(e, project.id);
+          }}
+        >
+          <Trash2 className="h-4 w-4" />
+        </span>
+      </div>
+    </button>
+  );
+}
 
 export function ProjectListPage() {
   const navigate = useNavigate();
@@ -97,38 +174,12 @@ export function ProjectListPage() {
       {projects && projects.length > 0 ? (
         <div className="space-y-2">
           {projects.map((project) => (
-            <button
+            <ProjectRow
               key={project.id}
-              className={cn(
-                'border-border flex w-full items-center justify-between rounded-lg border p-4',
-                'hover:bg-accent text-left transition-colors',
-              )}
-              onClick={() => handleOpenProject(project.id)}
-            >
-              <div className="flex items-center gap-3">
-                <FolderOpen className="text-muted-foreground h-5 w-5" />
-                <div>
-                  <p className="font-medium">{project.name}</p>
-                  <p className="text-muted-foreground text-xs">{project.path}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-muted-foreground text-xs">
-                  {formatRelativeTime(project.updatedAt)}
-                </span>
-                <span
-                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
-                  role="button"
-                  tabIndex={0}
-                  onClick={(e) => handleRemoveProject(e, project.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') handleRemoveProject(e, project.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </span>
-              </div>
-            </button>
+              project={project}
+              onOpen={handleOpenProject}
+              onRemove={handleRemoveProject}
+            />
           ))}
         </div>
       ) : (

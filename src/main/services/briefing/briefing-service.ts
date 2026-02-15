@@ -167,7 +167,7 @@ export function createBriefingService(deps: BriefingServiceDeps): BriefingServic
   }
 
   function getTaskSummary(): TaskSummary {
-    const projects = projectService.listProjects();
+    const projects = projectService.listProjectsSync();
     const today = getTodayDate();
     const yesterday = getYesterdayDate();
 

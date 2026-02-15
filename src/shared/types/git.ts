@@ -29,7 +29,7 @@ export interface Worktree {
   createdAt: string;
 }
 
-export interface SubProject {
+export interface DetectedSubProject {
   id: string;
   name: string;
   relativePath: string;

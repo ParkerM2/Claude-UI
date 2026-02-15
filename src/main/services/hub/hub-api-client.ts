@@ -211,11 +211,45 @@ export function createHubApiClient(
     },
 
     createTask(body) {
-      return hubPost('/api/tasks', body);
+      // Hub expects snake_case fields; client uses camelCase
+      const hubBody: Record<string, unknown> = {
+        project_id: body.projectId,
+        title: body.title,
+        description: body.description,
+      };
+      if (body.priority !== undefined) {
+        // Hub expects priority as a number
+        const priorityMap: Record<string, number> = {
+          low: 0,
+          normal: 1,
+          medium: 1,
+          high: 2,
+          urgent: 3,
+          critical: 3,
+        };
+        hubBody.priority = priorityMap[body.priority] ?? 1;
+      }
+      if (body.metadata !== undefined) {
+        hubBody.metadata = body.metadata;
+      }
+      return hubPost('/api/tasks', hubBody);
     },
 
     updateTask(taskId, body) {
-      return hubPut(`/api/tasks/${encodeURIComponent(taskId)}`, body);
+      // Hub expects snake_case fields; map priority string to number
+      const hubBody: Record<string, unknown> = { ...body };
+      if (body.priority !== undefined) {
+        const priorityMap: Record<string, number> = {
+          low: 0,
+          normal: 1,
+          medium: 1,
+          high: 2,
+          urgent: 3,
+          critical: 3,
+        };
+        hubBody.priority = priorityMap[body.priority] ?? 1;
+      }
+      return hubPut(`/api/tasks/${encodeURIComponent(taskId)}`, hubBody);
     },
 
     deleteTask(taskId) {

@@ -6,6 +6,7 @@ import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
 
 import { createDatabase } from './db/database.js';
+import { verifyAccessToken } from './lib/jwt.js';
 import { createApiKeyMiddleware, hashKey } from './middleware/api-key.js';
 import { createJwtAuthMiddleware } from './middleware/jwt-auth.js';
 import { agentRoutes } from './routes/agents.js';
@@ -62,24 +63,37 @@ const WS_CLOSE_AUTH_TIMEOUT = 4002;
 /** Timeout for receiving auth message (5 seconds). */
 const WS_AUTH_TIMEOUT_MS = 5000;
 
-interface WsAuthMessage {
+interface WsApiKeyAuthMessage {
   type: 'auth';
   apiKey: string;
 }
+
+interface WsBearerAuthMessage {
+  type: 'auth';
+  bearerToken: string;
+}
+
+type WsAuthMessage = WsApiKeyAuthMessage | WsBearerAuthMessage;
 
 function isValidAuthMessage(data: unknown): data is WsAuthMessage {
   if (typeof data !== 'object' || data === null) {
     return false;
   }
   const obj = data as Record<string, unknown>;
-  return obj.type === 'auth' && typeof obj.apiKey === 'string';
+  if (obj.type !== 'auth') {
+    return false;
+  }
+  return typeof obj.apiKey === 'string' || typeof obj.bearerToken === 'string';
 }
 
 /**
  * Handle WebSocket authentication using first-message protocol.
- * Client must send { type: "auth", apiKey: "..." } within 5 seconds.
- * - Valid key: add to broadcast pool
- * - Invalid key: close with code 4001
+ * Client must send one of:
+ *   { type: "auth", apiKey: "..." }       — legacy API key auth
+ *   { type: "auth", bearerToken: "..." }  — JWT bearer token auth
+ * within 5 seconds.
+ * - Valid credentials: add to broadcast pool
+ * - Invalid credentials: close with code 4001
  * - Timeout: close with code 4002
  */
 function handleWebSocketAuth(
@@ -96,6 +110,19 @@ function handleWebSocketAuth(
     }
   }, WS_AUTH_TIMEOUT_MS);
 
+  function authSuccess(): void {
+    authenticated = true;
+    clearTimeout(timeoutId);
+    console.log('[WS] Client authenticated');
+    addAuthenticatedClient(socket);
+  }
+
+  function authFailure(reason: string): void {
+    console.log(`[WS] ${reason}`);
+    clearTimeout(timeoutId);
+    socket.close(WS_CLOSE_INVALID_KEY, reason);
+  }
+
   // Handle first message for auth
   const handleMessage = (rawData: import('ws').RawData): void => {
     // Only process first message for auth
@@ -107,34 +134,46 @@ function handleWebSocketAuth(
       const data = JSON.parse(String(rawData)) as unknown;
 
       if (!isValidAuthMessage(data)) {
-        console.log('[WS] Invalid auth message format');
-        clearTimeout(timeoutId);
-        socket.close(WS_CLOSE_INVALID_KEY, 'Invalid auth message');
+        authFailure('Invalid auth message');
         return;
       }
 
-      // Validate API key against database
-      const keyHash = hashKey(data.apiKey);
-      const row = db
-        .prepare('SELECT id FROM api_keys WHERE key_hash = ?')
-        .get(keyHash) as { id: string } | undefined;
-
-      if (!row) {
-        console.log('[WS] Invalid API key');
-        clearTimeout(timeoutId);
-        socket.close(WS_CLOSE_INVALID_KEY, 'Invalid API key');
+      // JWT bearer token auth
+      if ('bearerToken' in data && typeof data.bearerToken === 'string') {
+        void (async () => {
+          try {
+            const payload = await verifyAccessToken(data.bearerToken);
+            if (payload) {
+              authSuccess();
+            } else {
+              authFailure('Invalid bearer token');
+            }
+          } catch {
+            authFailure('Bearer token verification failed');
+          }
+        })();
         return;
       }
 
-      // Auth successful — add to broadcast pool
-      authenticated = true;
-      clearTimeout(timeoutId);
-      console.log('[WS] Client authenticated');
-      addAuthenticatedClient(socket);
+      // Legacy API key auth
+      if ('apiKey' in data && typeof data.apiKey === 'string') {
+        const keyHash = hashKey(data.apiKey);
+        const row = db
+          .prepare('SELECT id FROM api_keys WHERE key_hash = ?')
+          .get(keyHash) as { id: string } | undefined;
+
+        if (!row) {
+          authFailure('Invalid API key');
+          return;
+        }
+
+        authSuccess();
+        return;
+      }
+
+      authFailure('Invalid auth message');
     } catch {
-      console.log('[WS] Failed to parse auth message');
-      clearTimeout(timeoutId);
-      socket.close(WS_CLOSE_INVALID_KEY, 'Invalid auth message');
+      authFailure('Failed to parse auth message');
     }
   };
 

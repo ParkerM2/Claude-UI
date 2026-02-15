@@ -31,6 +31,7 @@ import { createSuggestionEngine } from './services/briefing/suggestion-engine';
 import { createCalendarService } from './services/calendar/calendar-service';
 import { createChangelogService } from './services/changelog/changelog-service';
 import { createClaudeClient } from './services/claude';
+import { createDeviceService } from './services/device/device-service';
 import { createEmailService } from './services/email/email-service';
 import { createFitnessService } from './services/fitness/fitness-service';
 import { createGitService } from './services/git/git-service';
@@ -139,70 +140,8 @@ function createWindow(): void {
 function initializeApp(): void {
   const router = new IpcRouter(getMainWindow);
 
-  // Create project service first — other services depend on it
-  const projectService = createProjectService();
-
-  // Terminal service needs the router to emit output events
-  const terminalService = createTerminalService(router);
-  terminalServiceRef = terminalService;
-
-  // Task service resolves project IDs via projectService
-  const taskService = createTaskService(
-    (id) => projectService.getProjectPath(id),
-    () => projectService.listProjects().map((p) => ({ id: p.id, path: p.path })),
-  );
-
-  // Settings service provides configuration including agent settings
-  const settingsService = createSettingsService();
-  settingsServiceRef = settingsService;
-
-  // Agent queue manages concurrency limits for agent execution
-  const agentSettings = settingsService.getAgentSettings();
-  const agentQueue = createAgentQueue(router, agentSettings.maxConcurrentAgents);
-
-  // Agent service needs router for events, project resolver, and queue
-  const agentService = createAgentService(
-    router,
-    (id) => projectService.getProjectPath(id),
-    agentQueue,
-  );
-  agentServiceRef = agentService;
-
-  // Notes service persists to user data directory
-  const notesService = createNotesService({ dataDir: app.getPath('userData'), router });
-
-  // Planner service persists daily plans to user data directory
-  const plannerService = createPlannerService(router);
-
-  // Alert service — checks for due alerts on interval
-  const alertService = createAlertService(router);
-  alertService.startChecking();
-  alertServiceRef = alertService;
-
-  // Git services — polyrepo detects structure, git wraps simple-git, worktree tracks metadata
-  const polyrepoService = createPolyrepoService();
-  const gitService = createGitService(polyrepoService);
-  const worktreeService = createWorktreeService((id) => projectService.getProjectPath(id));
-  const mergeService = createMergeService();
-
-  // Milestones, Ideas, Changelog — persisted to user data
+  // Data directory — used by many services
   const dataDir = app.getPath('userData');
-  const milestonesService = createMilestonesService({ dataDir, router });
-  const ideasService = createIdeasService({ dataDir, router });
-  const changelogService = createChangelogService({ dataDir });
-
-  // Fitness service — workouts, measurements, goals
-  const fitnessService = createFitnessService({ dataDir, router });
-
-  // Email service — SMTP-based email sending with queue support
-  const emailService = createEmailService({ router });
-
-  // Insights — aggregates data from tasks, agents, projects
-  const insightsService = createInsightsService({
-    taskService,
-    agentService,
-    projectService,
-  });
 
   // OAuth + MCP infrastructure — shared by GitHub, Spotify, Calendar
   const tokenStore = createTokenStore({ dataDir });
@@ -233,6 +172,73 @@ function initializeApp(): void {
     () => hubConnectionManager.getConnection()?.hubUrl ?? null,
     () => hubAuthService.getAccessToken(),
   );
+
+  // Create project service — other services depend on it (Hub API proxy with local cache)
+  const projectService = createProjectService({ hubApiClient });
+
+  // Terminal service needs the router to emit output events
+  const terminalService = createTerminalService(router);
+  terminalServiceRef = terminalService;
+
+  // Task service resolves project IDs via projectService
+  const taskService = createTaskService(
+    (id) => projectService.getProjectPath(id),
+    () => projectService.listProjectsSync().map((p) => ({ id: p.id, path: p.path })),
+  );
+
+  // Settings service provides configuration including agent settings
+  const settingsService = createSettingsService();
+  settingsServiceRef = settingsService;
+
+  // Agent queue manages concurrency limits for agent execution
+  const agentSettings = settingsService.getAgentSettings();
+  const agentQueue = createAgentQueue(router, agentSettings.maxConcurrentAgents);
+
+  // Agent service needs router for events, project resolver, and queue
+  const agentService = createAgentService(
+    router,
+    (id) => projectService.getProjectPath(id),
+    agentQueue,
+  );
+  agentServiceRef = agentService;
+
+  // Notes service persists to user data directory
+  const notesService = createNotesService({ dataDir, router });
+
+  // Planner service persists daily plans to user data directory
+  const plannerService = createPlannerService(router);
+
+  // Alert service — checks for due alerts on interval
+  const alertService = createAlertService(router);
+  alertService.startChecking();
+  alertServiceRef = alertService;
+
+  // Git services — polyrepo detects structure, git wraps simple-git, worktree tracks metadata
+  const polyrepoService = createPolyrepoService();
+  const gitService = createGitService(polyrepoService);
+  const worktreeService = createWorktreeService((id) => projectService.getProjectPath(id));
+  const mergeService = createMergeService();
+
+  // Milestones, Ideas, Changelog — persisted to user data
+  const milestonesService = createMilestonesService({ dataDir, router });
+  const ideasService = createIdeasService({ dataDir, router });
+  const changelogService = createChangelogService({ dataDir });
+
+  // Fitness service — workouts, measurements, goals
+  const fitnessService = createFitnessService({ dataDir, router });
+
+  // Email service — SMTP-based email sending with queue support
+  const emailService = createEmailService({ router });
+
+  // Insights — aggregates data from tasks, agents, projects
+  const insightsService = createInsightsService({
+    taskService,
+    agentService,
+    projectService,
+  });
+
+  // Device service — manages device registration and status via Hub API
+  const deviceService = createDeviceService({ hubApiClient });
 
   // Device registration and heartbeat interval (30 seconds)
   const HEARTBEAT_INTERVAL_MS = 30_000;
@@ -415,6 +421,7 @@ function initializeApp(): void {
     agentService,
     agentQueue,
     claudeClient,
+    deviceService,
     alertService,
     assistantService,
     calendarService,

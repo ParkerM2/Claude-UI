@@ -29,7 +29,8 @@
 │                                          ├─ ProjectService      │
 │                                          ├─ TaskService         │
 │                                          ├─ TerminalService     │
-│                                          └─ SettingsService     │
+│                                          ├─ SettingsService     │
+│                                          └─ ... (30 total)      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -142,7 +143,7 @@ specs/
     └── ...
 ```
 
-The TaskService reads/writes these files. The Kanban board displays tasks grouped by status.
+The TaskService reads/writes these files. The Task Table displays tasks in a filterable, sortable dashboard view.
 
 ## Design System & Theme Architecture
 
@@ -352,6 +353,111 @@ The Electron client connects to a self-hosted Hub server for multi-device sync.
 5. **WebSocket Auth**: First message after connect is `{ type: "auth", apiKey }`, validated within 5s
 
 ---
+
+## Hub-First Task Operations
+
+Task CRUD operations now route through the Hub API rather than local file storage:
+
+```
+RENDERER                          MAIN PROCESS                    HUB SERVER
+========                          ============                    ==========
+
+useTasks() hook
+  |
+  v
+ipc('hub.tasks.list', { projectId })
+  |
+  v
+                              hub-handlers.ts
+                                |
+                                v
+                              hubApiClient.listTasks(projectId)
+                                |  src/main/services/hub/hub-api-client.ts
+                                v
+                              GET /api/tasks?projectId=...
+                                                                  |
+                                                                  v
+                                                              SQLite query
+                                                                  |
+                                                                  v
+                                                              JSON response
+                              <---------------------------------+
+```
+
+Local `tasks.*` channels still exist for backward-compatible access and are used internally by services (insights, briefing, assistant). The renderer exclusively uses `hub.tasks.*` channels.
+
+### WebSocket Event Forwarding (Hub -> Electron -> React)
+
+Real-time updates from the Hub server are forwarded through the Electron main process to React:
+
+```
+HUB SERVER                      MAIN PROCESS                    RENDERER
+==========                      ============                    ========
+
+WebSocket broadcast
+  { type: 'task.updated', ... }
+                              hub-connection.ts receives
+                                |
+                                v
+                              router.emit('event:hub.tasks.updated', payload)
+                                |
+                                v
+                              BrowserWindow.webContents.send(...)
+                                                                  |
+                                                                  v
+                                                              useHubEvent('event:hub.tasks.updated', ...)
+                                                                  |
+                                                                  v
+                                                              queryClient.invalidateQueries()
+                                                                  |
+                                                                  v
+                                                              React Query refetches from Hub
+```
+
+### Device Heartbeat System
+
+Each Electron client registers as a device with the Hub and sends periodic heartbeats:
+
+```
+APP STARTUP                     MAIN PROCESS                    HUB SERVER
+===========                     ============                    ==========
+
+index.ts (app ready)
+  |
+  v
+deviceService.registerDevice()
+  |
+  v
+                              POST /api/devices/register
+                                { machineId, deviceName, ... }
+                                                                  |
+                                                                  v
+                                                              INSERT/UPDATE devices
+                                                              WS broadcast: device.online
+                              <---- { deviceId } ---------------+
+                                |
+                                v
+heartbeatService.start(deviceId)
+  |
+  v
+Every 30s: deviceService.sendHeartbeat(deviceId)
+  |
+  v
+                              POST /api/devices/:id/heartbeat
+                                                                  |
+                                                                  v
+                                                              UPDATE last_seen_at
+```
+
+### AG-Grid Task Table
+
+The task dashboard uses AG-Grid Community v35.1.0 for the main data grid:
+
+- **TaskDataGrid** — Main grid component with column definitions, row selection, and sorting
+- **Cell renderers** — 12 custom cell renderers (StatusBadge, ProgressBar, ActivitySparkline, Agent, PrStatus, Cost, Priority, Actions, ExpandToggle, Workspace, Title, RelativeTime)
+- **Detail rows** — DIY master/detail via `isFullWidthRow` + `fullWidthCellRenderer` (Community workaround for Enterprise-only feature)
+- **TaskFiltersToolbar** — Filter controls above the grid
+- **TaskDetailRow** — Expanded row showing subtasks, execution log, PR status, and task controls
 
 ## Build System
 
