@@ -19,6 +19,8 @@ import {
 
 import { ROUTES, ROUTE_PATTERNS } from '@shared/constants';
 
+import { RootErrorBoundary } from '@renderer/shared/components/error-boundaries';
+
 import { AgentDashboard } from '@features/agents';
 import { AlertsPage } from '@features/alerts';
 import { AuthGuard, LoginPage, RegisterPage, useAuthStore } from '@features/auth';
@@ -300,7 +302,11 @@ declare module '@tanstack/react-router' {
 }
 
 export function AppRouter() {
-  return <RouterProvider router={router} />;
+  return (
+    <RootErrorBoundary>
+      <RouterProvider router={router} />
+    </RootErrorBoundary>
+  );
 }
 
 // ─── Route Components (wired with navigation callbacks) ─────

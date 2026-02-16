@@ -101,6 +101,70 @@ const GithubIssueImportSchema = z.object({
   assignees: z.array(z.string()),
 });
 
+// ── Error & Health Schemas ──────────────────────────────────
+
+const ErrorSeveritySchema = z.enum(['error', 'warning', 'info']);
+const ErrorTierSchema = z.enum(['app', 'project', 'personal']);
+const ErrorCategorySchema = z.enum([
+  'connection',
+  'filesystem',
+  'service',
+  'agent',
+  'ipc',
+  'renderer',
+  'general',
+]);
+
+const ErrorContextSchema = z.object({
+  route: z.string().optional(),
+  routeHistory: z.array(z.string()).optional(),
+  projectId: z.string().optional(),
+  projectName: z.string().optional(),
+  task: z
+    .object({
+      id: z.string(),
+      title: z.string(),
+    })
+    .optional(),
+  agent: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+    })
+    .optional(),
+});
+
+const ErrorEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string(),
+  severity: ErrorSeveritySchema,
+  tier: ErrorTierSchema,
+  category: ErrorCategorySchema,
+  message: z.string(),
+  stack: z.string().optional(),
+  context: ErrorContextSchema,
+});
+
+const ErrorStatsSchema = z.object({
+  total: z.number(),
+  byTier: z.record(ErrorTierSchema, z.number()),
+  bySeverity: z.record(ErrorSeveritySchema, z.number()),
+  last24h: z.number(),
+});
+
+const ServiceHealthStatusSchema = z.enum(['healthy', 'unhealthy', 'stopped']);
+
+const ServiceHealthSchema = z.object({
+  name: z.string(),
+  status: ServiceHealthStatusSchema,
+  lastPulse: z.string(),
+  missedCount: z.number(),
+});
+
+const HealthStatusSchema = z.object({
+  services: z.array(ServiceHealthSchema),
+});
+
 // ── Hub Task Schemas (Hub API shape — distinct from legacy TaskSchema) ──
 
 const HubTaskStatusSchema = z.enum(['backlog', 'planning', 'plan_ready', 'queued', 'running', 'paused', 'review', 'done', 'error']);
@@ -2029,6 +2093,35 @@ export const ipcInvokeContract = {
       error: z.string().optional(),
     }),
   },
+  'app.getErrorLog': {
+    input: z.object({ since: z.string().optional() }),
+    output: z.object({ entries: z.array(ErrorEntrySchema) }),
+  },
+  'app.getErrorStats': {
+    input: z.object({}),
+    output: ErrorStatsSchema,
+  },
+  'app.clearErrorLog': {
+    input: z.object({}),
+    output: z.object({ success: z.boolean() }),
+  },
+  'app.reportRendererError': {
+    input: z.object({
+      severity: ErrorSeveritySchema,
+      tier: ErrorTierSchema,
+      category: ErrorCategorySchema,
+      message: z.string(),
+      stack: z.string().optional(),
+      route: z.string().optional(),
+      routeHistory: z.array(z.string()).optional(),
+      projectId: z.string().optional(),
+    }),
+    output: z.object({ success: z.boolean() }),
+  },
+  'app.getHealthStatus': {
+    input: z.object({}),
+    output: HealthStatusSchema,
+  },
 
   // ── Agents (global) ──
   'agents.listAll': {
@@ -2514,6 +2607,28 @@ export const ipcEventContract = {
   'event:app.updateDownloaded': {
     payload: z.object({ version: z.string() }),
   },
+  'event:app.error': {
+    payload: ErrorEntrySchema,
+  },
+  'event:app.dataRecovery': {
+    payload: z.object({
+      store: z.string(),
+      recoveredFrom: z.enum(['backup', 'defaults']),
+      message: z.string(),
+    }),
+  },
+  'event:app.capacityAlert': {
+    payload: z.object({
+      count: z.number(),
+      message: z.string(),
+    }),
+  },
+  'event:app.serviceUnhealthy': {
+    payload: z.object({
+      serviceName: z.string(),
+      missedCount: z.number(),
+    }),
+  },
 
   // ── Assistant Events ──
   'event:assistant.response': {
@@ -2934,4 +3049,13 @@ export {
   QaResultSchema,
   QaReportSchema,
   QaSessionSchema,
+  ErrorSeveritySchema,
+  ErrorTierSchema,
+  ErrorCategorySchema,
+  ErrorContextSchema,
+  ErrorEntrySchema,
+  ErrorStatsSchema,
+  ServiceHealthStatusSchema,
+  ServiceHealthSchema,
+  HealthStatusSchema,
 };

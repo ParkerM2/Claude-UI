@@ -1238,3 +1238,33 @@ Return InsightMetrics {
   totalTokenCost?                 // NEW — from orchestrator
 }
 ```
+
+## 24. Error & Health Monitoring Flow
+
+### IPC Invoke Channels
+
+| Channel | Input | Output | Purpose |
+|---------|-------|--------|---------|
+| `app.getErrorLog` | `{ since?: string }` | `{ entries: ErrorEntry[] }` | Fetch error log entries |
+| `app.getErrorStats` | `{}` | `ErrorStats` | Aggregated error statistics |
+| `app.clearErrorLog` | `{}` | `{ success: boolean }` | Clear the error log |
+| `app.reportRendererError` | `{ severity, tier, category, message, stack?, route?, routeHistory?, projectId? }` | `{ success: boolean }` | Report an error from the renderer process |
+| `app.getHealthStatus` | `{}` | `HealthStatus` | Get health status of all services |
+
+### IPC Event Channels
+
+| Channel | Payload | When |
+|---------|---------|------|
+| `event:app.error` | `ErrorEntry` | New error collected |
+| `event:app.dataRecovery` | `{ store, recoveredFrom, message }` | JSON store recovered from backup or defaults |
+| `event:app.capacityAlert` | `{ count, message }` | Error log nearing capacity |
+| `event:app.serviceUnhealthy` | `{ serviceName, missedCount }` | Service missed health pulses |
+
+### Types
+
+Defined in `src/shared/types/health.ts`:
+- `ErrorSeverity`, `ErrorTier`, `ErrorCategory` — union type enums
+- `ErrorContext` — route, project, task, and agent context at time of error
+- `ErrorEntry` — single error log entry with id, timestamp, severity, tier, category, message, stack, context
+- `ErrorStats` — aggregated counts by tier, severity, and last 24h
+- `ServiceHealthStatus`, `ServiceHealth`, `HealthStatus` — service pulse monitoring
