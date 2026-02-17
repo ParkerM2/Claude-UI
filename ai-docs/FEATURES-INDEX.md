@@ -39,7 +39,7 @@ Location: `src/renderer/features/`
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager, ProjectEditDialog | `projects.*` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
 | **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, WebhookSettings | `settings.*` |
-| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog | `hub.tasks.*`, `tasks.*` |
+| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog; **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations, useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*`, `qa.*`, `event:agent.orchestrator.*`, `event:qa.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
 | **merge** | Branch merge workflow | ConflictResolver, MergeConfirmModal, MergePreviewPanel | `merge.*` |
@@ -115,8 +115,8 @@ Location: `src/main/services/`
 | **device/heartbeat** | Periodic heartbeat pings to Hub | start, stop | - |
 | **agent-orchestrator** | Headless Claude agent lifecycle management | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
 | **agent-orchestrator/jsonl-progress-watcher** | JSONL progress file watcher (debounced tail parsing) | start, stop, onProgress | `event:agent.orchestrator.progress`, `event:agent.orchestrator.planReady` |
-| **agent-orchestrator/agent-watchdog** | Health monitoring for active agent sessions | createAgentWatchdog | - |
-| **qa** | Two-tier automated QA system (quiet + full) | runQuiet, runFull, getReports | `event:assistant.proactive` (on failure) |
+| **agent-orchestrator/agent-watchdog** | Health monitoring for active agent sessions (PID checks, heartbeat age, auto-restart on overflow) | start, stop, checkNow, onAlert, dispose | `event:agent.orchestrator.watchdogAlert` (wired in index.ts) |
+| **qa** | Two-tier automated QA system (quiet + full) | startQuiet, startFull, getSession, getReportForTask, cancel, onSessionEvent | `event:qa.started`, `event:qa.progress`, `event:qa.completed` |
 | **assistant/watch-store** | Persistent watch subscription storage (JSON file) | add, remove, getActive, getAll, markTriggered, clear | - |
 | **assistant/watch-evaluator** | Evaluates IPC events against active watches | start, stop, onTrigger | `event:assistant.proactive` (via index.ts wiring) |
 | **assistant/cross-device-query** | Query other ADC instances via Hub API | query | - |

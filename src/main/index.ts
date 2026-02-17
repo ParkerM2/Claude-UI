@@ -24,6 +24,7 @@ import { createMcpRegistry } from './mcp/mcp-registry';
 import { createAgentQueue } from './services/agent/agent-queue';
 import { createAgentService } from './services/agent/agent-service';
 import { createAgentOrchestrator } from './services/agent-orchestrator/agent-orchestrator';
+import { createAgentWatchdog } from './services/agent-orchestrator/agent-watchdog';
 import { createJsonlProgressWatcher } from './services/agent-orchestrator/jsonl-progress-watcher';
 import { createAlertService } from './services/alerts/alert-service';
 import { createAppUpdateService } from './services/app/app-update-service';
@@ -90,6 +91,7 @@ let terminalServiceRef: ReturnType<typeof createTerminalService> | null = null;
 let agentServiceRef: ReturnType<typeof createAgentService> | null = null;
 let agentOrchestratorRef: ReturnType<typeof createAgentOrchestrator> | null = null;
 let jsonlProgressWatcherRef: ReturnType<typeof createJsonlProgressWatcher> | null = null;
+let agentWatchdogRef: ReturnType<typeof createAgentWatchdog> | null = null;
 let alertServiceRef: ReturnType<typeof createAlertService> | null = null;
 let hubConnectionManagerRef: ReturnType<typeof createHubConnectionManager> | null = null;
 let notificationManagerRef: ReturnType<typeof createNotificationManager> | null = null;
@@ -487,6 +489,23 @@ function initializeApp(): void {
   const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService ?? undefined);
   agentOrchestratorRef = agentOrchestrator;
 
+  // Agent watchdog — monitors active sessions for dead/stale processes
+  const agentWatchdog = createAgentWatchdog(agentOrchestrator, {}, notificationManager);
+  agentWatchdogRef = agentWatchdog;
+
+  // Wire watchdog alerts to IPC events for the renderer
+  agentWatchdog.onAlert((alert) => {
+    router.emit('event:agent.orchestrator.watchdogAlert', {
+      type: alert.type,
+      sessionId: alert.sessionId,
+      taskId: alert.taskId,
+      message: alert.message,
+      suggestedAction: alert.suggestedAction,
+      timestamp: alert.timestamp,
+    });
+  });
+  agentWatchdog.start();
+
   // QA runner — two-tier automated QA system
   const qaRunner = createQaRunner(agentOrchestrator, dataDir, notificationManager);
 
@@ -771,6 +790,7 @@ app.on('before-quit', () => {
   terminalServiceRef?.dispose();
   agentServiceRef?.dispose();
   agentOrchestratorRef?.dispose();
+  agentWatchdogRef?.dispose();
   jsonlProgressWatcherRef?.stop();
   alertServiceRef?.stopChecking();
   hubConnectionManagerRef?.dispose();
