@@ -26,6 +26,9 @@ logs/security/
 # Runtime data
 .auto-claude/
 
+# Claude Code workflow artifacts
+.claude/progress/
+
 # Logs
 *.log
 
