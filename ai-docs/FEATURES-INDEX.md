@@ -12,7 +12,9 @@
 | Renderer Features | 28 |
 | Main Process Services | 37 |
 | IPC Handler Files | 36 |
-| IPC Contract Lines | ~2600 |
+| IPC Domain Folders | 22 |
+| Hub Type Modules | 12 |
+| Bootstrap Modules | 5 |
 
 ---
 
@@ -77,20 +79,16 @@ Location: `src/main/services/`
 
 | Service | Purpose | Key Methods | Events Emitted |
 |---------|---------|-------------|----------------|
-| **agent** | Claude CLI process management | spawnAgent, stopAgent, pauseAgent, resumeAgent | `event:agent.*` |
+| **agent** | Claude CLI process management. Sub-modules: `agent-spawner.ts`, `agent-output-parser.ts`, `agent-queue.ts`, `token-parser.ts` | spawnAgent, stopAgent, pauseAgent, resumeAgent | `event:agent.*` |
 | **alerts** | Reminder/alert CRUD + scheduling | list, create, update, delete, startChecking | `event:alert.changed` |
-| **assistant** | Built-in assistant (intent → action) | sendCommand, getHistory | `event:assistant.*` |
+| **assistant** | Built-in assistant (intent → action). Sub-modules: `executors/` (22 domain executors), `intent-classifier/` (classifier + 13 pattern files) | sendCommand, getHistory | `event:assistant.*` |
 | **app-update** | Electron auto-updater | checkForUpdates, downloadUpdate, quitAndInstall, getStatus | `event:app.updateAvailable`, `event:app.updateDownloaded` |
 | **calendar** | Google Calendar integration | listEvents, createEvent | - |
 | **changelog** | Project changelog CRUD | list, addEntry | - |
 | **fitness** | Health metrics (manual) | getMetrics, logWorkout | - |
 | **git** | Git operations | getStatus, commit, listBranches, listWorktrees | `event:git.*` |
 | **github** | GitHub API integration | listPRs, listIssues, getRepo | - |
-| **hub** | Hub server connection | connect, disconnect, sync, listTasks, createTask, executeTask | `event:hub.*` |
-| **hub/api-client** | Hub REST API client | listTasks, getTask, createTask, updateTask, deleteTask, executeTask, cancelTask | - |
-| **hub/auth-service** | Hub authentication | register, login, logout, refreshToken, getCurrentUser | - |
-| **hub/token-store** | Secure token storage | getTokens, setTokens, clearTokens, getAccessToken | - |
-| **hub/websocket** | Hub WebSocket client | connect, disconnect, send, onMessage | `event:hub.tasks.*`, `event:hub.devices.*` |
+| **hub** | Hub server connection. Sub-modules: `hub-api-client.ts`, `hub-auth-service.ts`, `hub-client.ts`, `hub-config-store.ts`, `hub-connection.ts`, `hub-errors.ts`, `hub-event-mapper.ts`, `hub-sync.ts`, `hub-ws-client.ts`, `webhook-relay.ts` | connect, disconnect, sync | `event:hub.*` |
 | **ideas** | Idea CRUD | list, create, update, delete | - |
 | **insights** | Analytics aggregation | getMetrics, getTimeSeries | - |
 | **merge** | Branch merge operations | previewDiff, checkConflicts, mergeBranch | - |
@@ -98,16 +96,16 @@ Location: `src/main/services/`
 | **nlp** | Natural language parsing | parseTimeExpression, extractEntities | - |
 | **notes** | Note CRUD | list, create, update, delete | - |
 | **planner** | Daily time blocks | listBlocks, createBlock, updateBlock | `event:planner.*` |
-| **project** | Project management | list, add, remove, selectDirectory | `event:project.*` |
-| **settings** | App settings persistence | get, update | `event:settings.changed` |
+| **project** | Project management. Sub-modules: `project-detector.ts`, `task-service.ts`, `task-slug.ts`, `task-spec-parser.ts`, `task-store.ts` | list, add, remove, selectDirectory | `event:project.*` |
+| **settings** | App settings persistence. Sub-modules: `settings-defaults.ts`, `settings-encryption.ts`, `settings-store.ts` | get, update | `event:settings.changed` |
 | **spotify** | Spotify integration | getCurrentTrack, play, pause, skip | - |
 | **terminal** | PTY terminal management | create, sendInput, resize, kill | `event:terminal.*` |
-| **briefing** | Daily briefing & suggestions | generateBriefing, getSuggestions | - |
+| **briefing** | Daily briefing & suggestions. Sub-modules: `briefing-cache.ts`, `briefing-config.ts`, `briefing-generator.ts`, `briefing-summary.ts`, `suggestion-engine.ts` | generateBriefing, getSuggestions | - |
 | **claude** | Persistent Claude sessions (Anthropic SDK) | sendMessage, getConversation, listConversations | `event:claude.*` |
-| **email** | Email sending (SMTP) | sendEmail, getConfig, testConnection | - |
-| **notifications** | Background Slack/GitHub watchers | startWatching, stopWatching, getNotifications | `event:notification.*` |
+| **email** | Email sending (SMTP). Sub-modules: `email-config.ts`, `email-encryption.ts`, `email-queue.ts`, `email-store.ts`, `smtp-transport.ts` (barrel: `index.ts`) | sendEmail, getConfig, testConnection | - |
+| **notifications** | Background Slack/GitHub watchers. Sub-modules: `slack-watcher.ts`, `github-watcher.ts`, `notification-filter.ts`, `notification-manager.ts`, `notification-store.ts` (barrel: `index.ts`) | startWatching, stopWatching, getNotifications | `event:notification.*` |
 | **screen** | Screen capture (desktopCapturer) | captureScreen, getSources | - |
-| **tasks** | Smart task creation | decompose, importFromGithub | - |
+| **tasks** | Smart task creation. Sub-modules: `task-decomposer.ts`, `github-importer.ts` (barrel: `index.ts`) | decompose, importFromGithub | - |
 | **time-parser** | Natural language time parsing | parseTimeExpression | - |
 | **voice** | Voice interface (Web Speech API) | startListening, stopListening, speak | `event:voice.*` |
 | **workflow** | Workflow execution & progress | launchWorkflow, watchProgress | `event:workflow.*` |
@@ -116,7 +114,7 @@ Location: `src/main/services/`
 | **agent-orchestrator** | Headless Claude agent lifecycle management | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
 | **agent-orchestrator/jsonl-progress-watcher** | JSONL progress file watcher (debounced tail parsing) | start, stop, onProgress | `event:agent.orchestrator.progress`, `event:agent.orchestrator.planReady` |
 | **agent-orchestrator/agent-watchdog** | Health monitoring for active agent sessions | createAgentWatchdog | - |
-| **qa** | Two-tier automated QA system (quiet + full) | runQuiet, runFull, getReports | `event:assistant.proactive` (on failure) |
+| **qa** | Two-tier automated QA system (quiet + full). Sub-modules: `qa-agent-poller.ts`, `qa-prompt.ts`, `qa-report-parser.ts`, `qa-session-store.ts`, `qa-trigger.ts`, `qa-types.ts` | runQuiet, runFull, getReports | `event:assistant.proactive` (on failure) |
 | **assistant/watch-store** | Persistent watch subscription storage (JSON file) | add, remove, getActive, getAll, markTriggered, clear | - |
 | **assistant/watch-evaluator** | Evaluates IPC events against active watches | start, stop, onTrigger | `event:assistant.proactive` (via index.ts wiring) |
 | **assistant/cross-device-query** | Query other ADC instances via Hub API | query | - |
@@ -149,7 +147,7 @@ Location: `src/main/ipc/handlers/`
 | `project-handlers.ts` | projects.* |
 | `settings-handlers.ts` | settings.* |
 | `spotify-handlers.ts` | spotify.* |
-| `task-handlers.ts` | tasks.* |
+| `tasks/` (directory) | tasks.* — Split into: `hub-task-handlers.ts`, `legacy-task-handlers.ts`, `status-mapping.ts`, `task-transform.ts`, `index.ts` (barrel) |
 | `terminal-handlers.ts` | terminals.* |
 | `hotkey-handlers.ts` | hotkeys.get, hotkeys.update, hotkeys.reset |
 | `webhook-settings-handlers.ts` | webhooks.* |
@@ -204,6 +202,33 @@ Location: `src/main/ipc/handlers/`
 | `hub-protocol.ts` | Hub protocol contract types |
 | `auth.ts` | AuthUser, LoginCredentials, RegisterData, AuthTokens |
 
+### Route Groups (`src/renderer/app/routes/`)
+
+The router has been split from a single `router.tsx` into **8 route group files**:
+
+| File | Routes Covered |
+|------|----------------|
+| `auth.routes.tsx` | `/login`, `/register` |
+| `communication.routes.ts` | `/communications` |
+| `dashboard.routes.ts` | `/dashboard`, `/my-work` |
+| `misc.routes.ts` | `/alerts`, `/briefing`, `/fitness`, `/notes`, `/planner`, `/planner/weekly` |
+| `productivity.routes.ts` | `/productivity` |
+| `project.routes.ts` | `/projects`, `/projects/$projectId/**` (tasks, terminals, agents, etc.) |
+| `settings.routes.ts` | `/settings` |
+| `index.ts` | Barrel that assembles all route groups into the router |
+
+### Bootstrap Modules (`src/main/bootstrap/`)
+
+The main process `index.ts` has been split into **5 focused bootstrap modules**:
+
+| File | Purpose |
+|------|---------|
+| `lifecycle.ts` | App lifecycle (ready, quit, window creation) |
+| `service-registry.ts` | Service factory instantiation and dependency wiring |
+| `ipc-wiring.ts` | IPC handler registration (connects handlers to router) |
+| `event-wiring.ts` | Event forwarding setup (service events → renderer) |
+| `index.ts` | Barrel re-export |
+
 ### Constants (`src/shared/constants/`)
 
 | File | Constants |
@@ -213,12 +238,65 @@ Location: `src/main/ipc/handlers/`
 | `agent-patterns.ts` | Agent output parsing patterns |
 | `index.ts` | Barrel exports for all constants |
 
-### IPC Contract (`src/shared/ipc-contract.ts`)
+### IPC Contract (Domain-Based Structure)
 
-Single source of truth for all IPC channels. Contains:
-- `ipcInvokeContract` — Request/response channels with Zod schemas
-- `ipcEventContract` — Event channels with Zod schemas
-- Type utilities: `InvokeInput<T>`, `InvokeOutput<T>`, `EventPayload<T>`
+The IPC contract has been split from a single monolithic file into **22 domain folders** under `src/shared/ipc/`. The root barrel at `src/shared/ipc/index.ts` merges all domain contracts back into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin backward-compatible re-export.
+
+**Domain folders** (`src/shared/ipc/<domain>/`):
+
+| Domain | Contents |
+|--------|----------|
+| `agents` | Agent + orchestrator invoke/event contracts |
+| `app` | App lifecycle, update, version |
+| `assistant` | Assistant commands, responses, rate limits |
+| `auth` | Login, register, refresh token |
+| `briefing` | Daily briefing, suggestions |
+| `claude` | Persistent Claude sessions, streaming |
+| `common` | Shared schemas (SuccessResponse, TokenUsage) |
+| `email` | SMTP email sending, queue |
+| `fitness` | Workouts, body measurements, goals |
+| `git` | Git status, branches, worktrees |
+| `github` | GitHub PRs, issues, notifications |
+| `hub` | Hub connection, sync, config |
+| `misc` | Alerts, calendar, changelog, devices, hotkeys, ideas, insights, merge, milestones, notes, screen, time, voice, webhooks, workspaces |
+| `notifications` | Notification watchers (Slack, GitHub) |
+| `planner` | Time blocks, daily plans, weekly review |
+| `projects` | Project CRUD, sub-projects, repo detection |
+| `qa` | QA runner, reports, sessions |
+| `settings` | App settings, profiles, webhook config |
+| `spotify` | Spotify playback |
+| `tasks` | Local tasks + Hub tasks (invoke + events) |
+| `terminals` | Terminal session management |
+| `workflow` | Workflow execution |
+
+Each domain folder contains:
+```
+<domain>/
+├── contract.ts   # ipcInvokeContract + ipcEventContract entries
+├── schemas.ts    # Zod schemas for the domain
+└── index.ts      # Barrel export
+```
+
+Additional files: `src/shared/ipc/types.ts` (type utilities: `InvokeInput`, `InvokeOutput`, `EventPayload`, etc.)
+
+### Hub Type Modules (`src/shared/types/hub/`)
+
+Hub protocol types have been split from a single `hub-protocol.ts` into **12 focused modules**:
+
+| File | Types Defined |
+|------|---------------|
+| `auth.ts` | Hub auth token types, credentials |
+| `devices.ts` | Device registration, heartbeat types |
+| `enums.ts` | Hub-specific enums (status, priority) |
+| `errors.ts` | Hub error types |
+| `events.ts` | Hub WebSocket event payload types |
+| `guards.ts` | Type guard functions |
+| `index.ts` | Barrel re-export |
+| `legacy.ts` | Deprecated types (backward compat) |
+| `projects.ts` | Hub project types |
+| `tasks.ts` | Hub task types |
+| `transitions.ts` | Status transition types |
+| `workspaces.ts` | Hub workspace types |
 
 ---
 
@@ -297,6 +375,7 @@ Location: `src/renderer/shared/hooks/`
 | `useIpcEvent.ts` | Subscribe to IPC events from main process |
 | `useIpcQuery.ts` | IPC-backed React Query hook factory (not exported from barrel) |
 | `useMutationErrorToast.ts` | `onError(action)` factory for React Query mutation error handling → toast notifications |
+| `useLooseParams.ts` | Loose route params hook — reads `$projectId` without strict route context |
 | `useOAuthStatus.ts` | Check OAuth provider configuration status |
 
 ## 6.7 Shared Stores
@@ -334,27 +413,55 @@ ADC/
 ├── hub/                         # Hub server (Fastify + SQLite)
 ├── src/
 │   ├── main/                    # Electron main process
-│   │   ├── index.ts             # App lifecycle, window creation
+│   │   ├── index.ts             # App entry (delegates to bootstrap/)
+│   │   ├── bootstrap/           # App initialization modules (5 files)
+│   │   │   ├── index.ts         # Barrel re-export
+│   │   │   ├── lifecycle.ts     # App lifecycle (ready, quit, window)
+│   │   │   ├── service-registry.ts  # Service factory instantiation
+│   │   │   ├── ipc-wiring.ts    # IPC handler registration
+│   │   │   └── event-wiring.ts  # Event forwarding setup
 │   │   ├── auth/                # OAuth manager + providers
 │   │   ├── ipc/                 # IPC router + handlers
+│   │   │   └── handlers/tasks/  # Split task handlers (5 files)
 │   │   ├── mcp/                 # MCP client framework
 │   │   ├── mcp-servers/         # MCP server definitions
 │   │   ├── services/            # Business logic (37 services)
+│   │   │   ├── agent/           # 5 files (spawner, parser, queue, tokens)
+│   │   │   ├── assistant/       # Intent classifier (16 files), executors (22 files)
+│   │   │   ├── briefing/        # 6 files (cache, config, generator, summary, suggestions)
+│   │   │   ├── email/           # 7 files (config, encryption, queue, store, smtp)
+│   │   │   ├── hub/             # 10 files (api-client, auth, ws, sync, events)
+│   │   │   ├── notifications/   # 7 files (slack, github, filter, manager, store)
+│   │   │   ├── project/         # 6 files (detector, tasks, slug, spec-parser, store)
+│   │   │   ├── qa/              # 7 files (poller, prompt, parser, session, trigger, types)
+│   │   │   ├── settings/        # 4 files (defaults, encryption, store)
+│   │   │   ├── tasks/           # 3 files (decomposer, github-importer)
+│   │   │   └── ...              # Other service directories
 │   │   └── tray/                # System tray + hotkeys
 │   ├── preload/                 # Context bridge
 │   ├── renderer/                # React app
 │   │   ├── app/                 # Router, providers, layouts
+│   │   │   └── routes/          # Route groups (8 files)
 │   │   ├── features/            # Feature modules (28 features)
+│   │   │   ├── changelog/components/  # 7 files (split from monolithic)
+│   │   │   ├── planner/components/    # 12 files (split from monolithic)
+│   │   │   ├── projects/components/   # 10+ files + wizard-steps/ (6 files)
+│   │   │   └── settings/components/   # 28 files (split from monolithic)
 │   │   ├── shared/              # Shared hooks, stores, lib, components
 │   │   │   ├── components/      # 9 shared UI components
-│   │   │   ├── hooks/           # 6 shared hooks
+│   │   │   ├── hooks/           # 7 shared hooks (+ useLooseParams)
 │   │   │   ├── lib/             # Utilities (cn, ipc helper)
 │   │   │   └── stores/          # 5 Zustand stores + ThemeHydrator
 │   │   └── styles/globals.css   # Theme tokens + Tailwind
 │   └── shared/                  # Shared between main + renderer
-│       ├── ipc-contract.ts      # IPC channel definitions
+│       ├── ipc-contract.ts      # Thin re-export from ipc/ barrel
+│       ├── ipc/                 # Domain-based IPC contracts (22 folders)
+│       │   ├── <domain>/        # contract.ts + schemas.ts + index.ts
+│       │   ├── index.ts         # Root barrel (merges all domains)
+│       │   └── types.ts         # Type utilities
 │       ├── constants/           # Routes, themes
 │       └── types/               # Domain types
+│           └── hub/             # Hub protocol types (12 modules)
 └── .claude/agents/              # Agent prompt definitions
 ```
 

@@ -13,6 +13,9 @@
 │  │ Zustand      │   │ useIpcEvent() │◁─ events ──┤              │
 │  │ stores       │   │ hooks         │            │              │
 │  └──────────────┘   └───────────────┘            │              │
+│  ┌──────────────┐                                │              │
+│  │ Route Groups │  (8 route group files)         │              │
+│  └──────────────┘                                │              │
 ├──────────────────────────────────────────────────┼──────────────┤
 │  PRELOAD (Context Bridge)                        │              │
 │  ┌─────────────────────────────────────────────┐ │              │
@@ -22,15 +25,25 @@
 ├─────────────────────────────────────────────────────────────────┤
 │  MAIN PROCESS (Node.js)                                         │
 │  ┌──────────────┐   ┌───────────────┐   ┌────────────────────┐  │
-│  │ IPC Router   │──▷│ Handlers      │──▷│ Services           │  │
-│  │ (Zod valid.) │   │ (thin layer)  │   │ (business logic)   │  │
-│  └──────────────┘   └───────────────┘   └────────────────────┘  │
-│                                          ├─ AgentService        │
-│                                          ├─ ProjectService      │
-│                                          ├─ TaskService         │
-│                                          ├─ TerminalService     │
-│                                          ├─ SettingsService     │
+│  │ Bootstrap    │──▷│ IPC Router    │──▷│ Services           │  │
+│  │ (5 modules)  │   │ (Zod valid.)  │   │ (business logic)   │  │
+│  │              │   │               │   │                    │  │
+│  │ lifecycle    │   │ Handlers      │   │ Each service has   │  │
+│  │ svc-registry │   │ (thin layer)  │   │ focused sub-modules│  │
+│  │ ipc-wiring   │   └───────────────┘   └────────────────────┘  │
+│  │ event-wiring │                        ├─ AgentService (5)    │
+│  └──────────────┘                        ├─ AssistantService    │
+│                                          │   ├─ executors/ (22) │
+│                                          │   └─ classifier/(16) │
+│                                          ├─ HubService (10)     │
+│                                          ├─ ProjectService (6)  │
 │                                          └─ ... (37 total)      │
+│                                                                  │
+│  ┌──────────────────────────────────────────────────────────────┐│
+│  │ IPC Contract: src/shared/ipc/ (22 domain folders)            ││
+│  │ Each folder: contract.ts + schemas.ts + index.ts             ││
+│  │ Root barrel merges all into ipcInvokeContract/ipcEventContract││
+│  └──────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,6 +65,32 @@
 3. Preload listener fires via `ipcRenderer.on(channel, listener)`
 4. **Renderer** `useIpcEvent('event:terminal.output', handler)` hook receives payload
 5. Handler typically calls `queryClient.invalidateQueries()` to refetch data
+
+## Domain-Based IPC Structure
+
+The IPC contract was refactored from a single ~2600-line `ipc-contract.ts` into 22 domain-specific folders under `src/shared/ipc/`. Each domain folder contains:
+
+- `schemas.ts` — Zod schemas for the domain
+- `contract.ts` — Invoke and event contract entries using those schemas
+- `index.ts` — Barrel export
+
+The root barrel at `src/shared/ipc/index.ts` spreads all domain contracts into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin re-export that maintains backward compatibility — existing imports from `@shared/ipc-contract` continue to work.
+
+**To add a new IPC channel**: Add it to the appropriate domain folder's `contract.ts` and `schemas.ts`. The root barrel automatically picks it up.
+
+## Bootstrap Module Pattern
+
+The main process entry point (`src/main/index.ts`) delegates to 5 bootstrap modules in `src/main/bootstrap/`:
+
+| Module | Responsibility |
+|--------|---------------|
+| `lifecycle.ts` | Electron app lifecycle events, BrowserWindow creation |
+| `service-registry.ts` | Instantiates all service factories with dependency injection |
+| `ipc-wiring.ts` | Registers all IPC handlers (connects handler files to router) |
+| `event-wiring.ts` | Sets up service event → renderer forwarding |
+| `index.ts` | Barrel re-export |
+
+This replaces the previous monolithic `index.ts` where all initialization lived in a single file.
 
 ## Data Persistence
 
@@ -92,6 +131,21 @@ Key rules:
 - IPC handlers wrap sync returns with `Promise.resolve()`, or directly return the Promise from async Hub calls
 - Electron-specific async exception: `selectDirectory()` uses Electron dialog
 - Services emit events via `router.emit()` for real-time updates
+
+### Refactored Multi-File Services
+
+Large services have been split into focused sub-modules within their directory. The main service file remains the public API; sub-files are internal implementation details.
+
+Key refactored services:
+- **assistant/** — 22 domain executors in `executors/`, 16 intent classifier files in `intent-classifier/`
+- **agent/** — `agent-spawner.ts`, `agent-output-parser.ts`, `agent-queue.ts`, `token-parser.ts`
+- **hub/** — 10 files: api-client, auth, ws-client, connection, sync, events, config, errors, webhook-relay
+- **briefing/** — 6 files: cache, config, generator, summary, suggestion-engine
+- **email/** — 7 files: config, encryption, queue, store, smtp-transport
+- **notifications/** — 7 files: slack-watcher, github-watcher, filter, manager, store
+- **settings/** — 4 files: defaults, encryption, store
+- **project/** — 6 files: detector, task-service, slug, spec-parser, store
+- **qa/** — 7 files: poller, prompt, report-parser, session-store, trigger, types
 
 ## React Query Integration
 

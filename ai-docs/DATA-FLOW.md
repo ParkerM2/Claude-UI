@@ -55,7 +55,10 @@ Component re-renders with new data
 
 | Step | File | Purpose |
 |------|------|---------|
-| Contract | `src/shared/ipc-contract.ts` | Defines channel name, input Zod schema, output Zod schema |
+| Domain contracts | `src/shared/ipc/<domain>/contract.ts` | Domain-specific channel definitions with Zod schemas |
+| Domain schemas | `src/shared/ipc/<domain>/schemas.ts` | Zod schemas for the domain |
+| Root barrel | `src/shared/ipc/index.ts` | Merges all 22 domain contracts into unified objects |
+| Compat re-export | `src/shared/ipc-contract.ts` | Thin re-export from `src/shared/ipc/` (backward compat) |
 | Renderer helper | `src/renderer/shared/lib/ipc.ts` | Typed wrapper: `ipc(channel, input) -> Promise<Output>` |
 | Preload bridge | `src/preload/index.ts` | Context bridge: `api.invoke()`, `api.on()` |
 | Router | `src/main/ipc/router.ts` | Routes channel to handler, validates input with Zod |
@@ -65,12 +68,16 @@ Component re-renders with new data
 ### Type Flow (Compile-Time)
 
 ```
-ipc-contract.ts defines:
-  ipcInvokeContract['projects.list'].input  -> z.object({})
-  ipcInvokeContract['projects.list'].output -> z.array(ProjectSchema)
+Domain contract (src/shared/ipc/projects/contract.ts) defines:
+  projectsInvoke['projects.list'].input  -> z.object({})
+  projectsInvoke['projects.list'].output -> z.array(ProjectSchema)
 
-InvokeInput<'projects.list'>  = {}
-InvokeOutput<'projects.list'> = Project[]
+Root barrel (src/shared/ipc/index.ts) merges:
+  ipcInvokeContract = { ...projectsInvoke, ...tasksInvoke, ... }
+
+Type utilities (src/shared/ipc/types.ts) derive:
+  InvokeInput<'projects.list'>  = {}
+  InvokeOutput<'projects.list'> = Project[]
 
 ipc('projects.list', {})  -> Promise<Project[]>   // Fully typed, no manual wiring
 ```
@@ -117,8 +124,8 @@ BrowserWindow.webContents.send(ch, payload)
 ### Event Contract
 
 ```typescript
-// Defined in ipc-contract.ts
-ipcEventContract['event:task.statusChanged'] = {
+// Defined in src/shared/ipc/tasks/contract.ts (merged into ipcEventContract by root barrel)
+tasksEvents['event:task.statusChanged'] = {
   payload: z.object({
     taskId: z.string(),
     status: TaskStatusSchema,
@@ -502,9 +509,11 @@ Tasks returned, TaskTable renders filterable/sortable rows
 
 ### Route Hierarchy
 
+Routes are defined across 8 route group files in `src/renderer/app/routes/` and assembled in `routes/index.ts`.
+
 ```
 / (RootLayout)
-├── /dashboard              -> DashboardPage
+├── /dashboard              -> DashboardPage          (dashboard.routes.ts)
 ├── /my-work                -> MyWorkPage
 ├── /alerts                 -> AlertsPage
 ├── /briefing               -> BriefingPage
