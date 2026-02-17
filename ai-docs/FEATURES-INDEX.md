@@ -203,6 +203,7 @@ Location: `src/main/ipc/handlers/`
 | `hub-events.ts` | Hub event payload types |
 | `hub-protocol.ts` | Hub protocol contract types |
 | `auth.ts` | AuthUser, LoginCredentials, RegisterData, AuthTokens |
+| `health.ts` | ErrorEntry, ErrorStats, ErrorSeverity, ErrorTier, ErrorCategory, ErrorContext, ServiceHealth, ServiceHealthStatus, HealthStatus |
 
 ### Constants (`src/shared/constants/`)
 

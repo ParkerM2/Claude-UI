@@ -8,7 +8,7 @@
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, dialog, shell } from 'electron';
 
 import { createOAuthManager } from './auth/oauth-manager';
 import { GITHUB_OAUTH_CONFIG } from './auth/providers/github';
@@ -43,6 +43,8 @@ import { createGitService } from './services/git/git-service';
 import { createPolyrepoService } from './services/git/polyrepo-service';
 import { createWorktreeService } from './services/git/worktree-service';
 import { createGitHubService } from './services/github/github-service';
+import { createErrorCollector } from './services/health/error-collector';
+import { createHealthRegistry } from './services/health/health-registry';
 import { createHubApiClient } from './services/hub/hub-api-client';
 import { createHubAuthService } from './services/hub/hub-auth-service';
 import { createHubConnectionManager } from './services/hub/hub-connection';
@@ -75,11 +77,15 @@ import { createQuickInputWindow } from './tray/quick-input';
 
 import type { OAuthConfig } from './auth/types';
 import type { BriefingService } from './services/briefing/briefing-service';
+import type { ErrorCollector } from './services/health/error-collector';
+import type { HealthRegistry } from './services/health/health-registry';
 import type { HubApiClient } from './services/hub/hub-api-client';
 import type { SettingsService } from './services/settings/settings-service';
 import type { HotkeyManager } from './tray/hotkey-manager';
 
 let mainWindow: BrowserWindow | null = null;
+let errorCollectorRef: ErrorCollector | null = null;
+let healthRegistryRef: HealthRegistry | null = null;
 let terminalServiceRef: ReturnType<typeof createTerminalService> | null = null;
 let agentServiceRef: ReturnType<typeof createAgentService> | null = null;
 let agentOrchestratorRef: ReturnType<typeof createAgentOrchestrator> | null = null;
@@ -93,6 +99,10 @@ let hotkeyManagerRef: HotkeyManager | null = null;
 let settingsServiceRef: SettingsService | null = null;
 let heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
 let registeredDeviceId: string | null = null;
+
+// Renderer crash tracking
+let rendererCrashCount = 0;
+let lastRendererCrashTime = 0;
 
 function getMainWindow(): BrowserWindow | null {
   return mainWindow;
@@ -137,10 +147,69 @@ function createWindow(): void {
     mainWindow = null;
   });
 
+  // Renderer crash recovery — auto-recreate up to 3 times within 60s
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    console.error('[Main] Renderer process gone:', details.reason);
+
+    const now = Date.now();
+    if (now - lastRendererCrashTime > 60_000) {
+      rendererCrashCount = 0;
+    }
+    rendererCrashCount += 1;
+    lastRendererCrashTime = now;
+
+    const MAX_CONSECUTIVE_CRASHES = 3;
+    if (rendererCrashCount >= MAX_CONSECUTIVE_CRASHES) {
+      const choice = dialog.showMessageBoxSync({
+        type: 'error',
+        title: 'ADC — Renderer Crashed',
+        message: 'The app keeps crashing. Would you like to restart or quit?',
+        buttons: ['Restart', 'Quit'],
+        defaultId: 0,
+        cancelId: 1,
+      });
+      if (choice === 0) {
+        rendererCrashCount = 0;
+        createWindow();
+      } else {
+        app.quit();
+      }
+    } else {
+      setTimeout(() => {
+        createWindow();
+      }, 1000);
+    }
+  });
+
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
+
+/**
+ * Initialize a non-critical service with error handling.
+ * Returns the service instance or null if initialization fails.
+ */
+function initNonCritical<T>(
+  name: string,
+  factory: () => T,
+  errorCollector: ReturnType<typeof createErrorCollector>,
+): T | null {
+  try {
+    return factory();
+  } catch (error: unknown) {
+    console.error(`Non-critical service failed to initialize: ${name}`, error);
+    errorCollector.report({
+      severity: 'warning',
+      tier: 'app',
+      category: 'service',
+      message: `Service initialization failed: ${name} - ${error instanceof Error ? error.message : String(error)}`,
+    });
+    return null;
   }
 }
 
@@ -151,6 +220,24 @@ function initializeApp(): void {
 
   // Data directory — used by many services
   const dataDir = app.getPath('userData');
+
+  // Error collector + health registry — created early so services can report errors
+  const errorCollector = createErrorCollector(dataDir, {
+    onError: (entry) => {
+      router.emit('event:app.error', entry);
+    },
+    onCapacityAlert: (count, message) => {
+      router.emit('event:app.capacityAlert', { count, message });
+    },
+  });
+  errorCollectorRef = errorCollector;
+
+  const healthRegistry = createHealthRegistry({
+    onUnhealthy: (serviceName, missedCount) => {
+      router.emit('event:app.serviceUnhealthy', { serviceName, missedCount });
+    },
+  });
+  healthRegistryRef = healthRegistry;
 
   // OAuth + MCP infrastructure — shared by GitHub, Spotify, Calendar
   const tokenStore = createTokenStore({ dataDir });
@@ -228,13 +315,17 @@ function initializeApp(): void {
   const worktreeService = createWorktreeService((id) => projectService.getProjectPath(id));
   const mergeService = createMergeService();
 
-  // Milestones, Ideas, Changelog — persisted to user data
-  const milestonesService = createMilestonesService({ dataDir, router });
-  const ideasService = createIdeasService({ dataDir, router });
-  const changelogService = createChangelogService({ dataDir });
+  // Milestones, Ideas, Changelog — persisted to user data (non-critical)
+  const milestonesService = initNonCritical('milestones', () =>
+    createMilestonesService({ dataDir, router }), errorCollector);
+  const ideasService = initNonCritical('ideas', () =>
+    createIdeasService({ dataDir, router }), errorCollector);
+  const changelogService = initNonCritical('changelog', () =>
+    createChangelogService({ dataDir }), errorCollector);
 
-  // Fitness service — workouts, measurements, goals
-  const fitnessService = createFitnessService({ dataDir, router });
+  // Fitness service — workouts, measurements, goals (non-critical)
+  const fitnessService = initNonCritical('fitness', () =>
+    createFitnessService({ dataDir, router }), errorCollector);
 
   // Email service — SMTP-based email sending with queue support
   const emailService = createEmailService({ router });
@@ -269,6 +360,7 @@ function initializeApp(): void {
 
         heartbeatIntervalId = setInterval(() => {
           if (registeredDeviceId) {
+            healthRegistry.pulse('hubHeartbeat');
             void client.heartbeat(registeredDeviceId).then((res) => {
               if (!res.ok) {
                 console.warn('[Hub] Heartbeat failed:', res.error);
@@ -291,6 +383,7 @@ function initializeApp(): void {
   // Register device when Hub connection is established and user is authenticated
   // This is triggered when the connection status changes to 'connected'
   hubConnectionManager.onWebSocketMessage(() => {
+    healthRegistry.pulse('hubWebSocket');
     // Only register if not already registered and user is authenticated
     if (registeredDeviceId === null && hubAuthService.isAuthenticated()) {
       void registerDeviceAndStartHeartbeat(hubApiClient);
@@ -300,11 +393,13 @@ function initializeApp(): void {
   // GitHub service — wraps GitHub REST API with OAuth tokens
   const githubService = createGitHubService({ oauthManager, router });
 
-  // Spotify service — wraps Spotify Web API with OAuth tokens
-  const spotifyService = createSpotifyService({ oauthManager });
+  // Spotify service — wraps Spotify Web API with OAuth tokens (non-critical)
+  const spotifyService = initNonCritical('spotify', () =>
+    createSpotifyService({ oauthManager }), errorCollector);
 
-  // Calendar service — wraps Google Calendar API with OAuth tokens
-  const calendarService = createCalendarService({ oauthManager });
+  // Calendar service — wraps Google Calendar API with OAuth tokens (non-critical)
+  const calendarService = initNonCritical('calendar', () =>
+    createCalendarService({ oauthManager }), errorCollector);
 
   // Claude client — wraps Anthropic SDK with conversation management
   const claudeClient = createClaudeClient({
@@ -344,11 +439,13 @@ function initializeApp(): void {
   const taskDecomposer = createTaskDecomposer({ claudeClient });
   const githubImporter = createGithubImporter({ githubService, taskService });
 
-  // Voice service — manages voice configuration
-  const voiceService = createVoiceService();
+  // Voice service — manages voice configuration (non-critical)
+  const voiceService = initNonCritical('voice', () =>
+    createVoiceService(), errorCollector);
 
-  // Screen capture service — uses Electron desktopCapturer
-  const screenCaptureService = createScreenCaptureService();
+  // Screen capture service — uses Electron desktopCapturer (non-critical)
+  const screenCaptureService = initNonCritical('screenCapture', () =>
+    createScreenCaptureService(), errorCollector);
 
   // Suggestion engine — for briefings
   const suggestionEngine = createSuggestionEngine({
@@ -387,7 +484,7 @@ function initializeApp(): void {
   const taskLauncher = createTaskLauncher();
 
   // Agent orchestrator — headless Claude agent lifecycle management
-  const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService);
+  const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService ?? undefined);
   agentOrchestratorRef = agentOrchestrator;
 
   // QA runner — two-tier automated QA system
@@ -431,20 +528,20 @@ function initializeApp(): void {
     mcpManager,
     notesService,
     alertService,
-    spotifyService,
+    spotifyService: spotifyService ?? undefined,
     taskService,
     plannerService,
     watchStore,
     crossDeviceQuery,
-    fitnessService,
-    calendarService,
+    fitnessService: fitnessService ?? undefined,
+    calendarService: calendarService ?? undefined,
     briefingService,
     insightsService,
-    ideasService,
-    milestonesService,
+    ideasService: ideasService ?? undefined,
+    milestonesService: milestonesService ?? undefined,
     emailService,
     githubService,
-    changelogService,
+    changelogService: changelogService ?? undefined,
   });
 
   // Wire watch evaluator to emit proactive notifications when watches trigger
@@ -571,6 +668,10 @@ function initializeApp(): void {
 
   jsonlProgressWatcher.start();
 
+  // Health registry enrollment — register background services for monitoring
+  healthRegistry.register('hubHeartbeat', 60_000);
+  healthRegistry.register('hubWebSocket', 30_000);
+
   const services = {
     agentOrchestrator,
     projectService,
@@ -586,7 +687,9 @@ function initializeApp(): void {
     calendarService,
     changelogService,
     emailService,
+    errorCollector,
     fitnessService,
+    healthRegistry,
     hubConnectionManager,
     hubSyncService,
     ideasService,
@@ -624,6 +727,31 @@ function initializeApp(): void {
 // ─── App Lifecycle ────────────────────────────────────────────
 
 void (async () => {
+  // Global exception handlers — registered before app.whenReady() for maximum coverage
+  process.on('uncaughtException', (error) => {
+    console.error('[Main] Uncaught exception:', error);
+    dialog.showErrorBox(
+      'ADC Error',
+      `An unexpected error occurred:\n\n${error.message}`,
+    );
+    // Trigger graceful cleanup via before-quit handler
+    app.quit();
+  });
+
+  process.on('unhandledRejection', (reason) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    console.error('[Main] Unhandled rejection:', message);
+    // Report to ErrorCollector if initialized
+    errorCollectorRef?.report({
+      severity: 'error',
+      tier: 'app',
+      category: 'general',
+      message: `Unhandled rejection: ${message}`,
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
+    // Do NOT quit — unhandled rejections are recoverable
+  });
+
   await app.whenReady();
   initializeApp();
   createWindow();
@@ -654,4 +782,7 @@ app.on('before-quit', () => {
     clearInterval(heartbeatIntervalId);
     heartbeatIntervalId = null;
   }
+  // Dispose error collector and health registry last (they may log during shutdown)
+  healthRegistryRef?.dispose();
+  errorCollectorRef?.dispose();
 });
