@@ -16,10 +16,12 @@ import {
   wireIpcHandlers,
 } from './bootstrap';
 
+import type { ErrorCollector } from './services/health/error-collector';
 import type { SettingsService } from './services/settings/settings-service';
 
 let mainWindow: BrowserWindow | null = null;
 let settingsServiceRef: SettingsService | null = null;
+let errorCollectorRef: ErrorCollector | null = null;
 
 // Renderer crash tracking
 let rendererCrashCount = 0;
@@ -114,8 +116,9 @@ function createWindow(): void {
 function initializeApp(): void {
   const registry = createServiceRegistry(getMainWindow);
 
-  // Store ref for createWindow() settings checks
+  // Store refs for createWindow() settings checks and global error reporting
   settingsServiceRef = registry.settingsService;
+  errorCollectorRef = registry.errorCollector;
 
   // Wire IPC handlers
   wireIpcHandlers(registry.router, registry.services);
@@ -136,7 +139,11 @@ function initializeApp(): void {
     terminalService: registry.terminalService,
     agentService: registry.agentService,
     agentOrchestrator: registry.agentOrchestrator,
+    agentWatchdog: registry.agentWatchdog,
+    errorCollector: registry.errorCollector,
+    healthRegistry: registry.healthRegistry,
     jsonlProgressWatcher: registry.jsonlProgressWatcher,
+    qaTrigger: registry.qaTrigger,
     alertService: registry.alertService,
     hubConnectionManager: registry.hubConnectionManager,
     notificationManager: registry.notificationManager,
@@ -162,7 +169,13 @@ void (async () => {
   process.on('unhandledRejection', (reason) => {
     const message = reason instanceof Error ? reason.message : String(reason);
     console.error('[Main] Unhandled rejection:', message);
-    // TODO: Report to ErrorCollector once health monitoring is added to bootstrap
+    errorCollectorRef?.report({
+      severity: 'error',
+      tier: 'app',
+      category: 'general',
+      message: `Unhandled rejection: ${message}`,
+      stack: reason instanceof Error ? reason.stack : undefined,
+    });
     // Do NOT quit — unhandled rejections are recoverable
   });
 

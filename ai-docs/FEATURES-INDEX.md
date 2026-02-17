@@ -12,9 +12,10 @@
 | Renderer Features | 28 |
 | Main Process Services | 37 |
 | IPC Handler Files | 36 |
-| IPC Domain Folders | 22 |
+| IPC Domain Folders | 23 |
 | Hub Type Modules | 12 |
 | Bootstrap Modules | 5 |
+| FEATURE.md Files | 16 |
 
 ---
 
@@ -241,7 +242,7 @@ The main process `index.ts` has been split into **5 focused bootstrap modules**:
 
 ### IPC Contract (Domain-Based Structure)
 
-The IPC contract has been split from a single monolithic file into **22 domain folders** under `src/shared/ipc/`. The root barrel at `src/shared/ipc/index.ts` merges all domain contracts back into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin backward-compatible re-export.
+The IPC contract has been split from a single monolithic file into **23 domain folders** under `src/shared/ipc/`. The root barrel at `src/shared/ipc/index.ts` merges all domain contracts back into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin backward-compatible re-export.
 
 **Domain folders** (`src/shared/ipc/<domain>/`):
 
@@ -268,6 +269,7 @@ The IPC contract has been split from a single monolithic file into **22 domain f
 | `spotify` | Spotify playback |
 | `tasks` | Local tasks + Hub tasks (invoke + events) |
 | `terminals` | Terminal session management |
+| `health` | Error collection, health registry invoke/event contracts |
 | `workflow` | Workflow execution |
 
 Each domain folder contains:
@@ -278,7 +280,7 @@ Each domain folder contains:
 └── index.ts      # Barrel export
 ```
 
-Additional files: `src/shared/ipc/types.ts` (type utilities: `InvokeInput`, `InvokeOutput`, `EventPayload`, etc.)
+Additional files: `src/shared/ipc/types.ts` (type utilities: `InvokeInput`, `InvokeOutput`, `EventPayload`, etc.), `src/shared/ipc/FEATURE.md` (split rationale).
 
 ### Hub Type Modules (`src/shared/types/hub/`)
 
@@ -298,6 +300,29 @@ Hub protocol types have been split from a single `hub-protocol.ts` into **12 foc
 | `tasks.ts` | Hub task types |
 | `transitions.ts` | Status transition types |
 | `workspaces.ts` | Hub workspace types |
+
+### FEATURE.md Documentation Files
+
+Each split directory contains a `FEATURE.md` documenting its purpose, public API, and file inventory. There are **16 FEATURE.md files** across the codebase:
+
+| Location | Scope |
+|----------|-------|
+| `src/main/bootstrap/FEATURE.md` | Bootstrap module architecture |
+| `src/main/ipc/handlers/tasks/FEATURE.md` | Split task handler files |
+| `src/main/services/agent-orchestrator/FEATURE.md` | Agent orchestrator lifecycle, watchdog, progress watcher |
+| `src/main/services/assistant/FEATURE.md` | Assistant service: intent classification + command execution |
+| `src/main/services/assistant/executors/FEATURE.md` | 22 domain executor files |
+| `src/main/services/assistant/intent-classifier/FEATURE.md` | Classifier + 13 pattern files |
+| `src/main/services/briefing/FEATURE.md` | Briefing generation, cache, config, scheduling |
+| `src/main/services/email/FEATURE.md` | SMTP email, queue, encryption, store |
+| `src/main/services/hub/FEATURE.md` | Hub connection layer: API client, auth, WebSocket, sync |
+| `src/main/services/notifications/FEATURE.md` | Slack/GitHub watchers, notification manager, filter |
+| `src/renderer/app/routes/FEATURE.md` | 8 route group files |
+| `src/renderer/features/planner/FEATURE.md` | Planner components: weekly review, day compact, stats |
+| `src/renderer/features/settings/FEATURE.md` | Settings page: OAuth, webhooks, appearance sections |
+| `src/renderer/features/tasks/FEATURE.md` | Task dashboard: AG-Grid, cell renderers, detail rows |
+| `src/shared/ipc/FEATURE.md` | Domain-based IPC contract structure |
+| `src/shared/types/hub/FEATURE.md` | Hub protocol type modules |
 
 ---
 
@@ -456,7 +481,7 @@ ADC/
 │   │   └── styles/globals.css   # Theme tokens + Tailwind
 │   └── shared/                  # Shared between main + renderer
 │       ├── ipc-contract.ts      # Thin re-export from ipc/ barrel
-│       ├── ipc/                 # Domain-based IPC contracts (22 folders)
+│       ├── ipc/                 # Domain-based IPC contracts (23 folders)
 │       │   ├── <domain>/        # contract.ts + schemas.ts + index.ts
 │       │   ├── index.ts         # Root barrel (merges all domains)
 │       │   └── types.ts         # Type utilities

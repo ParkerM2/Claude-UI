@@ -91,6 +91,16 @@ export {
   GitHubLabelSchema,
   GitHubNotificationSchema,
   GitHubPullRequestSchema,
+  // health
+  ErrorCategorySchema,
+  ErrorContextSchema,
+  ErrorEntrySchema,
+  ErrorSeveritySchema,
+  ErrorStatsSchema,
+  ErrorTierSchema,
+  HealthStatusSchema,
+  ServiceHealthSchema,
+  ServiceHealthStatusSchema,
   // hub
   HubConfigOutputSchema,
   HubConnectionStatusSchema,

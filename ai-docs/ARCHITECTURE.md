@@ -40,7 +40,7 @@
 │                                          └─ ... (37 total)      │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────────┐│
-│  │ IPC Contract: src/shared/ipc/ (22 domain folders)            ││
+│  │ IPC Contract: src/shared/ipc/ (23 domain folders)            ││
 │  │ Each folder: contract.ts + schemas.ts + index.ts             ││
 │  │ Root barrel merges all into ipcInvokeContract/ipcEventContract││
 │  └──────────────────────────────────────────────────────────────┘│
@@ -68,7 +68,7 @@
 
 ## Domain-Based IPC Structure
 
-The IPC contract was refactored from a single ~2600-line `ipc-contract.ts` into 22 domain-specific folders under `src/shared/ipc/`. Each domain folder contains:
+The IPC contract was refactored from a single ~2600-line `ipc-contract.ts` into 23 domain-specific folders under `src/shared/ipc/`. Each domain folder contains:
 
 - `schemas.ts` — Zod schemas for the domain
 - `contract.ts` — Invoke and event contract entries using those schemas
@@ -76,7 +76,7 @@ The IPC contract was refactored from a single ~2600-line `ipc-contract.ts` into 
 
 The root barrel at `src/shared/ipc/index.ts` spreads all domain contracts into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin re-export that maintains backward compatibility — existing imports from `@shared/ipc-contract` continue to work.
 
-**To add a new IPC channel**: Add it to the appropriate domain folder's `contract.ts` and `schemas.ts`. The root barrel automatically picks it up.
+**To add a new IPC channel**: Add it to the appropriate domain folder's `contract.ts` and `schemas.ts`. The root barrel automatically picks it up. The `health` domain folder was the most recent addition (error collection + health monitoring channels).
 
 ## Bootstrap Module Pattern
 
@@ -84,11 +84,19 @@ The main process entry point (`src/main/index.ts`) delegates to 5 bootstrap modu
 
 | Module | Responsibility |
 |--------|---------------|
-| `lifecycle.ts` | Electron app lifecycle events, BrowserWindow creation |
-| `service-registry.ts` | Instantiates all service factories with dependency injection |
+| `lifecycle.ts` | Electron app lifecycle events, BrowserWindow creation, graceful shutdown (disposes all services including HealthRegistry + ErrorCollector last) |
+| `service-registry.ts` | Instantiates all service factories with dependency injection. Creates ErrorCollector + HealthRegistry early for crash resilience. Wraps non-critical services in `initNonCritical()` for graceful degradation. Wires AgentWatchdog (process monitoring), QaTrigger (automatic QA on session completion), and HealthRegistry enrollment (hubHeartbeat, hubWebSocket). |
 | `ipc-wiring.ts` | Registers all IPC handlers (connects handler files to router) |
 | `event-wiring.ts` | Sets up service event → renderer forwarding |
 | `index.ts` | Barrel re-export |
+
+### Bootstrap Resilience Features
+
+- **ErrorCollector** — Created first in `service-registry.ts`. Captures service errors to file-based log with capacity alerts. Reports errors via `event:app.error` IPC event. Used by `initNonCritical()` to record initialization failures.
+- **HealthRegistry** — Created early. Monitors service liveness via periodic pulses. Services call `healthRegistry.pulse(name)` during normal operation; the registry emits `event:app.serviceUnhealthy` when pulses are missed.
+- **initNonCritical()** — Wrapper function in `service-registry.ts`. Non-essential services (milestones, ideas, changelog, fitness, spotify, calendar, voice, screen) are wrapped so that if their factory throws, the app continues running with `null` for that service. Failures are reported to ErrorCollector.
+- **AgentWatchdog** — Created after the orchestrator. Monitors active agent sessions for dead/stale processes (30s interval, PID checks, heartbeat age thresholds). Alerts are forwarded to the renderer via `event:agent.orchestrator.watchdogAlert`.
+- **QaTrigger** — Created after QA runner. Listens for task status changes to `review` and automatically starts quiet QA sessions. Disposed in `lifecycle.ts` during shutdown.
 
 This replaces the previous monolithic `index.ts` where all initialization lived in a single file.
 

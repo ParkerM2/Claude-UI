@@ -16,7 +16,7 @@
 | `src/shared/types/hub/` | Hub protocol domain types (12 modules: auth, devices, enums, errors, events, guards, tasks, etc.) | Service logic, renderer imports |
 | `src/shared/ipc-contract.ts` | Thin re-export barrel from `src/shared/ipc/` | New contract definitions (add to domain folders) |
 | `src/shared/ipc/<domain>/` | Domain-specific Zod schemas (`schemas.ts`), invoke/event contracts (`contract.ts`), barrel (`index.ts`) | Cross-domain imports, business logic |
-| `src/shared/ipc/index.ts` | Root barrel merging all 22 domain contracts into unified objects | Domain-specific code |
+| `src/shared/ipc/index.ts` | Root barrel merging all 23 domain contracts into unified objects | Domain-specific code |
 | `src/shared/constants/` | Constant values, enums, config objects | Functions with side effects, mutable state |
 | `src/main/bootstrap/` | App initialization modules: lifecycle, service-registry, ipc-wiring, event-wiring | Business logic, feature code |
 | `src/main/services/` | Business logic, data persistence, PTY management | React code, browser APIs, UI logic |

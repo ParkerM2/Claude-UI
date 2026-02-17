@@ -144,7 +144,7 @@ src/
 
 ## Critical Pattern: IPC Contract
 
-**`src/shared/ipc/` (22 domain folders) is the source of truth for all IPC communication.** The root barrel at `src/shared/ipc/index.ts` merges all domain contracts into the unified `ipcInvokeContract` and `ipcEventContract`. The original `src/shared/ipc-contract.ts` is a thin backward-compatible re-export.
+**`src/shared/ipc/` (23 domain folders) is the source of truth for all IPC communication.** The root barrel at `src/shared/ipc/index.ts` merges all domain contracts into the unified `ipcInvokeContract` and `ipcEventContract`. The original `src/shared/ipc-contract.ts` is a thin backward-compatible re-export.
 
 To add a new IPC operation:
 1. Find or create the domain folder in `src/shared/ipc/<domain>/`

@@ -23,6 +23,7 @@ import { createMcpRegistry } from '../mcp/mcp-registry';
 import { createAgentQueue } from '../services/agent/agent-queue';
 import { createAgentService } from '../services/agent/agent-service';
 import { createAgentOrchestrator } from '../services/agent-orchestrator/agent-orchestrator';
+import { createAgentWatchdog } from '../services/agent-orchestrator/agent-watchdog';
 import { createJsonlProgressWatcher } from '../services/agent-orchestrator/jsonl-progress-watcher';
 import { createAlertService } from '../services/alerts/alert-service';
 import { createAppUpdateService } from '../services/app/app-update-service';
@@ -42,6 +43,8 @@ import { createGitService } from '../services/git/git-service';
 import { createPolyrepoService } from '../services/git/polyrepo-service';
 import { createWorktreeService } from '../services/git/worktree-service';
 import { createGitHubService } from '../services/github/github-service';
+import { createErrorCollector } from '../services/health/error-collector';
+import { createHealthRegistry } from '../services/health/health-registry';
 import { createHubApiClient } from '../services/hub/hub-api-client';
 import { createHubAuthService } from '../services/hub/hub-auth-service';
 import { createHubConnectionManager } from '../services/hub/hub-connection';
@@ -61,6 +64,7 @@ import { createPlannerService } from '../services/planner/planner-service';
 import { createProjectService } from '../services/project/project-service';
 import { createTaskService } from '../services/project/task-service';
 import { createQaRunner } from '../services/qa/qa-runner';
+import { createQaTrigger } from '../services/qa/qa-trigger';
 import { createScreenCaptureService } from '../services/screen/screen-capture-service';
 import { createSettingsService } from '../services/settings/settings-service';
 import { createSpotifyService } from '../services/spotify/spotify-service';
@@ -82,7 +86,11 @@ export interface ServiceRegistryResult {
   services: Services;
   assistantService: ReturnType<typeof createAssistantService>;
   agentOrchestrator: ReturnType<typeof createAgentOrchestrator>;
+  agentWatchdog: ReturnType<typeof createAgentWatchdog>;
+  errorCollector: ReturnType<typeof createErrorCollector>;
+  healthRegistry: ReturnType<typeof createHealthRegistry>;
   jsonlProgressWatcher: ReturnType<typeof createJsonlProgressWatcher>;
+  qaTrigger: ReturnType<typeof createQaTrigger>;
   watchEvaluator: ReturnType<typeof createWatchEvaluator>;
   webhookRelay: ReturnType<typeof createWebhookRelay>;
   hubConnectionManager: ReturnType<typeof createHubConnectionManager>;
@@ -106,6 +114,32 @@ export function createServiceRegistry(
 ): ServiceRegistryResult {
   const router = new IpcRouter(getMainWindow);
   const dataDir = app.getPath('userData');
+
+  // ─── Error collector + health registry (created early) ──────
+  const errorCollector = createErrorCollector(dataDir, {
+    onError: (entry) => { router.emit('event:app.error', entry); },
+    onCapacityAlert: (count, message) => { router.emit('event:app.capacityAlert', { count, message }); },
+  });
+  const healthRegistry = createHealthRegistry({
+    onUnhealthy: (serviceName, missedCount) => {
+      router.emit('event:app.serviceUnhealthy', { serviceName, missedCount });
+    },
+  });
+
+  /** Wrap non-critical service init — returns null on failure and reports to errorCollector. */
+  function initNonCritical<T>(name: string, factory: () => T): T | null {
+    try {
+      return factory();
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[Bootstrap] Non-critical service "${name}" failed to init: ${msg}`);
+      errorCollector.report({
+        severity: 'warning', tier: 'app', category: 'service',
+        message: `Service initialization failed: ${name} - ${msg}`,
+      });
+      return null;
+    }
+  }
 
   // ─── OAuth + MCP infrastructure ──────────────────────────────
   const tokenStore = createTokenStore({ dataDir });
@@ -162,11 +196,19 @@ export function createServiceRegistry(
   const worktreeService = createWorktreeService((id) => projectService.getProjectPath(id));
   const mergeService = createMergeService();
 
-  // ─── Data services ───────────────────────────────────────────
-  const milestonesService = createMilestonesService({ dataDir, router });
-  const ideasService = createIdeasService({ dataDir, router });
-  const changelogService = createChangelogService({ dataDir });
-  const fitnessService = createFitnessService({ dataDir, router });
+  // ─── Data services (non-critical wrapped) ────────────────────
+  const milestonesService = initNonCritical('milestones', () =>
+    createMilestonesService({ dataDir, router }),
+  );
+  const ideasService = initNonCritical('ideas', () =>
+    createIdeasService({ dataDir, router }),
+  );
+  const changelogService = initNonCritical('changelog', () =>
+    createChangelogService({ dataDir }),
+  );
+  const fitnessService = initNonCritical('fitness', () =>
+    createFitnessService({ dataDir, router }),
+  );
   const emailService = createEmailService({ router });
 
   // ─── Device + heartbeat ──────────────────────────────────────
@@ -199,6 +241,7 @@ export function createServiceRegistry(
 
         heartbeatIntervalId = setInterval(() => {
           if (registeredDeviceId) {
+            healthRegistry.pulse('hubHeartbeat');
             void client.heartbeat(registeredDeviceId).then((res) => {
               if (!res.ok) {
                 console.warn('[Hub] Heartbeat failed:', res.error);
@@ -219,6 +262,7 @@ export function createServiceRegistry(
   }
 
   hubConnectionManager.onWebSocketMessage(() => {
+    healthRegistry.pulse('hubWebSocket');
     if (registeredDeviceId === null && hubAuthService.isAuthenticated()) {
       void registerDeviceAndStartHeartbeat(hubApiClient);
     }
@@ -226,8 +270,12 @@ export function createServiceRegistry(
 
   // ─── External API services ───────────────────────────────────
   const githubService = createGitHubService({ oauthManager, router });
-  const spotifyService = createSpotifyService({ oauthManager });
-  const calendarService = createCalendarService({ oauthManager });
+  const spotifyService = initNonCritical('spotify', () =>
+    createSpotifyService({ oauthManager }),
+  );
+  const calendarService = initNonCritical('calendar', () =>
+    createCalendarService({ oauthManager }),
+  );
   const claudeClient = createClaudeClient({
     router,
     getApiKey: () => settingsService.getSettings().anthropicApiKey,
@@ -262,8 +310,10 @@ export function createServiceRegistry(
   const githubImporter = createGithubImporter({ githubService, taskService });
 
   // ─── Misc services ───────────────────────────────────────────
-  const voiceService = createVoiceService();
-  const screenCaptureService = createScreenCaptureService();
+  const voiceService = initNonCritical('voice', () => createVoiceService());
+  const screenCaptureService = initNonCritical('screenCapture', () =>
+    createScreenCaptureService(),
+  );
   const suggestionEngine = createSuggestionEngine({
     projectService,
     taskService,
@@ -297,8 +347,22 @@ export function createServiceRegistry(
 
   // ─── Workflow + orchestrator ──────────────────────────────────
   const taskLauncher = createTaskLauncher();
-  const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService);
+  const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService ?? undefined);
   const qaRunner = createQaRunner(agentOrchestrator, dataDir, notificationManager);
+
+  // Agent watchdog — monitors active sessions for dead/stale processes
+  const agentWatchdog = createAgentWatchdog(agentOrchestrator, {}, notificationManager);
+  agentWatchdog.onAlert((alert) => {
+    router.emit('event:agent.orchestrator.watchdogAlert', alert);
+  });
+  agentWatchdog.start();
+
+  // QA auto-trigger — starts QA when tasks enter review
+  const qaTrigger = createQaTrigger({ qaRunner, orchestrator: agentOrchestrator, hubApiClient, router });
+
+  // Health registry enrollment — register background services for monitoring
+  healthRegistry.register('hubHeartbeat', 60_000);
+  healthRegistry.register('hubWebSocket', 30_000);
 
   const insightsService = createInsightsService({
     taskService,
@@ -332,20 +396,20 @@ export function createServiceRegistry(
     mcpManager,
     notesService,
     alertService,
-    spotifyService,
+    spotifyService: spotifyService ?? undefined,
     taskService,
     plannerService,
     watchStore,
     crossDeviceQuery,
-    fitnessService,
-    calendarService,
+    fitnessService: fitnessService ?? undefined,
+    calendarService: calendarService ?? undefined,
     briefingService,
     insightsService,
-    ideasService,
-    milestonesService,
+    ideasService: ideasService ?? undefined,
+    milestonesService: milestonesService ?? undefined,
     emailService,
     githubService,
-    changelogService,
+    changelogService: changelogService ?? undefined,
   });
   // Fill closure ref for quick input
   assistantServiceRef = assistantService;
@@ -373,7 +437,9 @@ export function createServiceRegistry(
     calendarService,
     changelogService,
     emailService,
+    errorCollector,
     fitnessService,
+    healthRegistry,
     hubConnectionManager,
     hubSyncService,
     ideasService,
@@ -410,7 +476,11 @@ export function createServiceRegistry(
     services,
     assistantService,
     agentOrchestrator,
+    agentWatchdog,
+    errorCollector,
+    healthRegistry,
     jsonlProgressWatcher,
+    qaTrigger,
     watchEvaluator,
     webhookRelay,
     hubConnectionManager,

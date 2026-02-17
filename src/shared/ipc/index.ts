@@ -18,6 +18,7 @@ import { emailEvents, emailInvoke } from './email';
 import { fitnessEvents, fitnessInvoke } from './fitness';
 import { gitEvents, gitInvoke } from './git';
 import { githubEvents, githubInvoke } from './github';
+import { healthEvents, healthInvoke } from './health';
 import { hubEvents, hubInvoke } from './hub';
 import {
   alertsEvents,
@@ -78,6 +79,7 @@ export const ipcInvokeContract = {
   ...spotifyInvoke,
   ...calendarInvoke,
   ...appInvoke,
+  ...healthInvoke,
   ...orchestratorInvoke,
   ...qaInvoke,
   ...timeInvoke,
@@ -103,6 +105,7 @@ export const ipcEventContract = {
   ...agentsEvents,
   ...projectsEvents,
   ...appEvents,
+  ...healthEvents,
   ...assistantEvents,
   ...claudeEvents,
   ...webhookEvents,
@@ -212,6 +215,18 @@ export {
   GitHubNotificationSchema,
   GitHubPullRequestSchema,
 } from './github';
+
+export {
+  ErrorCategorySchema,
+  ErrorContextSchema,
+  ErrorEntrySchema,
+  ErrorSeveritySchema,
+  ErrorStatsSchema,
+  ErrorTierSchema,
+  HealthStatusSchema,
+  ServiceHealthSchema,
+  ServiceHealthStatusSchema,
+} from './health';
 
 export {
   HubConfigOutputSchema,
