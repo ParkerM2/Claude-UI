@@ -37,7 +37,11 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for WebSocket server services
 
 ## Broadcaster Pattern
 

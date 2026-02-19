@@ -38,8 +38,13 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
 - `superpowers:test-driven-development` — Write tests for routes
+
+### External (skills.sh)
+- `wshobson/agents:api-design-principles` — REST API design and endpoint patterns
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for server routes
 
 ## Route Pattern (MANDATORY)
 

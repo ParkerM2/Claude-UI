@@ -34,6 +34,14 @@ NEVER modify:
   src/renderer/**             — Renderer agents' domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for notification services
+
 ## Notification Service Pattern
 
 ```typescript

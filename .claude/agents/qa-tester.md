@@ -224,8 +224,13 @@ After completing the happy path, ALWAYS test these edge cases:
 
 ## Skills
 
+### Superpowers
 - `superpowers:systematic-debugging` — When investigating unexpected behavior
 - `superpowers:verification-before-completion` — Before marking scenario complete
+
+### External (skills.sh)
+- `anthropics/skills:webapp-testing` — Web app testing strategies
+- `wshobson/agents:e2e-testing-patterns` — E2E testing strategies and patterns
 
 ## Rules — Non-Negotiable
 

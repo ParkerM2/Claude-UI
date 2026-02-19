@@ -41,8 +41,15 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
 - `superpowers:brainstorming` — When designing new theme variants
+
+### External (skills.sh)
+- `jezweb/claude-skills:tailwind-v4-shadcn` — Tailwind v4 + shadcn/Radix styling patterns
+- `wshobson/agents:tailwind-design-system` — Tailwind CSS design system patterns
+- `wshobson/agents:design-system-patterns` — Design system construction and maintenance
+- `anthropics/skills:frontend-design` — Frontend design patterns and principles
 
 ## Theme System Architecture
 

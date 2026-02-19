@@ -29,9 +29,15 @@ If FAIL, you list every issue with file:line and fix instructions.
 
 ## Skills
 
+### Superpowers
 - `superpowers:requesting-code-review` — Use this skill's review methodology
 - `superpowers:verification-before-completion` — Run ALL checks before reporting
 - `superpowers:systematic-debugging` — When investigating potential issues
+
+### External (skills.sh)
+- `wshobson/agents:code-review-excellence` — Code review methodology and best practices
+- `anthropics/skills:webapp-testing` — Web app testing strategies
+- `wshobson/agents:accessibility-compliance` — WCAG/a11y compliance verification
 
 ## Review Protocol
 

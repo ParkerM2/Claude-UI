@@ -34,6 +34,14 @@ NEVER modify:
   src/main/services/other/**  — Other service engineers' domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for Electron main process
+
 ## Tray Manager Pattern (MANDATORY)
 
 ```typescript

@@ -34,6 +34,14 @@ NEVER modify:
   src/renderer/**                — Renderer agents' domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:git-advanced-workflows` — Git branching, worktrees, and workflow strategies
+
 ## Git Service Pattern (MANDATORY)
 
 ```typescript

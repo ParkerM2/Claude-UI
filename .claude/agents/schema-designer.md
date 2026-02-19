@@ -40,8 +40,12 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
 - `superpowers:brainstorming` — When choosing between type designs
+
+### External (skills.sh)
+- `wshobson/agents:typescript-advanced-types` — TypeScript strict patterns, generics, and utility types
 
 ## Type Definition Rules
 

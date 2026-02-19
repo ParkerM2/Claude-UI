@@ -35,6 +35,15 @@ NEVER modify:
   src/main/auth/**          — OAuth Engineer's domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:api-design-principles` — REST API design for external service integration
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for MCP server modules
+
 ## MCP Server Module Pattern (MANDATORY)
 
 Each integration follows the same structure:

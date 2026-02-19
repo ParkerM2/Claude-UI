@@ -41,7 +41,12 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:react-state-management` — State management patterns (Zustand, React Query)
+- `vercel-labs/agent-skills:vercel-react-best-practices` — React 19 patterns and best practices
 
 ## Store Pattern (MANDATORY)
 

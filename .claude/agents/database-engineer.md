@@ -43,7 +43,11 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:postgresql-table-design` — PostgreSQL schema design patterns
 
 ## Schema Design Pattern
 

@@ -37,6 +37,14 @@ NEVER modify:
   src/main/ipc/**         — IPC Handler Engineer's domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `anthropics/skills:mcp-builder` — MCP server creation patterns
+
 ## MCP Client Pattern (MANDATORY)
 
 ```typescript

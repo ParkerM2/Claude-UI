@@ -44,9 +44,15 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:test-driven-development` — When writing tests alongside new features
 - `superpowers:verification-before-completion` — Run full suite before marking done
 - `superpowers:systematic-debugging` — When tests fail unexpectedly
+
+### External (skills.sh)
+- `antfu/skills:vitest` — Vitest testing framework patterns
+- `wshobson/agents:e2e-testing-patterns` — E2E testing strategies and patterns
+- `anthropics/skills:webapp-testing` — Web app testing strategies
 
 ## Service Test Pattern
 

@@ -34,6 +34,15 @@ NEVER modify:
   src/main/services/**      — Service Engineer's domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `better-auth/skills:better-auth-best-practices` — Authentication patterns and best practices
+- `wshobson/agents:security-requirement-extraction` — Security analysis for auth flows
+
 ## OAuth Manager Pattern (MANDATORY)
 
 ```typescript

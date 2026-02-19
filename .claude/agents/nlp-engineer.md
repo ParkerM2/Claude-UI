@@ -31,6 +31,14 @@ NEVER modify:
   src/renderer/**                  — Renderer agents' domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:typescript-advanced-types` — TypeScript strict patterns for type-safe parsers
+
 ## Time Parser Pattern (MANDATORY)
 
 ```typescript

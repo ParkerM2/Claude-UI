@@ -42,7 +42,12 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:api-design-principles` — REST API and IPC contract design patterns
+- `wshobson/agents:error-handling-patterns` — Error handling strategies for handler layers
 
 ## Handler Pattern (MANDATORY)
 

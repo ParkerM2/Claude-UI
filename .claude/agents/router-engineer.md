@@ -39,7 +39,11 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `vercel-labs/agent-skills:vercel-react-best-practices` — React 19 routing and navigation patterns
 
 ## Adding a New Top-Level Route
 

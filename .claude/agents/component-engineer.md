@@ -43,8 +43,15 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
 - `superpowers:brainstorming` — When designing component structure
+
+### External (skills.sh)
+- `vercel-labs/agent-skills:vercel-react-best-practices` — React 19 patterns, hooks, and component design
+- `jezweb/claude-skills:tailwind-v4-shadcn` — Tailwind v4 + shadcn/Radix component patterns
+- `wshobson/agents:accessibility-compliance` — WCAG/a11y compliance for interactive elements
+- `giuseppe-trisciuoglio/developer-kit:shadcn-ui` — Shadcn/Radix UI component patterns
 
 ## Component Template (MANDATORY)
 

@@ -26,8 +26,12 @@ Then read the specific area of the codebase you're designing for:
 
 ## Skills
 
+### Superpowers
 - `superpowers:writing-plans` — ALWAYS use this before producing design output
 - `superpowers:brainstorming` — When exploring multiple design approaches
+
+### External (skills.sh)
+- `wshobson/agents:architecture-patterns` — Software architecture patterns and design decisions
 
 ## Design Document Format
 

@@ -35,6 +35,14 @@ NEVER modify:
   src/renderer/**            — Renderer agents' domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `vercel-labs/agent-skills:vercel-react-best-practices` — React 19 patterns and best practices
+
 ## Data Models (MANDATORY)
 
 ```typescript

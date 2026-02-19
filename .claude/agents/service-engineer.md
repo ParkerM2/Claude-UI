@@ -44,9 +44,14 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
 - `superpowers:test-driven-development` — Write tests alongside service code
 - `superpowers:systematic-debugging` — When encountering unexpected behavior
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for Electron main process services
+- `wshobson/agents:error-handling-patterns` — Error handling strategies and resilient service design
 
 ## Service Implementation Pattern
 

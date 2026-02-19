@@ -42,7 +42,12 @@ NEVER modify:
 
 ## Skills
 
+### Superpowers
 - `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for server infrastructure
+- `wshobson/agents:security-requirement-extraction` — Security analysis for infrastructure and deployment
 
 ## Docker Configuration
 

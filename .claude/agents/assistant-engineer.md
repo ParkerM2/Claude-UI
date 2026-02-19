@@ -36,6 +36,14 @@ NEVER modify:
   src/main/ipc/**           — IPC Handler Engineer's domain
 ```
 
+## Skills
+
+### Superpowers
+- `superpowers:verification-before-completion` — Before marking work done
+
+### External (skills.sh)
+- `wshobson/agents:nodejs-backend-patterns` — Node.js patterns for assistant services
+
 ## Intent Classification Pattern (MANDATORY)
 
 ```typescript

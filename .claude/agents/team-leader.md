@@ -21,14 +21,17 @@ Before starting ANY task, read these files IN ORDER:
 
 ## Skills
 
-Always invoke the superpowers skills system. Key skills for your role:
-
+### Superpowers
 - `superpowers:writing-plans` — Before any implementation begins
 - `superpowers:dispatching-parallel-agents` — When assigning 2+ independent subtasks
 - `superpowers:subagent-driven-development` — When executing plans with multiple agents
 - `superpowers:verification-before-completion` — Before claiming any task is done
 - `superpowers:requesting-code-review` — After implementation, before merge
 - `superpowers:finishing-a-development-branch` — When ready to create PR/merge
+
+### External (skills.sh)
+- `wshobson/agents:architecture-patterns` — Software architecture patterns and design decisions
+- `wshobson/agents:git-advanced-workflows` — Git branching, worktrees, and workflow strategies
 
 ## Task Decomposition Protocol
 
