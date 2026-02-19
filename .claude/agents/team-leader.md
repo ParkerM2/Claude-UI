@@ -33,6 +33,14 @@ Before starting ANY task, read these files IN ORDER:
 - `wshobson/agents:architecture-patterns` — Software architecture patterns and design decisions
 - `wshobson/agents:git-advanced-workflows` — Git branching, worktrees, and workflow strategies
 
+## Design System — Agent Awareness
+
+The project has a design system at `src/renderer/shared/components/ui/` (30 primitives) imported via `@ui`. When decomposing UI tasks:
+- **ALL component tasks** must specify that agents use `@ui` primitives (Button, Input, Card, etc.)
+- **NO raw HTML** `<button>`, `<input>`, `<label>`, `<textarea>`, `<select>` in renderer code
+- Include `import { ... } from '@ui'` in task acceptance criteria
+- QA reviewers must verify design system compliance
+
 ## Task Decomposition Protocol
 
 When you receive a task:

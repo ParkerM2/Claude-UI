@@ -257,6 +257,11 @@ Before marking work complete:
 - [ ] Active state detection works correctly
 - [ ] Route tree order matches sidebar order
 
+
+## Design System Awareness
+
+This project has a design system at `src/renderer/shared/components/ui/` (30 primitives), imported via `@ui`. All UI-facing code must use these primitives instead of raw HTML elements. Key exports: Button, Input, Textarea, Label, Badge, Card, Spinner, Dialog, AlertDialog, Select, DropdownMenu, Tooltip, Tabs, Switch, Checkbox, Toast, ScrollArea, Popover, Progress, Slider, Collapsible, PageLayout, Typography, Grid, Stack, Flex, Container, Separator, Form system (FormField, FormInput, etc.).
+
 ## Handoff
 
 After completing your work, notify the Team Leader with:

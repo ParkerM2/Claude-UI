@@ -205,6 +205,26 @@ When source changes affect areas covered by agent definitions in `.claude/agents
 
 **Check:** Run `npm run check:agents` and flag any stale references.
 
+### Check 12: Design System Compliance
+
+All renderer components MUST use design system primitives from `@ui` (`src/renderer/shared/components/ui/`). Flag any raw HTML form elements:
+
+```
+VIOLATIONS — search for these in src/renderer/:
+  <button    — Must use <Button> from @ui
+  <input     — Must use <Input> from @ui
+  <textarea  — Must use <Textarea> from @ui
+  <label     — Must use <Label> from @ui
+  <select    — Must use <Select> from @ui
+
+EXCEPTIONS (allowed):
+  - Inside the design system itself (src/renderer/shared/components/ui/)
+  - Hidden file inputs for upload triggers
+  - AG-Grid cell renderers that need raw elements for grid API compatibility
+```
+
+**Check:** Grep for raw HTML form elements in `src/renderer/features/` and `src/renderer/app/`. Flag any that should use `@ui` primitives.
+
 ## Report Format
 
 ### PASS Report
@@ -212,7 +232,7 @@ When source changes affect areas covered by agent definitions in `.claude/agents
 ```
 CODEBASE GUARDIAN REPORT: PASS
 =======================================
-Checks performed: 11
+Checks performed: 12
 Files reviewed: [count]
 
  1. File Placement:          PASS
@@ -259,7 +279,7 @@ VERDICT: REJECTED — return to specialists for fixes
 
 ## Rules — Non-Negotiable
 
-1. **Check ALL 11 categories** — never skip any
+1. **Check ALL 12 categories** — never skip any
 2. **Read actual files** — don't assume, verify
 3. **Report exact locations** — file:line for every issue
 4. **Don't fix code** — report only, let specialists fix

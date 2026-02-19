@@ -184,6 +184,17 @@ Generate reports in this exact structure:
 2. [Additional testing recommended]
 ```
 
+## Design System Visual Checks
+
+When testing UI components, verify design system compliance:
+- Buttons should have consistent rounded corners, focus rings, and hover states
+- Button variants: primary (teal/accent), secondary (dark), destructive (red), outline, ghost
+- Form inputs should have consistent borders, focus rings, and placeholder styling
+- Cards should have uniform borders, padding, and background colors
+- Loading states should use the `<Spinner>` component (smooth rotation, not jerky)
+- Dialogs should use Radix Dialog (proper overlay, focus trap, escape to close)
+- All components should adapt to the current theme (test by switching themes)
+
 ## Edge Cases to Always Try
 
 After completing the happy path, ALWAYS test these edge cases:
