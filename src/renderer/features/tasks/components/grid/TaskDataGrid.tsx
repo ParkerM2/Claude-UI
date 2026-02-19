@@ -19,7 +19,7 @@ import { Spinner } from '@ui';
 import { useProjects } from '@features/projects';
 import { useLaunchTask } from '@features/workflow';
 
-import { useKillAgent, useRestartFromCheckpoint, useStartExecution, useStartPlanning } from '../../api/useAgentMutations';
+import { useKillAgent, useReplanWithFeedback, useRestartFromCheckpoint, useStartExecution, useStartPlanning } from '../../api/useAgentMutations';
 import { useUpdateTaskStatus } from '../../api/useTaskMutations';
 import { useAllTasks, useTasks } from '../../api/useTasks';
 import { useTaskEvents } from '../../hooks/useTaskEvents';
@@ -78,6 +78,7 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
   const startExecution = useStartExecution();
   const killAgent = useKillAgent();
   const restartCheckpoint = useRestartFromCheckpoint();
+  const replanWithFeedback = useReplanWithFeedback();
   const updateStatus = useUpdateTaskStatus();
   const launchTask = useLaunchTask();
 
@@ -210,6 +211,28 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
       updateStatus.mutate({ taskId, status: 'backlog' });
     },
     [updateStatus],
+  );
+
+  const handleRequestChanges = useCallback(
+    (taskId: string, feedback: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const taskProjectId = (task as unknown as { projectId?: string }).projectId ?? projectId ?? '';
+      const path = resolveProjectPath(taskProjectId);
+      if (path.length === 0) return;
+
+      const metadata = task.metadata as Record<string, unknown> | undefined;
+      const previousPlanPath = typeof metadata?.planFilePath === 'string' ? metadata.planFilePath : undefined;
+
+      replanWithFeedback.mutate({
+        taskId,
+        projectPath: path,
+        taskDescription: task.description,
+        feedback,
+        previousPlanPath,
+      });
+    },
+    [tasks, projectId, resolveProjectPath, replanWithFeedback],
   );
 
   const handleLaunchWorkflow = useCallback(
@@ -426,13 +449,14 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
             onKillAgent={handleKillAgent}
             onLaunchWorkflow={handleLaunchWorkflow}
             onRejectPlan={handleRejectPlan}
+            onRequestChanges={handleRequestChanges}
             onRestartCheckpoint={handleRestartCheckpoint}
           />
         );
       }
       return null;
     },
-    [handleStartExecution, handleKillAgent, handleLaunchWorkflow, handleRejectPlan, handleRestartCheckpoint],
+    [handleStartExecution, handleKillAgent, handleLaunchWorkflow, handleRejectPlan, handleRequestChanges, handleRestartCheckpoint],
   );
 
   if (isLoading) {

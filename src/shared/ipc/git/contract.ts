@@ -2,14 +2,28 @@
  * Git IPC Contract
  *
  * Defines invoke channels for git status, branches, worktrees,
- * and repo structure detection.
+ * repo structure detection, commits, pushes, conflict resolution,
+ * and PR creation.
  */
 
 import { z } from 'zod';
 
 import { SuccessResponseSchema } from '../common/schemas';
 
-import { GitBranchSchema, GitStatusSchema, RepoStructureSchema, WorktreeSchema } from './schemas';
+import {
+  GitBranchSchema,
+  GitCommitInputSchema,
+  GitCommitOutputSchema,
+  GitCreatePrInputSchema,
+  GitCreatePrOutputSchema,
+  GitPushInputSchema,
+  GitPushOutputSchema,
+  GitResolveConflictInputSchema,
+  GitResolveConflictOutputSchema,
+  GitStatusSchema,
+  RepoStructureSchema,
+  WorktreeSchema,
+} from './schemas';
 
 // ─── Invoke Channels ──────────────────────────────────────────
 
@@ -29,6 +43,22 @@ export const gitInvoke = {
       baseBranch: z.string().optional(),
     }),
     output: SuccessResponseSchema,
+  },
+  'git.commit': {
+    input: GitCommitInputSchema,
+    output: GitCommitOutputSchema,
+  },
+  'git.push': {
+    input: GitPushInputSchema,
+    output: GitPushOutputSchema,
+  },
+  'git.resolveConflict': {
+    input: GitResolveConflictInputSchema,
+    output: GitResolveConflictOutputSchema,
+  },
+  'git.createPr': {
+    input: GitCreatePrInputSchema,
+    output: GitCreatePrOutputSchema,
   },
   'git.createWorktree': {
     input: z.object({ repoPath: z.string(), worktreePath: z.string(), branch: z.string() }),

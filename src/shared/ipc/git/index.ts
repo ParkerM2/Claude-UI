@@ -3,4 +3,18 @@
  */
 
 export { gitEvents, gitInvoke } from './contract';
-export { GitBranchSchema, GitStatusSchema, RepoStructureSchema, WorktreeSchema } from './schemas';
+export {
+  GitBranchSchema,
+  GitCommitInputSchema,
+  GitCommitOutputSchema,
+  GitConflictStrategySchema,
+  GitCreatePrInputSchema,
+  GitCreatePrOutputSchema,
+  GitPushInputSchema,
+  GitPushOutputSchema,
+  GitResolveConflictInputSchema,
+  GitResolveConflictOutputSchema,
+  GitStatusSchema,
+  RepoStructureSchema,
+  WorktreeSchema,
+} from './schemas';

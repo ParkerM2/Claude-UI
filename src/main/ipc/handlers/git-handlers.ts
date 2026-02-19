@@ -42,4 +42,20 @@ export function registerGitHandlers(
     const structure = await gitService.detectStructure(repoPath);
     return { structure };
   });
+
+  router.handle('git.commit', ({ projectPath, message, files }) =>
+    gitService.commit(projectPath, message, files),
+  );
+
+  router.handle('git.push', ({ projectPath, remote, branch }) =>
+    gitService.push(projectPath, remote, branch),
+  );
+
+  router.handle('git.resolveConflict', ({ projectPath, filePath, strategy }) =>
+    gitService.resolveConflict(projectPath, filePath, strategy),
+  );
+
+  router.handle('git.createPr', ({ projectPath, title, body, baseBranch, headBranch }) =>
+    gitService.createPr(projectPath, title, body, baseBranch, headBranch),
+  );
 }

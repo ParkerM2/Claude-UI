@@ -14,7 +14,8 @@ import { routeWebSocketEvent } from './hub-event-mapper';
 import type { WsEventData } from './hub-event-mapper';
 import type { IpcRouter } from '../../ipc/router';
 
-const RECONNECT_INTERVAL_MS = 30_000;
+const BASE_RECONNECT_MS = 30_000;
+const MAX_RECONNECT_MS = 300_000;
 
 export interface HubWsClientOptions {
   router: IpcRouter;
@@ -35,15 +36,23 @@ export function createHubWsClient(options: HubWsClientOptions): HubWsClient {
     options;
   let wsConnection: WebSocket | null = null;
   let reconnectTimerId: ReturnType<typeof setTimeout> | null = null;
+  let reconnectAttempt = 0;
+
+  function getReconnectDelay(): number {
+    return Math.min(BASE_RECONNECT_MS * 2 ** reconnectAttempt, MAX_RECONNECT_MS);
+  }
 
   function scheduleReconnect(): void {
     if (reconnectTimerId !== null) {
       return;
     }
+    const delay = getReconnectDelay();
+    reconnectAttempt += 1;
+    hubLogger.info(`[Hub] Scheduling reconnect in ${delay / 1000}s (attempt ${reconnectAttempt})`);
     reconnectTimerId = setTimeout(() => {
       reconnectTimerId = null;
       scheduleConnect();
-    }, RECONNECT_INTERVAL_MS);
+    }, delay);
   }
 
   function cancelReconnect(): void {
@@ -72,6 +81,7 @@ export function createHubWsClient(options: HubWsClientOptions): HubWsClient {
       wsConnection = new WebSocket(wsUrl);
 
       wsConnection.addEventListener('open', () => {
+        reconnectAttempt = 0;
         hubLogger.info('[Hub] WebSocket connected, sending auth message');
         // Send auth message as first message (required by hub's first-message auth protocol)
         if (wsConnection?.readyState === WebSocket.OPEN) {

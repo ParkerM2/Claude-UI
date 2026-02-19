@@ -229,7 +229,21 @@ export {
   WorkoutTypeSchema,
 } from './fitness';
 
-export { GitBranchSchema, GitStatusSchema, RepoStructureSchema, WorktreeSchema } from './git';
+export {
+  GitBranchSchema,
+  GitCommitInputSchema,
+  GitCommitOutputSchema,
+  GitConflictStrategySchema,
+  GitCreatePrInputSchema,
+  GitCreatePrOutputSchema,
+  GitPushInputSchema,
+  GitPushOutputSchema,
+  GitResolveConflictInputSchema,
+  GitResolveConflictOutputSchema,
+  GitStatusSchema,
+  RepoStructureSchema,
+  WorktreeSchema,
+} from './git';
 
 export {
   GitHubIssueSchema,

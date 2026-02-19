@@ -195,7 +195,7 @@ export async function routeIntent(
       case 'changelog':
         return executeChangelog(intent, deps);
       case 'conversation':
-        return await executeConversation(intent);
+        return await executeConversation(intent, context);
       default:
         return buildTextResponse("I'm not sure how to handle that. Could you rephrase?");
     }

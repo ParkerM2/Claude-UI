@@ -2,6 +2,8 @@
  * React Query hooks for auth operations
  */
 
+import { useCallback } from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { LoginInput, RegisterInput } from '@shared/types/auth';
@@ -71,6 +73,27 @@ export function useRefreshToken() {
       setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
     },
   });
+}
+
+/**
+ * Force-logout helper — clears both main process tokens (via IPC) and
+ * renderer state. Used when token refresh fails and we need to ensure
+ * stale tokens are removed from both layers.
+ *
+ * The IPC call may fail if the Hub is unreachable — that's OK, we still
+ * clear the renderer state to force re-login.
+ */
+export function useForceLogout(): () => Promise<void> {
+  const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  return useCallback(async () => {
+    try {
+      await ipc('auth.logout', {});
+    } catch {
+      // Hub unreachable — ignore, we'll clear local state regardless
+    }
+    clearAuth();
+  }, [clearAuth]);
 }
 
 /** Fetch current user — only runs when authenticated, staleTime: 5 minutes */

@@ -471,6 +471,7 @@ export function createServiceRegistry(
     emailService,
     githubService,
     changelogService: changelogService ?? undefined,
+    projectService,
   });
   // Fill closure ref for quick input
   assistantServiceRef = assistantService;
