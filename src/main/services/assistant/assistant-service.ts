@@ -41,6 +41,7 @@ import type { InsightsService } from '../insights/insights-service';
 import type { MilestonesService } from '../milestones/milestones-service';
 import type { NotesService } from '../notes/notes-service';
 import type { PlannerService } from '../planner/planner-service';
+import type { ProjectService } from '../project/project-service';
 import type { TaskService } from '../project/task-service';
 import type { SpotifyService } from '../spotify/spotify-service';
 
@@ -74,6 +75,7 @@ export interface AssistantServiceDeps {
   emailService?: EmailService;
   githubService?: GitHubService;
   changelogService?: ChangelogService;
+  projectService?: ProjectService;
 }
 
 function buildHistoryEntry(
@@ -94,9 +96,38 @@ function buildHistoryEntry(
   };
 }
 
+/** Internal context with optional project path for enriched routing. */
+interface EnrichedContext extends AssistantContext {
+  activeProjectPath?: string;
+  activeProjectType?: string;
+}
+
 export function createAssistantService(deps: AssistantServiceDeps): AssistantService {
   const { router, mcpManager } = deps;
   const history: HistoryStore = createHistoryStore();
+
+  /** Enrich context with project path/type when a project is selected. */
+  function enrichContext(context?: AssistantContext): EnrichedContext | undefined {
+    if (!context?.activeProjectId || !deps.projectService) {
+      return context as EnrichedContext | undefined;
+    }
+
+    const projectPath = deps.projectService.getProjectPath(context.activeProjectId);
+    if (!projectPath) {
+      return context as EnrichedContext;
+    }
+
+    // Find the project in the sync cache for repo structure info
+    const projects = deps.projectService.listProjectsSync();
+    const project = projects.find((p) => p.id === context.activeProjectId);
+
+    return {
+      ...context,
+      activeProjectPath: projectPath,
+      activeProjectType: project?.repoStructure ?? undefined,
+    };
+  }
+
   const executor: CommandExecutor = createCommandExecutor({
     mcpManager,
     notesService: deps.notesService,
@@ -140,8 +171,9 @@ export function createAssistantService(deps: AssistantServiceDeps): AssistantSer
         `[Assistant] Classified "${trimmedInput}" as ${intent.type}/${intent.subtype ?? 'none'} (confidence: ${String(intent.confidence)})`,
       );
 
-      // Execute the command with context
-      const response = await executor.execute(intent, context);
+      // Enrich context with project details and execute
+      const enrichedCtx = enrichContext(context);
+      const response = await executor.execute(intent, enrichedCtx);
 
       // Log to history
       const entry = buildHistoryEntry(

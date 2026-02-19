@@ -2,7 +2,14 @@
  * Auth feature — public API
  */
 
-export { useLogin, useRegister, useLogout, useRefreshToken, useCurrentUser } from './api/useAuth';
+export {
+  useLogin,
+  useRegister,
+  useLogout,
+  useRefreshToken,
+  useCurrentUser,
+  useForceLogout,
+} from './api/useAuth';
 export { authKeys } from './api/queryKeys';
 export { useAuthStore } from './store';
 export { useAuthInit } from './hooks/useAuthEvents';

@@ -379,6 +379,19 @@
       "commit": null,
       "supersededBy": null,
       "tags": ["ui", "design-system", "components", "radix", "cva"]
+    },
+    "sprint-1-core-hardening": {
+      "title": "Sprint 1: Core Hardening",
+      "status": "IMPLEMENTED",
+      "planFile": ".claude/progress/sprint-1-core-hardening-design.md",
+      "progressFile": "docs/progress/sprint-1-core-hardening-progress.md",
+      "created": "2026-02-20",
+      "statusChangedAt": "2026-02-20",
+      "branch": "feature/sprint-1-core-hardening",
+      "pr": null,
+      "commit": null,
+      "supersededBy": null,
+      "tags": ["sprint", "hardening", "e2e-pipeline", "git", "auth", "tasks"]
     }
   }
 }

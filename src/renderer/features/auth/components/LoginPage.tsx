@@ -1,12 +1,17 @@
 /**
- * Login page — full-page centered form with email/password and link to register
+ * Login page — full-page centered form with email/password and link to register.
+ * Includes client-side rate limiting: after 5 consecutive failed attempts,
+ * the submit button is disabled for 30 seconds.
  */
 
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Button, Card, CardContent, CardFooter, CardHeader, CardTitle, Input, Label, Spinner } from '@ui';
 
 import { useLogin } from '../api/useAuth';
+
+const MAX_ATTEMPTS = 5;
+const COOLDOWN_SECONDS = 30;
 
 interface LoginPageProps {
   onNavigateToHubSetup: () => void;
@@ -17,13 +22,62 @@ interface LoginPageProps {
 export function LoginPage({ onNavigateToHubSetup, onNavigateToRegister, onSuccess }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const cooldownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const login = useLogin();
+
+  const isCoolingDown = cooldownRemaining > 0;
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (cooldownTimerRef.current !== null) {
+        clearInterval(cooldownTimerRef.current);
+      }
+    };
+  }, []);
+
+  const startCooldown = useCallback(() => {
+    setCooldownRemaining(COOLDOWN_SECONDS);
+
+    if (cooldownTimerRef.current !== null) {
+      clearInterval(cooldownTimerRef.current);
+    }
+
+    cooldownTimerRef.current = setInterval(() => {
+      setCooldownRemaining((prev) => {
+        if (prev <= 1) {
+          if (cooldownTimerRef.current !== null) {
+            clearInterval(cooldownTimerRef.current);
+            cooldownTimerRef.current = null;
+          }
+          setFailedAttempts(0);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
 
   function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (isCoolingDown) return;
+
     login.mutate(
       { email, password },
-      { onSuccess },
+      {
+        onSuccess,
+        onError: () => {
+          setFailedAttempts((prev) => {
+            const next = prev + 1;
+            if (next >= MAX_ATTEMPTS) {
+              startCooldown();
+            }
+            return next;
+          });
+        },
+      },
     );
   }
 
@@ -74,15 +128,26 @@ export function LoginPage({ onNavigateToHubSetup, onNavigateToRegister, onSucces
               />
             </div>
 
-            {login.isError ? (
+            {login.isError && !isCoolingDown ? (
               <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 {login.error instanceof Error ? login.error.message : 'Login failed'}
+                {failedAttempts >= 3 && failedAttempts < MAX_ATTEMPTS ? (
+                  <span className="mt-1 block text-xs opacity-80">
+                    {MAX_ATTEMPTS - failedAttempts} attempt{MAX_ATTEMPTS - failedAttempts === 1 ? '' : 's'} remaining before lockout
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+
+            {isCoolingDown ? (
+              <div className="rounded-md bg-warning/10 px-3 py-2 text-sm text-warning">
+                Too many attempts. Try again in {cooldownRemaining}s
               </div>
             ) : null}
 
             <Button
               className="w-full"
-              disabled={!isFormValid || login.isPending}
+              disabled={!isFormValid || login.isPending || isCoolingDown}
               type="submit"
               variant="primary"
             >

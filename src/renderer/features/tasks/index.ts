@@ -34,6 +34,8 @@ export { useQaEvents } from './hooks/useQaEvents';
 export { useTaskUI } from './store';
 
 // Components
+export { CreatePrDialog } from './components/CreatePrDialog';
 export { TaskDataGrid } from './components/grid/TaskDataGrid';
 export { TaskFiltersToolbar } from './components/TaskFiltersToolbar';
+export { TaskResultView } from './components/detail/TaskResultView';
 export { TaskStatusBadge } from './components/TaskStatusBadge';

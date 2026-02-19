@@ -9,10 +9,13 @@
 
 import { app, BrowserWindow } from 'electron';
 
+import { appLogger } from '../lib/logger';
+
 import type { createAgentOrchestrator } from '../services/agent-orchestrator/agent-orchestrator';
 import type { createAgentWatchdog } from '../services/agent-orchestrator/agent-watchdog';
 import type { createJsonlProgressWatcher } from '../services/agent-orchestrator/jsonl-progress-watcher';
 import type { createAlertService } from '../services/alerts/alert-service';
+import type { AppUpdateService } from '../services/app/app-update-service';
 import type { createWatchEvaluator } from '../services/assistant/watch-evaluator';
 import type { createBriefingService } from '../services/briefing/briefing-service';
 import type { CleanupService } from '../services/data-management/cleanup-service';
@@ -42,6 +45,7 @@ export interface LifecycleDeps {
   cleanupService: CleanupService;
   crashRecovery: CrashRecovery;
   hotkeyManager: HotkeyManager;
+  appUpdateService: AppUpdateService;
   getHeartbeatIntervalId: () => ReturnType<typeof setInterval> | null;
 }
 
@@ -55,6 +59,17 @@ export function setupLifecycle(deps: LifecycleDeps): void {
 
   // Start periodic cleanup service
   deps.cleanupService.start();
+
+  // Check for app updates on startup (production only)
+  if (app.isPackaged) {
+    try {
+      deps.appUpdateService.checkForUpdates();
+      appLogger.info('[Lifecycle] Auto-update check triggered');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      appLogger.warn('[Lifecycle] Auto-update check failed:', message);
+    }
+  }
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();

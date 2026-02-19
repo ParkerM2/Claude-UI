@@ -1896,3 +1896,99 @@ Defined in `src/shared/types/data-management.ts`:
 | `src/renderer/features/settings/components/StorageUsageBar.tsx` | Visual usage bar |
 | `src/renderer/features/settings/components/RetentionControl.tsx` | Per-store retention editor |
 | `src/shared/types/health.ts` | TypeScript types for error entries + service health |
+
+---
+
+## 28. Git Operations Flow
+
+### Commit / Push / Resolve Conflict
+
+```
+User triggers git action (TaskResultView action buttons, CreatePrDialog, etc.)
+  |
+  v
+ipc('git.commit' | 'git.push' | 'git.resolveConflict', input)
+  |
+  v
+                              git-handlers.ts
+                                |
+                                v
+                              gitService.commit(projectPath, message, files?)
+                              gitService.push(projectPath, remote?, branch?)
+                              gitService.resolveConflict(projectPath, filePath, strategy)
+                                |  src/main/services/git/git-service.ts
+                                |  Uses simple-git library (async)
+                                v
+                              Return { hash, message } | { success, remote, branch } | { success, filePath }
+                                |
+                                v
+                              IPC response flows back to renderer
+```
+
+### PR Creation Flow
+
+```
+User completes task → clicks "Create PR" in TaskResultView
+  |
+  v
+CreatePrDialog opens
+  → User fills title, body, base branch, head branch
+  |
+  v
+ipc('git.createPr', { projectPath, title, body, baseBranch, headBranch })
+  |
+  v
+                              git-handlers.ts
+                                |
+                                v
+                              gitService.createPr(projectPath, title, body, baseBranch, headBranch)
+                                |  src/main/services/git/git-service.ts
+                                |  Uses `gh pr create` CLI command (execFile)
+                                v
+                              Return { url, number, title }
+                                |
+                                v
+                              Renderer shows PR link in success toast
+```
+
+### Git Status in Project List
+
+```
+ProjectList mounts
+  |
+  v
+For each project with a repoPath:
+  ipc('git.status', { repoPath })
+  |
+  v
+                              git-handlers.ts → gitService.getStatus(repoPath)
+                                |  simple-git: status(), branch()
+                                v
+                              Return GitStatus { branch, isClean, modified, staged, ... }
+  |
+  v
+GitStatusIndicator renders:
+  - Branch name badge (e.g., "main")
+  - Clean/changed indicator (green dot vs orange dot)
+```
+
+### IPC Channels (Sprint 1 additions)
+
+| Channel | Input | Output | Purpose |
+|---------|-------|--------|---------|
+| `git.commit` | `{ projectPath, message, files? }` | `{ hash, message }` | Stage and commit files |
+| `git.push` | `{ projectPath, remote?, branch? }` | `{ success, remote, branch }` | Push commits to remote |
+| `git.resolveConflict` | `{ projectPath, filePath, strategy }` | `{ success, filePath }` | Resolve merge conflict (ours/theirs) |
+| `git.createPr` | `{ projectPath, title, body, baseBranch, headBranch }` | `{ url, number, title }` | Create GitHub PR via `gh` CLI |
+
+### Key Files
+| File | Purpose |
+|------|---------|
+| `src/shared/ipc/git/contract.ts` | Git IPC contract (11 invoke channels + 1 event) |
+| `src/shared/ipc/git/schemas.ts` | Zod schemas for git operations |
+| `src/main/ipc/handlers/git-handlers.ts` | Git handler registration |
+| `src/main/services/git/git-service.ts` | Git operations via simple-git + `gh` CLI |
+| `src/renderer/features/tasks/components/detail/TaskResultView.tsx` | Execution results display with commit/push/PR action buttons |
+| `src/renderer/features/tasks/components/CreatePrDialog.tsx` | PR creation dialog (title, body, branch selection) |
+| `src/renderer/features/projects/components/ProjectList.tsx` | GitStatusIndicator (branch + clean/changed badge) |
+| `src/renderer/features/auth/api/useAuth.ts` | useForceLogout hook (IPC logout on token refresh failure) |

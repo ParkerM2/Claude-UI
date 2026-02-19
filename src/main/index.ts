@@ -153,6 +153,7 @@ function initializeApp(): void {
     cleanupService: registry.cleanupService,
     crashRecovery: registry.crashRecovery,
     hotkeyManager: registry.hotkeyManager,
+    appUpdateService: registry.services.appUpdateService,
     getHeartbeatIntervalId: () => registry.heartbeatIntervalId,
   });
 }
