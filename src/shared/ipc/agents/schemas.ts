@@ -30,6 +30,7 @@ export const OrchestratorSessionSchema = z.object({
   progressFile: z.string(),
   logFile: z.string(),
   hooksConfigPath: z.string(),
+  originalSettingsContent: z.string().nullable(),
   exitCode: z.number().nullable(),
   projectPath: z.string(),
   command: z.string(),

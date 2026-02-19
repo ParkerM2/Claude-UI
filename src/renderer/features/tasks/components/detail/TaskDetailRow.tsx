@@ -16,6 +16,7 @@ interface TaskDetailRowProps {
   task: Task;
   onApproveAndExecute?: (taskId: string) => void;
   onRejectPlan?: (taskId: string) => void;
+  onRequestChanges?: (taskId: string, feedback: string) => void;
   onKillAgent?: (taskId: string) => void;
   onRestartCheckpoint?: (taskId: string) => void;
   onLaunchWorkflow?: (taskId: string) => void;
@@ -28,7 +29,7 @@ function hasPlan(task: Task): boolean {
   return planStatuses.has(hubStatus) || typeof task.metadata?.planContent === 'string';
 }
 
-export function TaskDetailRow({ task, onApproveAndExecute, onRejectPlan, onKillAgent, onRestartCheckpoint, onLaunchWorkflow }: TaskDetailRowProps) {
+export function TaskDetailRow({ task, onApproveAndExecute, onRejectPlan, onRequestChanges, onKillAgent, onRestartCheckpoint, onLaunchWorkflow }: TaskDetailRowProps) {
   const showPlan = hasPlan(task);
   const planContent = (task.metadata?.planContent as string | undefined) ?? null;
 
@@ -47,6 +48,7 @@ export function TaskDetailRow({ task, onApproveAndExecute, onRejectPlan, onKillA
             taskId={task.id}
             onApproveAndExecute={onApproveAndExecute}
             onReject={onRejectPlan}
+            onRequestChanges={onRequestChanges}
           />
         </div>
       ) : null}

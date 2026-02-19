@@ -1209,12 +1209,89 @@ TaskDataGrid mounts
 | `src/main/services/agent-orchestrator/agent-orchestrator.ts` | Session lifecycle (spawn, kill, getSession, listActive) |
 | `src/main/services/agent-orchestrator/jsonl-progress-watcher.ts` | Incremental JSONL tail parser (100ms debounce) |
 | `src/main/services/agent-orchestrator/agent-watchdog.ts` | Health monitoring (30s interval, PID + heartbeat checks) |
-| `src/main/services/agent-orchestrator/hooks-template.ts` | Claude hooks config generator (PostToolUse + Stop) |
-| `src/main/services/agent-orchestrator/types.ts` | AgentSession, SpawnOptions, ProgressEntry types |
-| `src/main/ipc/handlers/agent-orchestrator-handlers.ts` | 6 IPC channels (start/kill/restart/get/list) |
+| `src/main/services/agent-orchestrator/hooks-template.ts` | Claude hooks config generator (PostToolUse + Stop). Merges hooks into `.claude/settings.local.json` (saves original content for restoration on cleanup) |
+| `src/main/services/agent-orchestrator/types.ts` | AgentSession (incl. `originalSettingsContent`), SpawnOptions, ProgressEntry types |
+| `src/main/ipc/handlers/agent-orchestrator-handlers.ts` | 7 IPC channels (startPlanning/startExecution/replanWithFeedback/kill/restart/get/list) |
 | `src/main/index.ts` | Event forwarding + watchdog wiring |
+| `src/main/bootstrap/event-wiring.ts` | Event forwarding setup; includes plan file detection on planning completion |
 | `src/renderer/features/tasks/hooks/useAgentEvents.ts` | 6 orchestrator event listeners → cache updates |
-| `src/renderer/features/tasks/api/useAgentMutations.ts` | 4 mutation hooks (planning/execution/kill/restart) |
+| `src/renderer/features/tasks/api/useAgentMutations.ts` | 5 mutation hooks (planning/execution/replanWithFeedback/kill/restart) |
+| `src/renderer/features/tasks/components/detail/PlanFeedbackDialog.tsx` | Feedback dialog for requesting changes to a plan |
+| `src/renderer/features/tasks/components/detail/PlanViewer.tsx` | Plan display with Approve, Request Changes buttons |
+
+---
+
+## 19.5. Task Planning Pipeline Flow
+
+The complete planning pipeline: idea → plan → review → approve/reject/request changes → execute.
+
+```
+User creates task (idea/backlog)
+  |
+  v
+User clicks "Start Planning" (ActionsCell)
+  |
+  v
+useStartPlanning().mutate({ taskId, projectPath, taskDescription })
+  |
+  v
+ipc('agent.startPlanning', { ... })
+  |
+  v
+hubApiClient.updateTaskStatus(taskId, 'planning')
+  → orchestrator.spawn({ phase: 'planning', prompt: '/plan-feature ...' })
+    → Hooks config merged into .claude/settings.local.json
+    → Agent writes JSONL progress to {dataDir}/progress/{taskId}.jsonl
+  |
+  v
+Agent completes planning (process exits)
+  |
+  v
+event-wiring.ts: onSessionEvent('completed') + phase === 'planning'
+  → Scan project for plan files (PLAN.md, plan.md, etc.)
+  → If plan file found:
+      hubApiClient.updateTaskStatus(taskId, 'plan_ready')
+      router.emit('event:agent.orchestrator.planReady', { taskId, planSummary, planFilePath })
+  → Restore original .claude/settings.local.json content
+  |
+  v
+Renderer: useAgentEvents receives planReady event
+  → Task status shows "plan_ready" with pulsing indicator
+  → TaskDetailRow expands PlanViewer with plan content
+  |
+  v
+User reviews plan in PlanViewer
+  |
+  ├── "Approve & Execute" clicked:
+  |     |
+  |     v
+  |   useStartExecution().mutate({ taskId, projectPath, taskDescription, planRef })
+  |     → planRef points to the plan file path for the execution agent to follow
+  |     → Task transitions: plan_ready → executing
+  |
+  ├── "Request Changes" clicked:
+  |     |
+  |     v
+  |   PlanFeedbackDialog opens
+  |     → User types feedback (what to change in the plan)
+  |     → Submit calls useReplanWithFeedback().mutate({ taskId, feedback, ... })
+  |       |
+  |       v
+  |     ipc('agent.replanWithFeedback', { taskId, feedback, previousPlanPath })
+  |       → Spawns new planning agent with feedback context
+  |       → Task transitions: plan_ready → planning
+  |       → Cycle repeats until approved
+  |
+  └── "Reject" (or manual status change):
+        → Task returns to backlog/todo
+```
+
+### CLI Commands
+
+| Command | File | Purpose |
+|---------|------|---------|
+| `/plan-feature` | `.claude/commands/plan-feature.md` | Planning agent prompt — creates a feature plan file |
+| `/resume-feature` | `.claude/commands/resume-feature.md` | Resume a previously started feature |
 
 ---
 

@@ -5,14 +5,24 @@
  * that write progress entries to a per-task JSONL file.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
+interface HookEntry {
+  command: string;
+  timeout: number;
+}
 
 interface HooksConfig {
   hooks: {
-    PostToolUse: Array<{ command: string; timeout: number }>;
-    Stop: Array<{ command: string; timeout: number }>;
+    PostToolUse: HookEntry[];
+    Stop: HookEntry[];
   };
+}
+
+interface WriteHooksResult {
+  configPath: string;
+  originalContent: string | null;
 }
 
 /**
@@ -65,22 +75,64 @@ export function generateHooksConfig(taskId: string, progressDir: string): HooksC
 }
 
 /**
- * Writes the hooks config to a temporary file in the project's
- * `.claude/` directory. Returns the path to the written file.
+ * Merges hooks config into the project's `.claude/settings.local.json`.
+ *
+ * Claude CLI only reads hooks from `settings.local.json`, so we merge
+ * our progress-tracking hooks into the existing file (if any) and
+ * return the original content for later restoration.
  */
 export function writeHooksConfig(
   taskId: string,
   projectPath: string,
   progressDir: string,
-): string {
+): WriteHooksResult {
   const config = generateHooksConfig(taskId, progressDir);
-  const configPath = join(projectPath, '.claude', `hooks-${taskId}.json`);
+  const claudeDir = join(projectPath, '.claude');
+  const configPath = join(claudeDir, 'settings.local.json');
 
   // Ensure directories exist
-  mkdirSync(dirname(configPath), { recursive: true });
+  mkdirSync(claudeDir, { recursive: true });
   mkdirSync(progressDir, { recursive: true });
 
-  writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+  // Read existing settings (if any)
+  let originalContent: string | null = null;
+  let existingSettings: Record<string, unknown> = {};
 
-  return configPath;
+  if (existsSync(configPath)) {
+    try {
+      originalContent = readFileSync(configPath, 'utf-8');
+      existingSettings = JSON.parse(originalContent) as Record<string, unknown>;
+    } catch {
+      // Malformed JSON — start fresh, but still preserve the raw content for backup
+      originalContent = readFileSync(configPath, 'utf-8');
+      existingSettings = {};
+    }
+  }
+
+  // Merge hooks into existing settings
+  const rawHooks: unknown = existingSettings.hooks;
+  const existingHooks = isHooksObject(rawHooks) ? rawHooks : {};
+
+  const mergedHooks: Record<string, HookEntry[]> = { ...existingHooks };
+
+  for (const [eventName, entries] of Object.entries(config.hooks)) {
+    const existing: HookEntry[] = Array.isArray(mergedHooks[eventName])
+      ? mergedHooks[eventName]
+      : [];
+    mergedHooks[eventName] = [...existing, ...entries];
+  }
+
+  const mergedSettings = {
+    ...existingSettings,
+    hooks: mergedHooks,
+  };
+
+  writeFileSync(configPath, JSON.stringify(mergedSettings, null, 2), 'utf-8');
+
+  return { configPath, originalContent };
+}
+
+/** Type guard: checks if a value is a record of hook entry arrays. */
+function isHooksObject(value: unknown): value is Record<string, HookEntry[]> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -1,11 +1,15 @@
 /**
- * PlanViewer — Displays agent plan content with approve/reject actions.
+ * PlanViewer — Displays agent plan content with approve/reject/request-changes actions.
  * Shown in the task detail row when a plan exists (status plan_ready or later).
  */
 
-import { FileText, Play, X } from 'lucide-react';
+import { useState } from 'react';
+
+import { FileText, MessageSquare, Play, X } from 'lucide-react';
 
 import { cn } from '@renderer/shared/lib/utils';
+
+import { PlanFeedbackDialog } from './PlanFeedbackDialog';
 
 interface PlanViewerProps {
   taskId: string;
@@ -13,6 +17,7 @@ interface PlanViewerProps {
   status: string;
   onApproveAndExecute?: (taskId: string) => void;
   onReject?: (taskId: string) => void;
+  onRequestChanges?: (taskId: string, feedback: string) => void;
 }
 
 const ACTION_BUTTON_BASE =
@@ -24,7 +29,10 @@ export function PlanViewer({
   status,
   onApproveAndExecute,
   onReject,
+  onRequestChanges,
 }: PlanViewerProps) {
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+
   if (!planContent) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -35,6 +43,11 @@ export function PlanViewer({
   }
 
   const showActions = status === 'plan_ready';
+
+  function handleFeedbackSubmit(feedback: string) {
+    onRequestChanges?.(taskId, feedback);
+    setFeedbackDialogOpen(false);
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -59,6 +72,19 @@ export function PlanViewer({
               Approve & Execute
             </button>
             <button
+              aria-label="Request changes to plan"
+              className={cn(
+                ACTION_BUTTON_BASE,
+                'bg-warning/10 text-warning hover:bg-warning/20',
+              )}
+              onClick={() => {
+                setFeedbackDialogOpen(true);
+              }}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Request Changes
+            </button>
+            <button
               aria-label="Reject plan"
               className={cn(
                 ACTION_BUTTON_BASE,
@@ -80,6 +106,12 @@ export function PlanViewer({
           {planContent}
         </pre>
       </div>
+
+      <PlanFeedbackDialog
+        open={feedbackDialogOpen}
+        onOpenChange={setFeedbackDialogOpen}
+        onSubmit={handleFeedbackSubmit}
+      />
     </div>
   );
 }

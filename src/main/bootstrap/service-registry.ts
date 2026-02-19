@@ -99,6 +99,7 @@ export interface ServiceRegistryResult {
   briefingService: ReturnType<typeof createBriefingService>;
   hotkeyManager: ReturnType<typeof createHotkeyManager>;
   settingsService: ReturnType<typeof createSettingsService>;
+  hubApiClient: HubApiClient;
   heartbeatIntervalId: ReturnType<typeof setInterval> | null;
   registeredDeviceId: string | null;
 }
@@ -480,6 +481,7 @@ export function createServiceRegistry(
     briefingService,
     hotkeyManager,
     settingsService,
+    hubApiClient,
     heartbeatIntervalId,
     registeredDeviceId,
   };

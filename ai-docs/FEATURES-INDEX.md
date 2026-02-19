@@ -42,7 +42,7 @@ Location: `src/renderer/features/`
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager, ProjectEditDialog | `projects.*` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
 | **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, WebhookSettings | `settings.*` |
-| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog; **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations, useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*`, `qa.*`, `event:agent.orchestrator.*`, `event:qa.*` |
+| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog, PlanFeedbackDialog; **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations (useStartPlanning, useStartExecution, useReplanWithFeedback, useKillAgent, useRestartFromCheckpoint), useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*` (incl. `agent.replanWithFeedback`), `qa.*`, `event:agent.orchestrator.*`, `event:qa.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
 | **merge** | Branch merge workflow | MergeConfirmModal | `merge.*` |
@@ -107,7 +107,7 @@ Location: `src/main/services/`
 | **time-parser** | Natural language time parsing | parseTimeExpression | - |
 | **voice** | Voice interface (Web Speech API) | startListening, stopListening, speak | `event:voice.*` |
 | **device** | Device registration & heartbeat via Hub API | registerDevice, updateDevice, sendHeartbeat | `event:hub.devices.*` |
-| **agent-orchestrator** | Headless Claude agent lifecycle management | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
+| **agent-orchestrator** | Headless Claude agent lifecycle management. Hooks config merges into `.claude/settings.local.json` (restored on cleanup). Planning completion auto-detects plan files and transitions to `plan_ready`. | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
 | **agent-orchestrator/jsonl-progress-watcher** | JSONL progress file watcher (debounced tail parsing) | start, stop, onProgress | `event:agent.orchestrator.progress`, `event:agent.orchestrator.planReady` |
 | **agent-orchestrator/agent-watchdog** | Health monitoring for active agent sessions (PID checks, heartbeat age, auto-restart on overflow) | start, stop, checkNow, onAlert, dispose | `event:agent.orchestrator.watchdogAlert` (wired in index.ts) |
 | **qa** | Two-tier automated QA system (quiet + full) | startQuiet, startFull, getSession, getReportForTask, cancel, onSessionEvent | `event:qa.started`, `event:qa.progress`, `event:qa.completed` |
@@ -159,7 +159,7 @@ Location: `src/main/ipc/handlers/`
 | `workspace-handlers.ts` | workspace.* |
 | `auth-handlers.ts` | auth.* |
 | `device-handlers.ts` | devices.* |
-| `orchestrator-handlers.ts` | orchestrator.* (spawn, stop, list sessions, get progress) |
+| `orchestrator-handlers.ts` | orchestrator.* (spawn, stop, replan with feedback, list sessions, get progress) |
 | `qa-handlers.ts` | qa.* (run quiet, run full, get reports) |
 
 ---
@@ -478,7 +478,8 @@ ADC/
 │       ├── constants/           # Routes, themes
 │       └── types/               # Domain types
 │           └── hub/             # Hub protocol types (9 modules)
-└── .claude/agents/              # Agent prompt definitions
+├── .claude/agents/              # Agent prompt definitions
+└── .claude/commands/            # Claude CLI slash commands (plan-feature, resume-feature)
 ```
 
 ---

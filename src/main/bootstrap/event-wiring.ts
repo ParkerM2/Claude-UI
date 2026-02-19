@@ -3,15 +3,20 @@
  *
  * Handles:
  * - Agent orchestrator session events → IPC events
+ * - Planning completion → plan file detection → Hub status update
  * - JSONL progress watcher → granular progress/heartbeat IPC events
  * - Webhook relay → Hub WebSocket → assistant service
  * - Watch evaluator → proactive assistant notifications
  */
 
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import type { IpcRouter } from '../ipc/router';
 import type { createAgentOrchestrator } from '../services/agent-orchestrator/agent-orchestrator';
 import type { createJsonlProgressWatcher } from '../services/agent-orchestrator/jsonl-progress-watcher';
 import type { createWatchEvaluator } from '../services/assistant/watch-evaluator';
+import type { HubApiClient } from '../services/hub/hub-api-client';
 import type { createHubConnectionManager } from '../services/hub/hub-connection';
 import type { createWebhookRelay } from '../services/hub/webhook-relay';
 
@@ -22,6 +27,67 @@ interface EventWiringDeps {
   watchEvaluator: ReturnType<typeof createWatchEvaluator>;
   webhookRelay: ReturnType<typeof createWebhookRelay>;
   hubConnectionManager: ReturnType<typeof createHubConnectionManager>;
+  hubApiClient: HubApiClient;
+}
+
+/**
+ * Scans for a plan file produced by the planning agent.
+ *
+ * Checks two locations in order:
+ * 1. The agent's log file for a `PLAN_FILE:<path>` output line
+ * 2. The `docs/plans/` directory for recently created `*-plan.md` files
+ *
+ * Returns `{ filePath, content }` or `null` if no plan file found.
+ */
+function detectPlanFile(
+  projectPath: string,
+  logFile: string,
+): { filePath: string; content: string } | null {
+  // Strategy 1: Scan the agent log for PLAN_FILE: marker
+  try {
+    if (existsSync(logFile)) {
+      const logContent = readFileSync(logFile, 'utf-8');
+      const lines = logContent.split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const match = /PLAN_FILE:(.+)/.exec(lines[i]?.trim() ?? '');
+        if (match?.[1]) {
+          const planPath = join(projectPath, match[1].trim());
+          if (existsSync(planPath)) {
+            return {
+              filePath: match[1].trim(),
+              content: readFileSync(planPath, 'utf-8'),
+            };
+          }
+        }
+      }
+    }
+  } catch {
+    // Log may be gone if cleanup ran first — continue to fallback
+  }
+
+  // Strategy 2: Scan docs/plans/ for *-plan.md files (most recent first)
+  const plansDir = join(projectPath, 'docs', 'plans');
+  try {
+    if (existsSync(plansDir)) {
+      const planFiles = readdirSync(plansDir)
+        .filter((f) => f.endsWith('-plan.md'))
+        .sort()
+        .reverse();
+
+      if (planFiles.length > 0) {
+        const filePath = `docs/plans/${planFiles[0]}`;
+        const fullPath = join(plansDir, planFiles[0]);
+        return {
+          filePath,
+          content: readFileSync(fullPath, 'utf-8'),
+        };
+      }
+    }
+  } catch {
+    // Directory may not exist — no plan found
+  }
+
+  return null;
 }
 
 /** Wires all service events to IPC for renderer consumption. */
@@ -33,6 +99,7 @@ export function wireEventForwarding(deps: EventWiringDeps): void {
     watchEvaluator,
     webhookRelay,
     hubConnectionManager,
+    hubApiClient,
   } = deps;
 
   // ─── Orchestrator session events → IPC ───────────────────────
@@ -53,6 +120,34 @@ export function wireEventForwarding(deps: EventWiringDeps): void {
           reason: 'completed',
           exitCode: event.exitCode ?? 0,
         });
+
+        // ── Planning completion: detect plan file → update Hub → emit planReady ──
+        if (event.session.phase === 'planning') {
+          void (async () => {
+            try {
+              const plan = detectPlanFile(event.session.projectPath, event.session.logFile);
+              if (plan) {
+                // Update Hub task: status → plan_ready, store plan in metadata
+                await hubApiClient.updateTaskStatus(event.session.taskId, 'plan_ready');
+                await hubApiClient.updateTask(event.session.taskId, {
+                  metadata: {
+                    planContent: plan.content,
+                    planFilePath: plan.filePath,
+                  },
+                });
+
+                router.emit('event:agent.orchestrator.planReady', {
+                  taskId: event.session.taskId,
+                  planSummary: plan.content.slice(0, 500),
+                  planFilePath: plan.filePath,
+                });
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : 'Unknown error';
+              console.warn('[EventWiring] Planning completion handler error:', message);
+            }
+          })();
+        }
         break;
       case 'error':
         router.emit('event:agent.orchestrator.error', {

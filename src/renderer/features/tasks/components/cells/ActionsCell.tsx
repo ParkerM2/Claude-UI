@@ -7,6 +7,7 @@ import { useState } from 'react';
 
 import {
   Brain,
+  MessageSquare,
   Play,
   RefreshCw,
   RotateCcw,
@@ -33,6 +34,7 @@ interface ActionsCellData {
 interface ActionsCellProps extends CustomCellRendererProps {
   onStartPlanning?: (taskId: string) => void;
   onStartExecution?: (taskId: string) => void;
+  onRequestChanges?: (taskId: string) => void;
   onKillAgent?: (taskId: string) => void;
   onRestartCheckpoint?: (taskId: string) => void;
 }
@@ -110,6 +112,19 @@ export function ActionsCell(props: ActionsCellProps) {
           onClick={handleKillClick}
         >
           <Square className={ICON_SIZE} />
+        </button>
+      ) : null}
+
+      {/* Request changes — available for plan_ready */}
+      {status === 'plan_ready' ? (
+        <button
+          aria-label="Request changes to plan"
+          className={cn(ICON_BUTTON, 'text-warning hover:text-warning')}
+          onClick={(event) => {
+            handleClick(event, props.onRequestChanges);
+          }}
+        >
+          <MessageSquare className={ICON_SIZE} />
         </button>
       ) : null}
 

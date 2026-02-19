@@ -22,6 +22,7 @@ export interface AgentSession {
   progressFile: string;
   logFile: string;
   hooksConfigPath: string;
+  originalSettingsContent: string | null;
   exitCode: number | null;
   projectPath: string;
   command: string;

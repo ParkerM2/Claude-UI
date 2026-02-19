@@ -165,10 +165,16 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
       const taskProjectId = (task as unknown as { projectId?: string }).projectId ?? projectId ?? '';
       const path = resolveProjectPath(taskProjectId);
       if (path.length === 0) return;
+
+      // Pass planRef from task metadata when available (plan_ready → execution)
+      const metadata = task.metadata as Record<string, unknown> | undefined;
+      const planRef = typeof metadata?.planFilePath === 'string' ? metadata.planFilePath : undefined;
+
       startExecution.mutate({
         taskId,
         projectPath: path,
         taskDescription: task.description,
+        planRef,
       });
     },
     [tasks, projectId, resolveProjectPath, startExecution],

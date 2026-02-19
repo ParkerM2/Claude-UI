@@ -7,7 +7,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { createWriteStream, mkdirSync, unlinkSync } from 'node:fs';
+import { createWriteStream, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { writeHooksConfig } from './hooks-template';
@@ -53,8 +53,24 @@ export function createAgentOrchestrator(
   }
 
   function cleanupHooksConfig(session: AgentSession): void {
+    // Only restore settings when this is the last active session,
+    // otherwise other sessions still need their hooks in place.
+    const activeSessions = [...sessions.values()].filter(
+      (s) => s.id !== session.id && (s.status === 'active' || s.status === 'spawning'),
+    );
+
+    if (activeSessions.length > 0) {
+      return;
+    }
+
     try {
-      unlinkSync(session.hooksConfigPath);
+      if (session.originalSettingsContent === null) {
+        // No settings file existed before — remove it
+        unlinkSync(session.hooksConfigPath);
+      } else {
+        // Restore original content
+        writeFileSync(session.hooksConfigPath, session.originalSettingsContent, 'utf-8');
+      }
     } catch {
       // Config may already be cleaned up — ignore
     }
@@ -117,7 +133,8 @@ export function createAgentOrchestrator(
       const logFile = join(progressDir, `${taskId}.log`);
 
       // Write Claude hooks config for progress tracking
-      const hooksConfigPath = writeHooksConfig(taskId, projectPath, progressDir);
+      const { configPath: hooksConfigPath, originalContent: originalSettingsContent } =
+        writeHooksConfig(taskId, projectPath, progressDir);
 
       // Create session record
       const session: AgentSession = {
@@ -131,6 +148,7 @@ export function createAgentOrchestrator(
         progressFile,
         logFile,
         hooksConfigPath,
+        originalSettingsContent,
         exitCode: null,
         projectPath,
         command: prompt,
@@ -179,8 +197,9 @@ export function createAgentOrchestrator(
         processes.delete(sessionId);
         cleanupLogStream(sessionId);
         cleanupHooksConfig(session);
-        cleanupProgressFiles(session);
 
+        // Emit event BEFORE cleaning up progress/log files so handlers
+        // can still read the log (e.g., for plan file detection).
         const updatedSession = sessions.get(sessionId);
         if (updatedSession) {
           emitEvent({
@@ -195,6 +214,8 @@ export function createAgentOrchestrator(
             tryUpdateMilestones(updatedSession.taskId);
           }
         }
+
+        cleanupProgressFiles(session);
       });
 
       child.on('error', (error) => {
