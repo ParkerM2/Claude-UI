@@ -174,13 +174,13 @@
     },
     "security-hardening": {
       "title": "Security Hardening",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED",
       "planFile": "docs/plans/2026-02-16-security-hardening-design.md",
       "progressFile": null,
       "created": "2026-02-16",
       "statusChangedAt": "2026-02-19",
       "branch": "feature/security-hardening",
-      "pr": null,
+      "pr": 52,
       "commit": null,
       "supersededBy": null,
       "tags": ["security", "hardening"]
