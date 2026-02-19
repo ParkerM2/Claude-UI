@@ -5,6 +5,8 @@
  * Bridges QA session events to IPC events for real-time UI updates.
  */
 
+import { createThrottle } from '../throttle';
+
 import type { AgentOrchestrator } from '../../services/agent-orchestrator/types';
 import type { QaRunner } from '../../services/qa/qa-types';
 import type { TaskRepository } from '../../services/tasks/types';
@@ -37,6 +39,8 @@ export function registerQaHandlers(
   orchestrator: AgentOrchestrator,
   taskRepository: TaskRepository,
 ): void {
+  const allowFullQa = createThrottle(10000);
+
   // Wire QA session events to IPC events for the renderer
   qaRunner.onSessionEvent((event) => {
     if (event.type === 'started') {
@@ -84,6 +88,10 @@ export function registerQaHandlers(
   });
 
   router.handle('qa.startFull', async ({ taskId }) => {
+    if (!allowFullQa()) {
+      throw new Error('Too many requests. Please wait.');
+    }
+
     const agentSession = orchestrator.getSessionByTaskId(taskId);
     const projectPath = agentSession?.projectPath ?? '';
 

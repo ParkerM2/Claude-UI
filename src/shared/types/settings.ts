@@ -2,6 +2,8 @@
  * Settings-related types
  */
 
+import type { SecuritySettings } from './security';
+
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface AgentSettings {
@@ -28,6 +30,7 @@ export interface AppSettings {
   startMinimized?: boolean;
   keepRunning?: boolean;
   logLevel?: LogLevel;
+  securitySettings?: SecuritySettings;
 }
 
 export interface CustomTheme {

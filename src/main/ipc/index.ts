@@ -37,6 +37,7 @@ import { registerPlannerHandlers } from './handlers/planner-handlers';
 import { registerProjectHandlers } from './handlers/project-handlers';
 import { registerQaHandlers } from './handlers/qa-handlers';
 import { registerScreenHandlers } from './handlers/screen-handlers';
+import { registerSecurityHandlers } from './handlers/security-handlers';
 import { registerSettingsHandlers } from './handlers/settings-handlers';
 import { registerSpotifyHandlers } from './handlers/spotify-handlers';
 import { registerTaskHandlers } from './handlers/task-handlers';
@@ -224,4 +225,5 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerQaHandlers(router, services.qaRunner, services.agentOrchestrator, services.taskRepository);
   registerDashboardHandlers(router, services.dashboardService);
   registerDockerHandlers(router, services.dockerService);
+  registerSecurityHandlers(router, services.settingsService);
 }

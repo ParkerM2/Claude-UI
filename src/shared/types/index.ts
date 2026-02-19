@@ -27,6 +27,8 @@ export { LEGACY_STATUS_MAP } from './task';
 export type * from './terminal';
 export type * from './voice';
 export type * from './screen';
+export type * from './security';
+export { DEFAULT_SECURITY_SETTINGS } from './security';
 export type * from './briefing';
 export type * from './health';
 export type * from './workspace';

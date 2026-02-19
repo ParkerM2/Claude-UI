@@ -5,6 +5,8 @@
  * headless Claude agents for task planning and execution.
  */
 
+import type { SecuritySettings } from '@shared/types/security';
+
 // ─── Agent Session ─────────────────────────────────────────────
 
 export type AgentPhase = 'planning' | 'executing' | 'qa';
@@ -37,6 +39,7 @@ export interface SpawnOptions {
   prompt: string;
   phase: AgentPhase;
   env?: Record<string, string>;
+  securitySettings?: SecuritySettings;
 }
 
 // ─── Events ────────────────────────────────────────────────────

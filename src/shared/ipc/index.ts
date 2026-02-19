@@ -50,6 +50,7 @@ import { oauthInvoke } from './oauth';
 import { plannerEvents, plannerInvoke } from './planner';
 import { projectsEvents, projectsInvoke } from './projects';
 import { qaEvents, qaInvoke } from './qa';
+import { securityInvoke } from './security';
 import { settingsInvoke } from './settings';
 import { spotifyInvoke } from './spotify';
 import { hubTasksEvents, hubTasksInvoke, tasksEvents, tasksInvoke } from './tasks';
@@ -99,6 +100,7 @@ export const ipcInvokeContract = {
   ...workflowInvoke,
   ...dashboardInvoke,
   ...dockerInvoke,
+  ...securityInvoke,
 } as const;
 
 // ─── Merged Event Contract ───────────────────────────────────
@@ -331,6 +333,13 @@ export {
   QaVerificationResultSchema,
   QaVerificationSuiteSchema,
 } from './qa';
+
+export {
+  CspModeSchema,
+  SecurityAuditExportSchema,
+  SecurityModeSchema,
+  SecuritySettingsSchema,
+} from './security';
 
 export { AppSettingsSchema, ProfileSchema, WebhookConfigSchema } from './settings';
 

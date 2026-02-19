@@ -12,7 +12,7 @@
 | Renderer Features | 29 |
 | Main Process Services | 32 |
 | IPC Handler Files | 41 |
-| IPC Domain Folders | 24 |
+| IPC Domain Folders | 25 |
 | Hub Type Modules | 9 |
 | Bootstrap Modules | 5 |
 | FEATURE.md Files | 16 |
@@ -109,7 +109,7 @@ Location: `src/main/services/`
 | **time-parser** | Natural language time parsing | parseTimeExpression | - |
 | **voice** | Voice interface (Web Speech API) | startListening, stopListening, speak | `event:voice.*` |
 | **device** | Device registration & heartbeat via Hub API | registerDevice, updateDevice, sendHeartbeat | `event:hub.devices.*` |
-| **agent-orchestrator** | Headless Claude agent lifecycle management. Hooks config merges into `.claude/settings.local.json` (restored on cleanup). Planning completion auto-detects plan files and transitions to `plan_ready`. | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
+| **agent-orchestrator** | Headless Claude agent lifecycle management. Hooks config merges into `.claude/settings.local.json` (restored on cleanup). Planning completion auto-detects plan files and transitions to `plan_ready`. Security hardened: taskId sanitization (regex allowlist), environment scrubbing (glob-based blocklist/allowlist), working directory validation (existsSync + restricted paths). | spawnSession, stopSession, listSessions, onSessionEvent | `event:agent.orchestrator.*` |
 | **agent-orchestrator/jsonl-progress-watcher** | JSONL progress file watcher (debounced tail parsing) | start, stop, onProgress | `event:agent.orchestrator.progress`, `event:agent.orchestrator.planReady` |
 | **agent-orchestrator/agent-watchdog** | Health monitoring for active agent sessions (PID checks, heartbeat age, auto-restart on overflow) | start, stop, checkNow, onAlert, dispose | `event:agent.orchestrator.watchdogAlert` (wired in index.ts) |
 | **qa** | Two-tier automated QA system (quiet + full) | startQuiet, startFull, getSession, getReportForTask, cancel, onSessionEvent | `event:qa.started`, `event:qa.progress`, `event:qa.completed` |
@@ -172,6 +172,16 @@ Location: `src/main/ipc/handlers/`
 | `device-handlers.ts` | devices.* |
 | `orchestrator-handlers.ts` | orchestrator.* (spawn, stop, replan with feedback, list sessions, get progress) |
 | `qa-handlers.ts` | qa.* (run quiet, run full, get reports) |
+| `security-handlers.ts` | security.getSettings, security.updateSettings, security.exportAudit |
+| `agent-orchestrator-handlers.ts` | agent.startPlanning, agent.startExecution, agent.replanWithFeedback, agent.killSession, agent.restartFromCheckpoint, agent.getOrchestratorSession, agent.listOrchestratorSessions |
+
+### IPC Utilities (`src/main/ipc/`)
+
+| File | Purpose |
+|------|---------|
+| `throttle.ts` | `createThrottle(windowMs)` — rate-limiter for expensive IPC handlers (agent spawn: 5s, email send: 2s, full QA: 10s) |
+| `router.ts` | IPC router with typed handle/emit |
+| `index.ts` | Handler registration barrel |
 
 ---
 
@@ -208,6 +218,7 @@ Location: `src/main/ipc/handlers/`
 | `hub-protocol.ts` | Hub protocol contract types |
 | `auth.ts` | AuthUser, LoginCredentials, RegisterData, AuthTokens |
 | `health.ts` | ErrorEntry, ErrorStats, ErrorSeverity, ErrorTier, ErrorCategory, ErrorContext, ServiceHealth, ServiceHealthStatus, HealthStatus |
+| `security.ts` | SecuritySettings, SecurityMode, CspMode, SecurityAuditExport, DEFAULT_SECURITY_SETTINGS |
 
 ### Route Groups (`src/renderer/app/routes/`)
 
@@ -247,7 +258,7 @@ The main process `index.ts` has been split into **5 focused bootstrap modules**:
 
 ### IPC Contract (Domain-Based Structure)
 
-The IPC contract has been split from a single monolithic file into **24 domain folders** under `src/shared/ipc/`. The root barrel at `src/shared/ipc/index.ts` merges all domain contracts back into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin backward-compatible re-export.
+The IPC contract has been split from a single monolithic file into **25 domain folders** under `src/shared/ipc/`. The root barrel at `src/shared/ipc/index.ts` merges all domain contracts back into the unified `ipcInvokeContract` and `ipcEventContract` objects. The original `src/shared/ipc-contract.ts` is now a thin backward-compatible re-export.
 
 **Domain folders** (`src/shared/ipc/<domain>/`):
 
@@ -276,6 +287,7 @@ The IPC contract has been split from a single monolithic file into **24 domain f
 | `tasks` | Local tasks + Hub tasks (invoke + events) |
 | `terminals` | Terminal session management |
 | `health` | Error collection, health registry invoke/event contracts |
+| `security` | Security settings, audit export (3 channels) |
 | `workflow` | Workflow execution |
 
 Each domain folder contains:
