@@ -13,6 +13,8 @@ import type { CodebaseAnalysis, CreateProjectInput, SetupStepStatus } from '@sha
 
 import { serviceLogger } from '@main/lib/logger';
 
+import { ensureGitignoreEntries } from './gitignore-manager';
+
 import type { ClaudeMdGeneratorService } from './claudemd-generator';
 import type { CodebaseAnalyzerService } from './codebase-analyzer';
 import type { DocGeneratorService } from './doc-generator';
@@ -163,6 +165,7 @@ export function createSetupPipeline(deps: SetupPipelineDeps): SetupPipelineServi
           if (!result.success) {
             throw new Error(result.error ?? 'Failed to initialize ADC workspace');
           }
+          ensureGitignoreEntries(projectPath, ['.adc/', '.claude/settings.local.json']);
         },
       },
     ];

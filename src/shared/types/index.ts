@@ -9,6 +9,7 @@ export type * from './assistant-watch';
 export type * from './auth';
 export type * from './claude';
 export type * from './changelog';
+export type * from './data-management';
 export type * from './email';
 export type * from './fitness';
 export type * from './git';

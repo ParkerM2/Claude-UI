@@ -879,6 +879,7 @@ Email integration:
 | **Webhooks** | `WebhookSettings.tsx` | `settings.getWebhookConfig`, `settings.updateWebhookConfig` | Webhook URL + events |
 | **Hotkeys** | `HotkeySettings.tsx` | `hotkeys.get`, `hotkeys.update`, `hotkeys.reset` | Keyboard shortcuts customization |
 | **Voice** | `VoiceSettings` (from `@features/voice`) | `voice.getConfig`, `voice.updateConfig`, `voice.checkPermission` | Enable/disable voice, language, input mode, synthesis test |
+| **Storage Management** | `StorageManagementSection.tsx` (+ `StorageUsageBar.tsx`, `RetentionControl.tsx`) | `dataManagement.getRegistry`, `dataManagement.getUsage`, `dataManagement.getRetention`, `dataManagement.updateRetention`, `dataManagement.clearStore`, `dataManagement.runCleanup`, `dataManagement.exportData`, `dataManagement.importData`, `event:dataManagement.cleanupComplete` | Storage usage bar, per-store retention policies, auto-cleanup toggle, manual cleanup, data export/import |
 | **About** | inline | — | Version number (v0.1.0) |
 
 ### 23.1 Profile Save Flow (When User Clicks "Save" on a Profile)

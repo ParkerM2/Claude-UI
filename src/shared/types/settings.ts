@@ -2,6 +2,7 @@
  * Settings-related types
  */
 
+import type { DataRetentionSettings } from './data-management';
 import type { SecuritySettings } from './security';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -31,6 +32,7 @@ export interface AppSettings {
   keepRunning?: boolean;
   logLevel?: LogLevel;
   securitySettings?: SecuritySettings;
+  dataRetention?: DataRetentionSettings;
 }
 
 export interface CustomTheme {

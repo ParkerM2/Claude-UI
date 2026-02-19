@@ -15,6 +15,7 @@ import { authInvoke } from './auth';
 import { briefingEvents, briefingInvoke } from './briefing';
 import { claudeEvents, claudeInvoke } from './claude';
 import { dashboardEvents, dashboardInvoke } from './dashboard';
+import { dataManagementEvents, dataManagementInvoke } from './data-management';
 import { dockerInvoke } from './docker';
 import { emailEvents, emailInvoke } from './email';
 import { fitnessEvents, fitnessInvoke } from './fitness';
@@ -101,6 +102,7 @@ export const ipcInvokeContract = {
   ...dashboardInvoke,
   ...dockerInvoke,
   ...securityInvoke,
+  ...dataManagementInvoke,
 } as const;
 
 // ─── Merged Event Contract ───────────────────────────────────
@@ -131,6 +133,7 @@ export const ipcEventContract = {
   ...orchestratorEvents,
   ...qaEvents,
   ...dashboardEvents,
+  ...dataManagementEvents,
 } as const;
 
 // ─── Type Utilities ──────────────────────────────────────────
@@ -191,6 +194,17 @@ export {
 } from './claude';
 
 export { SuccessResponseSchema, SuccessWithErrorSchema, TokenUsageSchema } from './common';
+
+export {
+  CleanupResultSchema,
+  DataExportArchiveSchema,
+  DataLifecycleSchema,
+  DataRetentionSettingsSchema,
+  DataStoreEntrySchema,
+  DataStoreUsageSchema,
+  ImportResultSchema,
+  RetentionPolicySchema,
+} from './data-management';
 
 export {
   EmailAttachmentSchema,

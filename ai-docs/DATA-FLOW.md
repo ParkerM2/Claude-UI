@@ -1778,4 +1778,121 @@ Defined in `src/shared/types/health.ts`:
 | `src/main/bootstrap/lifecycle.ts` | Graceful shutdown (disposes health + error last) |
 | `src/shared/ipc/health/contract.ts` | IPC contract for error/health channels |
 | `src/shared/ipc/health/schemas.ts` | Zod schemas for error/health payloads |
+
+---
+
+## 27. Data Management & Cleanup Flow
+
+### Storage Inspection Flow
+
+```
+Settings → Storage Management section
+  |
+  v
+useDataRegistry() → ipc('dataManagement.getRegistry', {})
+  → data-management-handlers.ts → DATA_STORE_REGISTRY (static)
+  → Returns: DataStoreEntry[] (22+ stores with lifecycle, retention metadata)
+
+useDataUsage() → ipc('dataManagement.getUsage', {})
+  → data-management-handlers.ts → storageInspector.getUsage()
+  → For each store: statSync file/dir → sizeBytes, itemCount
+  → Returns: DataStoreUsage[]
+
+StorageUsageBar renders proportional segments by lifecycle category
+RetentionControl cards render per-store with usage stats
+```
+
+### Cleanup Service Flow
+
+```
+App starts
+  → lifecycle.ts → crashRecovery.recover()
+    → Detect orphaned hooks in .claude/settings.local.json
+    → Remove stale progress files (>24h, no active session)
+    → Remove stale QA dirs (>7 days)
+    → Returns: { fixed: number, details: string[] }
+  → cleanupService.start()
+    → 30s delay → initial cleanup run
+    → setInterval(cleanupIntervalHours) → periodic runs
+
+Each cleanup run:
+  → Read DATA_STORE_REGISTRY
+  → Get user retention overrides from settings
+  → For each store with cleanup function:
+    → Merge default + user retention
+    → Run store-specific cleaner (prune by age/count)
+    → Sum cleaned items + freed bytes
+  → router.emit('event:dataManagement.cleanupComplete', { cleaned, freedBytes })
+    → Renderer: useDataManagementEvents()
+      → invalidate usage + retention queries
+      → UI refreshes automatically
+```
+
+### Data Export/Import Flow
+
+```
+Export:
+  User clicks "Export Data" → useExportData().mutate()
+  → ipc('dataManagement.exportData', {})
+  → data-export.ts: exportData(dataDir)
+    → Electron save dialog
+    → Read all exportable stores (canExport && !sensitive)
+    → Write JSON archive { version, exportedAt, appVersion, stores }
+
+Import:
+  User clicks "Import Data" → useImportData().mutate({ filePath })
+  → ipc('dataManagement.importData', { filePath })
+  → data-export.ts: importData(dataDir, filePath)
+    → Validate archive version
+    → Merge each store's data into existing
+    → Returns { success, imported }
+```
+
+### IPC Invoke Channels
+
+| Channel | Input | Output | Purpose |
+|---------|-------|--------|---------|
+| `dataManagement.getRegistry` | `{}` | `DataStoreEntry[]` | Static registry of all data stores |
+| `dataManagement.getUsage` | `{}` | `DataStoreUsage[]` | Current disk usage per store |
+| `dataManagement.getRetention` | `{}` | `DataRetentionSettings` | User retention config |
+| `dataManagement.updateRetention` | `Partial<DataRetentionSettings>` | `DataRetentionSettings` | Update retention settings |
+| `dataManagement.clearStore` | `{ storeId }` | `{ success, message }` | Clear a specific store |
+| `dataManagement.runCleanup` | `{}` | `{ cleaned, freedBytes }` | Trigger manual cleanup |
+| `dataManagement.exportData` | `{}` | `{ filePath }` | Export data archive |
+| `dataManagement.importData` | `{ filePath }` | `{ success, imported }` | Import data archive |
+
+### IPC Event Channels
+
+| Channel | Payload | When |
+|---------|---------|------|
+| `event:dataManagement.cleanupComplete` | `{ cleaned, freedBytes }` | After periodic or manual cleanup |
+
+### Types
+
+Defined in `src/shared/types/data-management.ts`:
+- `DataLifecycle` — `'transient' | 'session' | 'short-lived' | 'persistent' | 'synced'`
+- `RetentionPolicy` — maxAgeDays, maxItems, enabled
+- `DataStoreEntry` — store metadata (id, label, filePath, lifecycle, retention, flags)
+- `DataStoreUsage` — runtime usage (sizeBytes, itemCount, oldestEntry)
+- `DataRetentionSettings` — user-configured overrides + auto-cleanup settings
+- `DataExportArchive` — export file format
+
+### Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/main/services/data-management/store-registry.ts` | Static DATA_STORE_REGISTRY (22+ store entries) |
+| `src/main/services/data-management/store-cleaners.ts` | Per-store cleanup functions |
+| `src/main/services/data-management/cleanup-service.ts` | Periodic cleanup orchestrator |
+| `src/main/services/data-management/storage-inspector.ts` | Disk usage calculator |
+| `src/main/services/data-management/crash-recovery.ts` | Startup orphan detection |
+| `src/main/services/data-management/data-export.ts` | Export/import archive functions |
+| `src/main/ipc/handlers/data-management-handlers.ts` | IPC handler registration |
+| `src/shared/ipc/data-management/contract.ts` | IPC contract (8 invoke + 1 event) |
+| `src/shared/ipc/data-management/schemas.ts` | Zod schemas for all payloads |
+| `src/renderer/features/settings/api/useDataManagement.ts` | React Query hooks (8 hooks) |
+| `src/renderer/features/settings/hooks/useDataManagementEvents.ts` | Event subscription |
+| `src/renderer/features/settings/components/StorageManagementSection.tsx` | Main settings section |
+| `src/renderer/features/settings/components/StorageUsageBar.tsx` | Visual usage bar |
+| `src/renderer/features/settings/components/RetentionControl.tsx` | Per-store retention editor |
 | `src/shared/types/health.ts` | TypeScript types for error entries + service health |

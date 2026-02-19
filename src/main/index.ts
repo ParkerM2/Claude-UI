@@ -150,6 +150,8 @@ function initializeApp(): void {
     notificationManager: registry.notificationManager,
     briefingService: registry.briefingService,
     watchEvaluator: registry.watchEvaluator,
+    cleanupService: registry.cleanupService,
+    crashRecovery: registry.crashRecovery,
     hotkeyManager: registry.hotkeyManager,
     getHeartbeatIntervalId: () => registry.heartbeatIntervalId,
   });

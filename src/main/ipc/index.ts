@@ -16,6 +16,7 @@ import { registerCalendarHandlers } from './handlers/calendar-handlers';
 import { registerChangelogHandlers } from './handlers/changelog-handlers';
 import { registerClaudeHandlers } from './handlers/claude-handlers';
 import { registerDashboardHandlers } from './handlers/dashboard-handlers';
+import { registerDataManagementHandlers } from './handlers/data-management-handlers';
 import { registerDeviceHandlers } from './handlers/device-handlers';
 import { registerDockerHandlers } from './handlers/docker-handlers';
 import { registerEmailHandlers } from './handlers/email-handlers';
@@ -63,6 +64,8 @@ import type { CalendarService } from '../services/calendar/calendar-service';
 import type { ChangelogService } from '../services/changelog/changelog-service';
 import type { ClaudeClient } from '../services/claude';
 import type { DashboardService } from '../services/dashboard/dashboard-service';
+import type { CleanupService } from '../services/data-management/cleanup-service';
+import type { StorageInspector } from '../services/data-management/storage-inspector';
 import type { DeviceService } from '../services/device/device-service';
 import type { DockerService } from '../services/docker/docker-service';
 import type { EmailService } from '../services/email/email-service';
@@ -144,6 +147,8 @@ export interface Services {
   dashboardService: DashboardService;
   dockerService: DockerService;
   oauthManager: OAuthManager;
+  cleanupService: CleanupService;
+  storageInspector: StorageInspector;
   codebaseAnalyzer: CodebaseAnalyzerService;
   setupPipeline: SetupPipelineService;
   dataDir: string;
@@ -226,4 +231,11 @@ export function registerAllHandlers(router: IpcRouter, services: Services): void
   registerDashboardHandlers(router, services.dashboardService);
   registerDockerHandlers(router, services.dockerService);
   registerSecurityHandlers(router, services.settingsService);
+  registerDataManagementHandlers(
+    router,
+    services.cleanupService,
+    services.storageInspector,
+    services.settingsService,
+    services.dataDir,
+  );
 }

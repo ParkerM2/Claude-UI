@@ -7,6 +7,8 @@
 
 import { z } from 'zod';
 
+import { DataRetentionSettingsSchema } from '../data-management/schemas';
+
 // ── App Settings Schemas ────────────────────────────────────────
 
 export const AppSettingsSchema = z.object({
@@ -23,6 +25,7 @@ export const AppSettingsSchema = z.object({
   minimizeToTray: z.boolean().optional(),
   startMinimized: z.boolean().optional(),
   keepRunning: z.boolean().optional(),
+  dataRetention: DataRetentionSettingsSchema.optional(),
 });
 
 // ── Profile Schemas ─────────────────────────────────────────────

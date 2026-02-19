@@ -37,10 +37,11 @@
 │                                          │   └─ classifier/(16) │
 │                                          ├─ HubService (9)     │
 │                                          ├─ ProjectService (6)  │
-│                                          └─ ... (32 total)      │
+│                                          ├─ DataMgmtService (7) │
+│                                          └─ ... (33 total)      │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────────┐│
-│  │ IPC Contract: src/shared/ipc/ (24 domain folders)            ││
+│  │ IPC Contract: src/shared/ipc/ (26 domain folders)            ││
 │  │ Each folder: contract.ts + schemas.ts + index.ts             ││
 │  │ Root barrel merges all into ipcInvokeContract/ipcEventContract││
 │  └──────────────────────────────────────────────────────────────┘│

@@ -36,6 +36,9 @@ import { createCalendarService } from '../services/calendar/calendar-service';
 import { createChangelogService } from '../services/changelog/changelog-service';
 import { createClaudeClient } from '../services/claude';
 import { createDashboardService } from '../services/dashboard/dashboard-service';
+import { createCleanupService } from '../services/data-management/cleanup-service';
+import { createCrashRecovery } from '../services/data-management/crash-recovery';
+import { createStorageInspector } from '../services/data-management/storage-inspector';
 import { createDeviceService } from '../services/device/device-service';
 import { createDockerService } from '../services/docker/docker-service';
 import { createEmailService } from '../services/email/email-service';
@@ -108,6 +111,8 @@ export interface ServiceRegistryResult {
   briefingService: ReturnType<typeof createBriefingService>;
   hotkeyManager: ReturnType<typeof createHotkeyManager>;
   settingsService: ReturnType<typeof createSettingsService>;
+  cleanupService: ReturnType<typeof createCleanupService>;
+  crashRecovery: ReturnType<typeof createCrashRecovery>;
   hubApiClient: HubApiClient;
   taskRepository: TaskRepository;
   heartbeatIntervalId: ReturnType<typeof setInterval> | null;
@@ -384,6 +389,19 @@ export function createServiceRegistry(
     hotkeyManager.registerDefaults();
   }
 
+  // ─── Data management services ─────────────────────────────────
+  const storageInspector = createStorageInspector({ dataDir });
+  const cleanupService = createCleanupService({
+    dataDir,
+    getRetentionSettings: () => settingsService.getSettings().dataRetention,
+    router,
+  });
+  const crashRecovery = createCrashRecovery({
+    dataDir,
+    listProjectPaths: () => projectService.listProjectsSync().map((p) => p.path),
+    listActiveSessions: () => [],
+  });
+
   // ─── Workflow + orchestrator ──────────────────────────────────
   const taskLauncher = createTaskLauncher();
   const agentOrchestrator = createAgentOrchestrator(dataDir, milestonesService ?? undefined);
@@ -510,6 +528,8 @@ export function createServiceRegistry(
     hubAuthService,
     qaRunner,
     taskLauncher,
+    cleanupService,
+    storageInspector,
     oauthManager,
     codebaseAnalyzer,
     setupPipeline,
@@ -539,6 +559,8 @@ export function createServiceRegistry(
     settingsService,
     hubApiClient,
     taskRepository,
+    cleanupService,
+    crashRecovery,
     heartbeatIntervalId,
     registeredDeviceId,
   };
