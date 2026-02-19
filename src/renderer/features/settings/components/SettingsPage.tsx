@@ -23,6 +23,7 @@ import { HotkeySettings } from './HotkeySettings';
 import { HubSettings } from './HubSettings';
 import { OAuthProviderSettings } from './OAuthProviderSettings';
 import { ProfileSection } from './ProfileSection';
+import { StorageManagementSection } from './StorageManagementSection';
 import { TypographySection } from './TypographySection';
 import { UiScaleSection } from './UiScaleSection';
 import { WebhookSettings } from './WebhookSettings';
@@ -136,6 +137,14 @@ export function SettingsPage() {
           Hub Connection
         </h2>
         <HubSettings />
+      </section>
+
+      {/* ── Storage Management ── */}
+      <section className="mb-8">
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium tracking-wider uppercase">
+          Storage Management
+        </h2>
+        <StorageManagementSection />
       </section>
 
       {/* ── Webhooks ── */}

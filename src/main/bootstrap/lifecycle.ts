@@ -15,6 +15,8 @@ import type { createJsonlProgressWatcher } from '../services/agent-orchestrator/
 import type { createAlertService } from '../services/alerts/alert-service';
 import type { createWatchEvaluator } from '../services/assistant/watch-evaluator';
 import type { createBriefingService } from '../services/briefing/briefing-service';
+import type { CleanupService } from '../services/data-management/cleanup-service';
+import type { CrashRecovery } from '../services/data-management/crash-recovery';
 import type { ErrorCollector } from '../services/health/error-collector';
 import type { HealthRegistry } from '../services/health/health-registry';
 import type { createHubConnectionManager } from '../services/hub/hub-connection';
@@ -37,12 +39,23 @@ export interface LifecycleDeps {
   notificationManager: ReturnType<typeof createNotificationManager>;
   briefingService: ReturnType<typeof createBriefingService>;
   watchEvaluator: ReturnType<typeof createWatchEvaluator>;
+  cleanupService: CleanupService;
+  crashRecovery: CrashRecovery;
   hotkeyManager: HotkeyManager;
   getHeartbeatIntervalId: () => ReturnType<typeof setInterval> | null;
 }
 
 /** Registers Electron app lifecycle event handlers. */
 export function setupLifecycle(deps: LifecycleDeps): void {
+  // Run crash recovery on startup (before agents)
+  const recovery = deps.crashRecovery.recover();
+  if (recovery.fixed > 0) {
+    console.warn(`[Recovery] Fixed ${String(recovery.fixed)} orphaned artifacts on startup`);
+  }
+
+  // Start periodic cleanup service
+  deps.cleanupService.start();
+
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
@@ -53,6 +66,7 @@ export function setupLifecycle(deps: LifecycleDeps): void {
 
   app.on('before-quit', () => {
     (app as unknown as Record<string, boolean>).isQuitting = true;
+    deps.cleanupService.dispose();
     deps.hotkeyManager.unregisterAll();
     deps.agentWatchdog.dispose();
     deps.qaTrigger.dispose();

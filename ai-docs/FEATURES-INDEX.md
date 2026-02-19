@@ -10,9 +10,9 @@
 | Category | Count |
 |----------|-------|
 | Renderer Features | 29 |
-| Main Process Services | 32 |
+| Main Process Services | 33 |
 | IPC Handler Files | 41 |
-| IPC Domain Folders | 25 |
+| IPC Domain Folders | 26 |
 | Hub Type Modules | 9 |
 | Bootstrap Modules | 5 |
 | FEATURE.md Files | 16 |
@@ -42,7 +42,7 @@ Location: `src/renderer/features/`
 | **productivity** | Productivity widgets | CalendarWidget, SpotifyWidget | `calendar.*`, `spotify.*` |
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager, ProjectEditDialog | `projects.*` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
-| **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings | `settings.*`, `oauth.*` |
+| **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings, StorageManagementSection, StorageUsageBar, RetentionControl | `settings.*`, `oauth.*`, `dataManagement.*` |
 | **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid, TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog, PlanFeedbackDialog; **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations (useStartPlanning, useStartExecution, useReplanWithFeedback, useKillAgent, useRestartFromCheckpoint), useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*` (incl. `agent.replanWithFeedback`), `qa.*`, `event:agent.orchestrator.*`, `event:qa.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
@@ -116,6 +116,7 @@ Location: `src/main/services/`
 | **assistant/watch-store** | Persistent watch subscription storage (JSON file) | add, remove, getActive, getAll, markTriggered, clear | - |
 | **assistant/watch-evaluator** | Evaluates IPC events against active watches | start, stop, onTrigger | `event:assistant.proactive` (via index.ts wiring) |
 | **assistant/cross-device-query** | Query other ADC instances via Hub API | query | - |
+| **data-management** | Storage lifecycle auditing, cleanup, inspection. Sub-modules: `store-registry.ts` (22+ data store entries), `store-cleaners.ts` (per-store cleanup functions), `cleanup-service.ts` (periodic orchestrator), `storage-inspector.ts` (disk usage calculator), `crash-recovery.ts` (orphan detection), `data-export.ts` (archive export/import), `index.ts` (barrel) | runCleanup, getUsage, getRegistry, getRetention, updateRetention, clearStore, exportData, importData | `event:dataManagement.cleanupComplete` |
 
 ### Main Process Libraries
 
@@ -172,6 +173,7 @@ Location: `src/main/ipc/handlers/`
 | `device-handlers.ts` | devices.* |
 | `orchestrator-handlers.ts` | orchestrator.* (spawn, stop, replan with feedback, list sessions, get progress) |
 | `qa-handlers.ts` | qa.* (run quiet, run full, get reports) |
+| `data-management-handlers.ts` | dataManagement.* (registry, usage, retention, cleanup, export/import) |
 | `security-handlers.ts` | security.getSettings, security.updateSettings, security.exportAudit |
 | `agent-orchestrator-handlers.ts` | agent.startPlanning, agent.startExecution, agent.replanWithFeedback, agent.killSession, agent.restartFromCheckpoint, agent.getOrchestratorSession, agent.listOrchestratorSessions |
 
@@ -218,6 +220,7 @@ Location: `src/main/ipc/handlers/`
 | `hub-protocol.ts` | Hub protocol contract types |
 | `auth.ts` | AuthUser, LoginCredentials, RegisterData, AuthTokens |
 | `health.ts` | ErrorEntry, ErrorStats, ErrorSeverity, ErrorTier, ErrorCategory, ErrorContext, ServiceHealth, ServiceHealthStatus, HealthStatus |
+| `data-management.ts` | DataLifecycle, RetentionPolicy, DataStoreEntry, DataStoreUsage, DataRetentionSettings, DataExportArchive |
 | `security.ts` | SecuritySettings, SecurityMode, CspMode, SecurityAuditExport, DEFAULT_SECURITY_SETTINGS |
 
 ### Route Groups (`src/renderer/app/routes/`)
@@ -287,6 +290,7 @@ The IPC contract has been split from a single monolithic file into **25 domain f
 | `tasks` | Local tasks + Hub tasks (invoke + events) |
 | `terminals` | Terminal session management |
 | `health` | Error collection, health registry invoke/event contracts |
+| `data-management` | Data store registry, retention settings, cleanup, usage, export/import (8 invoke + 1 event) |
 | `security` | Security settings, audit export (3 channels) |
 | `workflow` | Workflow execution |
 
