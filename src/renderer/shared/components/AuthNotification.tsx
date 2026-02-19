@@ -1,12 +1,14 @@
 /**
- * AuthNotification — Fixed notification when Claude CLI is missing or unauthenticated
+ * AuthNotification — Fixed notification when Claude CLI is missing or unauthenticated.
  *
  * Renders in the bottom-left corner of the app. Dismissible per session.
+ * Links to Settings page for re-authorization.
  */
 
 import { useState } from 'react';
 
-import { AlertTriangle, ExternalLink, X } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { AlertTriangle, ExternalLink, Settings, X } from 'lucide-react';
 
 import { useClaudeAuth } from '@renderer/shared/hooks';
 
@@ -15,6 +17,7 @@ import { useClaudeAuth } from '@renderer/shared/hooks';
 export function AuthNotification() {
   const { data: auth, isLoading } = useClaudeAuth();
   const [isDismissed, setIsDismissed] = useState(false);
+  const navigate = useNavigate();
 
   if (isLoading || isDismissed) {
     return null;
@@ -26,40 +29,55 @@ export function AuthNotification() {
 
   const isInstalled = auth.installed;
 
+  function handleGoToSettings() {
+    void navigate({ to: '/settings' });
+  }
+
   return (
-    <div className="bg-card border-border fixed bottom-4 left-4 z-50 max-w-sm rounded-lg border p-4 shadow-lg">
+    <div className="fixed bottom-4 left-4 z-50 max-w-sm rounded-lg border border-border bg-card p-4 shadow-lg">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warning" />
         <div className="min-w-0 flex-1">
-          <p className="text-foreground text-sm font-medium">
-            {isInstalled ? 'Claude CLI needs authentication' : 'Claude CLI not found'}
+          <p className="text-sm font-medium text-foreground">
+            {isInstalled ? 'Claude Code needs authorization' : 'Claude Code not found'}
           </p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-muted-foreground">
             {isInstalled
-              ? 'Run "claude login" in a terminal to authenticate the Claude CLI.'
-              : 'The Claude CLI is required to run autonomous agents. Install it to get started.'}
+              ? 'Autonomous agents are paused. Authorize Claude Code to resume.'
+              : 'Claude Code is required to run autonomous agents.'}
           </p>
-          {isInstalled ? null : (
-            <a
-              className="text-primary mt-2 inline-flex items-center gap-1 text-xs hover:underline"
-              href="https://docs.anthropic.com/en/docs/claude-code"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Learn More
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          )}
+          <div className="mt-2 flex items-center gap-3">
+            {isInstalled ? (
+              <button
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                type="button"
+                onClick={handleGoToSettings}
+              >
+                <Settings className="size-3" />
+                Authorize in Settings
+              </button>
+            ) : (
+              <a
+                className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                href="https://docs.anthropic.com/en/docs/claude-code/getting-started"
+                rel="noopener noreferrer"
+                target="_blank"
+              >
+                Install Guide
+                <ExternalLink className="size-3" />
+              </a>
+            )}
+          </div>
         </div>
         <button
           aria-label="Dismiss notification"
-          className="text-muted-foreground hover:text-foreground shrink-0 p-1"
+          className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
           type="button"
           onClick={() => {
             setIsDismissed(true);
           }}
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" />
         </button>
       </div>
     </div>

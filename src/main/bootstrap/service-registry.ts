@@ -61,7 +61,13 @@ import {
   createSlackWatcher,
 } from '../services/notifications';
 import { createPlannerService } from '../services/planner/planner-service';
+import { createClaudeMdGenerator } from '../services/project/claudemd-generator';
+import { createCodebaseAnalyzer } from '../services/project/codebase-analyzer';
+import { createDocGenerator } from '../services/project/doc-generator';
+import { createGitHubRepoCreator } from '../services/project/github-repo-creator';
 import { createProjectService } from '../services/project/project-service';
+import { createSetupPipeline } from '../services/project/setup-pipeline';
+import { createSkillsResolver } from '../services/project/skills-resolver';
 import { createTaskService } from '../services/project/task-service';
 import { createQaRunner } from '../services/qa/qa-runner';
 import { createQaTrigger } from '../services/qa/qa-trigger';
@@ -159,6 +165,21 @@ export function createServiceRegistry(
 
   // ─── Hub services ────────────────────────────────────────────
   const hubConnectionManager = createHubConnectionManager(router);
+
+  // Auto-connect if Hub was previously configured and enabled
+  const savedHubConfig = hubConnectionManager.getConnection();
+  if (savedHubConfig?.enabled) {
+    console.log('[Hub] Auto-connecting to saved Hub:', savedHubConfig.hubUrl);
+    void (async () => {
+      const result = await hubConnectionManager.connect();
+      if (result.success) {
+        console.log('[Hub] Auto-connect succeeded');
+      } else {
+        console.warn('[Hub] Auto-connect failed:', result.error);
+      }
+    })();
+  }
+
   const hubSyncService = createHubSyncService(hubConnectionManager);
   const hubAuthService = createHubAuthService({
     tokenStore,
@@ -200,6 +221,23 @@ export function createServiceRegistry(
   const gitService = createGitService(polyrepoService);
   const worktreeService = createWorktreeService((id) => projectService.getProjectPath(id));
   const mergeService = createMergeService();
+
+  // ─── Project setup pipeline services ────────────────────────
+  const codebaseAnalyzer = createCodebaseAnalyzer();
+  const claudeMdGenerator = createClaudeMdGenerator();
+  const skillsResolver = createSkillsResolver();
+  const docGenerator = createDocGenerator();
+  const githubRepoCreator = createGitHubRepoCreator();
+  const setupPipeline = createSetupPipeline({
+    codebaseAnalyzer,
+    claudeMdGenerator,
+    skillsResolver,
+    docGenerator,
+    githubRepoCreator,
+    projectService,
+    gitService,
+    router,
+  });
 
   // ─── Data services (non-critical wrapped) ────────────────────
   const milestonesService = initNonCritical('milestones', () =>
@@ -472,6 +510,8 @@ export function createServiceRegistry(
     qaRunner,
     taskLauncher,
     oauthManager,
+    codebaseAnalyzer,
+    setupPipeline,
     dataDir,
     providers,
     tokenStore,

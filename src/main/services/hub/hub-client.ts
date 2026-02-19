@@ -204,7 +204,7 @@ export function createHubClient(getConnection: () => HubConnection | null): HubC
   }
 
   return {
-    healthCheck: () => request('/api/health', 'GET'),
+    healthCheck: () => request('GET', '/api/health'),
 
     // ── Projects ──
     listProjects: () => request('GET', '/api/projects'),

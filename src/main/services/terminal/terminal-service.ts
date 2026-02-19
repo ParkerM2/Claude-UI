@@ -48,6 +48,29 @@ function getShellArgs(): string[] {
   return ['--login'];
 }
 
+/** Session env vars that Claude Code sets to detect nested invocations. */
+const CLAUDE_SESSION_VARS = [
+  'CLAUDE_CODE_SESSION',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CLAUDE_CODE_ENTRY_POINT',
+  'CLAUDE_INNER_AGENT',
+];
+
+/** Build env for PTY shells — strips only session-detection vars so
+ *  the `claude` CLI doesn't think it's nested inside another session. */
+function cleanEnv(): Record<string, string> {
+  const sessionSet = new Set(CLAUDE_SESSION_VARS);
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && !sessionSet.has(key)) {
+      env[key] = value;
+    }
+  }
+  env.TERM = 'xterm-256color';
+  env.COLORTERM = 'truecolor';
+  return env;
+}
+
 export function createTerminalService(router: IpcRouter): TerminalService {
   const processes = new Map<string, PtyProcess>();
 
@@ -73,11 +96,7 @@ export function createTerminalService(router: IpcRouter): TerminalService {
         cols: 120,
         rows: 30,
         cwd: resolvedCwd,
-        env: {
-          ...process.env,
-          TERM: 'xterm-256color',
-          COLORTERM: 'truecolor',
-        } as Record<string, string>,
+        env: cleanEnv(),
       });
 
       const session: TerminalSession = {

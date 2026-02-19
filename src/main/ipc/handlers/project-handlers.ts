@@ -6,7 +6,9 @@ import type { Project } from '@shared/types';
 
 import { detectRepoStructure } from '../../services/project/project-detector';
 
+import type { CodebaseAnalyzerService } from '../../services/project/codebase-analyzer';
 import type { ProjectService } from '../../services/project/project-service';
+import type { SetupPipelineService } from '../../services/project/setup-pipeline';
 import type { IpcRouter } from '../router';
 
 /**
@@ -31,7 +33,12 @@ function transformHubProject(raw: Record<string, unknown>): Project {
   };
 }
 
-export function registerProjectHandlers(router: IpcRouter, service: ProjectService): void {
+export function registerProjectHandlers(
+  router: IpcRouter,
+  service: ProjectService,
+  codebaseAnalyzer: CodebaseAnalyzerService,
+  setupPipeline: SetupPipelineService,
+): void {
   router.handle('projects.list', async () => {
     const projects = await service.listProjects();
     return projects.map((p) => transformHubProject(p as unknown as Record<string, unknown>));
@@ -73,5 +80,28 @@ export function registerProjectHandlers(router: IpcRouter, service: ProjectServi
 
   router.handle('projects.deleteSubProject', async ({ projectId, subProjectId }) => {
     return await service.deleteSubProject(projectId, subProjectId);
+  });
+
+  router.handle('projects.analyzeCodebase', ({ path }) =>
+    Promise.resolve(codebaseAnalyzer.analyzeCodebase(path)),
+  );
+
+  router.handle('projects.setupExisting', ({ projectId }) => {
+    void setupPipeline.runForExisting(projectId);
+    return Promise.resolve({ success: true });
+  });
+
+  router.handle('projects.createNew', async (input) => {
+    const project = await service.addProject({
+      path: input.path,
+      name: input.name,
+      description: input.description,
+      workspaceId: input.workspaceId,
+    });
+    void setupPipeline.runForNew({
+      ...input,
+      projectId: project.id,
+    });
+    return transformHubProject(project as unknown as Record<string, unknown>);
   });
 }

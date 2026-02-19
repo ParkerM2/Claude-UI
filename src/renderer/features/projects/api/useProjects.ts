@@ -5,6 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { InvokeInput } from '@shared/ipc-contract';
+import type { CreateProjectInput } from '@shared/types/project-setup';
 
 import { useMutationErrorToast } from '@renderer/shared/hooks';
 import { ipc } from '@renderer/shared/lib/ipc';
@@ -43,15 +44,6 @@ export function useRemoveProject() {
       void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
     },
     onError: onError('remove project'),
-  });
-}
-
-/** Initialize a project (set up .adc folder, etc.) */
-export function useInitializeProject() {
-  const { onError } = useMutationErrorToast();
-  return useMutation({
-    mutationFn: (projectId: string) => ipc('projects.initialize', { projectId }),
-    onError: onError('initialize project'),
   });
 }
 
@@ -100,6 +92,30 @@ export function useCreateSubProject() {
       });
     },
     onError: onError('create sub-project'),
+  });
+}
+
+/** Start setup pipeline for an existing project */
+export function useSetupExisting() {
+  const { onError } = useMutationErrorToast();
+  return useMutation({
+    mutationFn: (input: { projectId: string }) =>
+      ipc('projects.setupExisting', input),
+    onError: onError('setup project'),
+  });
+}
+
+/** Create a brand-new project (init from scratch) */
+export function useCreateNewProject() {
+  const queryClient = useQueryClient();
+  const { onError } = useMutationErrorToast();
+  return useMutation({
+    mutationFn: (input: CreateProjectInput) =>
+      ipc('projects.createNew', input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+    },
+    onError: onError('create new project'),
   });
 }
 

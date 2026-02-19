@@ -80,7 +80,9 @@ import type { MilestonesService } from '../services/milestones/milestones-servic
 import type { NotesService } from '../services/notes/notes-service';
 import type { NotificationManager } from '../services/notifications';
 import type { PlannerService } from '../services/planner/planner-service';
+import type { CodebaseAnalyzerService } from '../services/project/codebase-analyzer';
 import type { ProjectService } from '../services/project/project-service';
+import type { SetupPipelineService } from '../services/project/setup-pipeline';
 import type { TaskService } from '../services/project/task-service';
 import type { QaRunner } from '../services/qa/qa-types';
 import type { ScreenCaptureService } from '../services/screen/screen-capture-service';
@@ -141,13 +143,15 @@ export interface Services {
   dashboardService: DashboardService;
   dockerService: DockerService;
   oauthManager: OAuthManager;
+  codebaseAnalyzer: CodebaseAnalyzerService;
+  setupPipeline: SetupPipelineService;
   dataDir: string;
   providers: Map<string, OAuthConfig>;
   tokenStore: TokenStore;
 }
 
 export function registerAllHandlers(router: IpcRouter, services: Services): void {
-  registerProjectHandlers(router, services.projectService);
+  registerProjectHandlers(router, services.projectService, services.codebaseAnalyzer, services.setupPipeline);
   registerTaskHandlers(
     router,
     services.taskRepository,

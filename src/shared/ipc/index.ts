@@ -308,9 +308,14 @@ export {
 
 export {
   ChildRepoSchema,
+  CodebaseAnalysisSchema,
+  CreateProjectInputSchema,
   ProjectSchema,
   RepoDetectionResultSchema,
   RepoTypeSchema,
+  SetupProgressEventSchema,
+  SetupStepSchema,
+  SetupStepStatusSchema,
   SubProjectSchema,
 } from './projects';
 

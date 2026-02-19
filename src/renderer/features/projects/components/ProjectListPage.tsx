@@ -5,7 +5,7 @@
 import { useState } from 'react';
 
 import { useNavigate } from '@tanstack/react-router';
-import { FolderOpen, Layers, Pencil, Plus, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { FolderOpen, Layers, Loader2, Pencil, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react';
 
 import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 import type { Project, RepoType } from '@shared/types';
@@ -15,14 +15,16 @@ import { useLayoutStore } from '@renderer/shared/stores';
 
 import {
   useProjects,
-  useAddProject,
   useRemoveProject,
   useSelectDirectory,
   useSubProjects,
 } from '../api/useProjects';
 
+import { AddProjectDialog } from './AddProjectDialog';
+import { CreateProjectWizard } from './CreateProjectWizard';
 import { ProjectEditDialog } from './ProjectEditDialog';
 import { ProjectInitWizard } from './ProjectInitWizard';
+import { SetupProgressModal } from './SetupProgressModal';
 
 function repoStructureBadgeClass(structure: RepoType): string {
   if (structure === 'monorepo') return 'bg-info/10 text-info';
@@ -116,19 +118,40 @@ function ProjectRow({ project, onEdit, onOpen, onRemove }: ProjectRowProps) {
 export function ProjectListPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
-  const addProject = useAddProject();
   const removeProject = useRemoveProject();
   const selectDirectory = useSelectDirectory();
   const { addProjectTab } = useLayoutStore();
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [createWizardOpen, setCreateWizardOpen] = useState(false);
+
+  // Add Project Dialog state
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const [selectedFolderPath, setSelectedFolderPath] = useState('');
+
+  // Setup Progress Modal state
+  const [showProgressModal, setShowProgressModal] = useState(false);
+  const [setupProjectId, setSetupProjectId] = useState('');
 
   async function handleAddProject() {
     const result = await selectDirectory.mutateAsync();
     if (result.path) {
-      const project = await addProject.mutateAsync({ path: result.path });
-      addProjectTab(project.id);
-      void navigate({ to: projectViewPath(project.id, PROJECT_VIEWS.TASKS) });
+      setSelectedFolderPath(result.path);
+      setShowAddDialog(true);
+    }
+  }
+
+  function handleSetupStarted(projectId: string) {
+    setShowAddDialog(false);
+    setSetupProjectId(projectId);
+    setShowProgressModal(true);
+  }
+
+  function handleSetupComplete() {
+    setShowProgressModal(false);
+    if (setupProjectId.length > 0) {
+      addProjectTab(setupProjectId);
+      void navigate({ to: projectViewPath(setupProjectId, PROJECT_VIEWS.TASKS) });
     }
   }
 
@@ -137,10 +160,16 @@ export function ProjectListPage() {
     void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.TASKS) });
   }
 
-  function handleWizardComplete(projectId: string) {
+  function handleWizardSetupStarted(projectId: string) {
     setWizardOpen(false);
-    addProjectTab(projectId);
-    void navigate({ to: projectViewPath(projectId, PROJECT_VIEWS.TASKS) });
+    setSetupProjectId(projectId);
+    setShowProgressModal(true);
+  }
+
+  function handleProjectCreated(projectId: string) {
+    setCreateWizardOpen(false);
+    setSetupProjectId(projectId);
+    setShowProgressModal(true);
   }
 
   function handleEditProject(e: React.MouseEvent | React.KeyboardEvent, project: Project) {
@@ -178,7 +207,19 @@ export function ProjectListPage() {
             Init Wizard
           </button>
           <button
-            disabled={addProject.isPending}
+            type="button"
+            className={cn(
+              'border-border text-foreground flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium',
+              'hover:bg-accent transition-colors',
+            )}
+            onClick={() => setCreateWizardOpen(true)}
+          >
+            <Sparkles className="h-4 w-4" />
+            New Project
+          </button>
+          <button
+            disabled={selectDirectory.isPending}
+            type="button"
             className={cn(
               'bg-primary text-primary-foreground flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium',
               'hover:bg-primary/90 transition-colors',
@@ -215,9 +256,29 @@ export function ProjectListPage() {
       {wizardOpen ? (
         <ProjectInitWizard
           onClose={() => setWizardOpen(false)}
-          onComplete={handleWizardComplete}
+          onSetupStarted={handleWizardSetupStarted}
         />
       ) : null}
+
+      <CreateProjectWizard
+        open={createWizardOpen}
+        onClose={() => setCreateWizardOpen(false)}
+        onProjectCreated={handleProjectCreated}
+      />
+
+      <AddProjectDialog
+        folderPath={selectedFolderPath}
+        open={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSetupStarted={handleSetupStarted}
+      />
+
+      <SetupProgressModal
+        open={showProgressModal}
+        projectId={setupProjectId}
+        onClose={() => setShowProgressModal(false)}
+        onComplete={handleSetupComplete}
+      />
 
       <ProjectEditDialog
         project={editingProject}

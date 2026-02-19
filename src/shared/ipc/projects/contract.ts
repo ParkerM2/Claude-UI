@@ -7,7 +7,14 @@
 
 import { z } from 'zod';
 
-import { ProjectSchema, RepoDetectionResultSchema, SubProjectSchema } from './schemas';
+import {
+  CodebaseAnalysisSchema,
+  CreateProjectInputSchema,
+  ProjectSchema,
+  RepoDetectionResultSchema,
+  SetupProgressEventSchema,
+  SubProjectSchema,
+} from './schemas';
 
 /** Invoke channels for project operations */
 export const projectsInvoke = {
@@ -69,11 +76,26 @@ export const projectsInvoke = {
     input: z.object({ projectId: z.string(), subProjectId: z.string() }),
     output: z.object({ success: z.boolean() }),
   },
+  'projects.setupExisting': {
+    input: z.object({ projectId: z.string() }),
+    output: z.object({ success: z.boolean(), error: z.string().optional() }),
+  },
+  'projects.createNew': {
+    input: CreateProjectInputSchema,
+    output: ProjectSchema,
+  },
+  'projects.analyzeCodebase': {
+    input: z.object({ path: z.string() }),
+    output: CodebaseAnalysisSchema,
+  },
 } as const;
 
 /** Event channels for project-related events */
 export const projectsEvents = {
   'event:project.updated': {
     payload: z.object({ projectId: z.string() }),
+  },
+  'event:project.setupProgress': {
+    payload: SetupProgressEventSchema,
   },
 } as const;

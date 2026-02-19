@@ -23,6 +23,8 @@ export interface GitService {
   ) => Promise<{ success: boolean }>;
   switchBranch: (repoPath: string, branchName: string) => Promise<void>;
   detectStructure: (repoPath: string) => Promise<RepoStructure>;
+  initRepo: (repoPath: string) => Promise<void>;
+  initialCommit: (repoPath: string, message: string) => Promise<void>;
 }
 
 function validateRepoPath(repoPath: string): void {
@@ -77,6 +79,19 @@ export function createGitService(polyrepoService: PolyrepoService): GitService {
     detectStructure(repoPath) {
       validateRepoPath(repoPath);
       return Promise.resolve(polyrepoService.detectStructure(repoPath));
+    },
+
+    async initRepo(repoPath) {
+      validateRepoPath(repoPath);
+      const git = simpleGit(repoPath);
+      await git.init();
+    },
+
+    async initialCommit(repoPath, message) {
+      validateRepoPath(repoPath);
+      const git = simpleGit(repoPath);
+      await git.add('.');
+      await git.commit(message);
     },
   };
 }

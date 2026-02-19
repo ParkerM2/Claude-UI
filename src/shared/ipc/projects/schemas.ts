@@ -105,3 +105,44 @@ export const MergeDiffSummarySchema = z.object({
   deletions: z.number(),
   changedFiles: z.number(),
 });
+
+// ── Project Setup Pipeline Schemas ─────────────────────────────
+
+export const CodebaseAnalysisSchema = z.object({
+  languages: z.array(z.object({ name: z.string(), percentage: z.number() })),
+  frameworks: z.array(z.string()),
+  packageManager: z.string().nullable(),
+  buildTool: z.string().nullable(),
+  testFramework: z.string().nullable(),
+  linter: z.string().nullable(),
+  hasTypeScript: z.boolean(),
+  hasTailwind: z.boolean(),
+  nodeVersion: z.string().nullable(),
+  monorepoTool: z.string().nullable(),
+});
+
+export const SetupStepStatusSchema = z.enum(['pending', 'running', 'done', 'error', 'skipped']);
+
+export const SetupStepSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  status: SetupStepStatusSchema,
+  error: z.string().optional(),
+});
+
+export const SetupProgressEventSchema = z.object({
+  projectId: z.string(),
+  currentStep: z.string(),
+  steps: z.array(SetupStepSchema),
+  analysis: CodebaseAnalysisSchema.optional(),
+});
+
+export const CreateProjectInputSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  path: z.string(),
+  techStack: z.array(z.string()).optional(),
+  githubVisibility: z.enum(['public', 'private']),
+  createGitHubRepo: z.boolean(),
+  workspaceId: z.string().optional(),
+});
