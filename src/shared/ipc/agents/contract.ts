@@ -33,6 +33,17 @@ export const orchestratorInvoke = {
     input: z.object({ sessionId: z.string() }),
     output: z.object({ success: z.boolean() }),
   },
+  'agent.replanWithFeedback': {
+    input: z.object({
+      taskId: z.string(),
+      projectPath: z.string(),
+      taskDescription: z.string(),
+      feedback: z.string(),
+      previousPlanPath: z.string().optional(),
+      subProjectPath: z.string().optional(),
+    }),
+    output: z.object({ sessionId: z.string(), status: z.literal('spawned') }),
+  },
   'agent.restartFromCheckpoint': {
     input: z.object({ taskId: z.string(), projectPath: z.string() }),
     output: z.object({ sessionId: z.string(), status: z.literal('spawned') }),

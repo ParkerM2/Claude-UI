@@ -131,6 +131,7 @@ function initializeApp(): void {
     watchEvaluator: registry.watchEvaluator,
     webhookRelay: registry.webhookRelay,
     hubConnectionManager: registry.hubConnectionManager,
+    hubApiClient: registry.hubApiClient,
   });
 
   // Register app lifecycle handlers (quit, activate, cleanup)

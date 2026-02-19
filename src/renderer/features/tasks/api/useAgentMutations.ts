@@ -48,6 +48,26 @@ export function useStartExecution() {
   });
 }
 
+/** Re-plan a task with user feedback on what to change */
+export function useReplanWithFeedback() {
+  const queryClient = useQueryClient();
+  const { onError } = useMutationErrorToast();
+  return useMutation({
+    mutationFn: (input: {
+      taskId: string;
+      projectPath: string;
+      taskDescription: string;
+      feedback: string;
+      previousPlanPath?: string;
+      subProjectPath?: string;
+    }) => ipc('agent.replanWithFeedback', input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
+    },
+    onError: onError('re-plan with feedback'),
+  });
+}
+
 /** Kill an active agent session */
 export function useKillAgent() {
   const queryClient = useQueryClient();

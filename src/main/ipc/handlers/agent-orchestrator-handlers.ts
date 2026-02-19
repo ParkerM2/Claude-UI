@@ -24,7 +24,7 @@ export function registerAgentOrchestratorHandlers(
       taskId,
       projectPath,
       subProjectPath,
-      prompt: `/create-feature-plan ${taskDescription}`,
+      prompt: `/plan-feature ${taskDescription}`,
       phase: 'planning',
     });
 
@@ -49,6 +49,35 @@ export function registerAgentOrchestratorHandlers(
 
     return { sessionId: session.id, status: 'spawned' as const };
   });
+
+  router.handle(
+    'agent.replanWithFeedback',
+    async ({ taskId, projectPath, taskDescription, feedback, previousPlanPath, subProjectPath }) => {
+      // Update task status back to 'planning' via Hub API
+      await hubApiClient.updateTaskStatus(taskId, 'planning');
+
+      const feedbackBlock = [
+        '',
+        'IMPORTANT: A previous plan was rejected. The user provided this feedback:',
+        feedback,
+        '',
+        previousPlanPath ? `Previous plan is at: ${previousPlanPath}` : '',
+        previousPlanPath ? 'Read it and address the feedback.' : '',
+      ]
+        .filter((line) => line.length > 0)
+        .join('\n');
+
+      const session = await orchestrator.spawn({
+        taskId,
+        projectPath,
+        subProjectPath,
+        prompt: `/plan-feature ${taskDescription}\n${feedbackBlock}`,
+        phase: 'planning',
+      });
+
+      return { sessionId: session.id, status: 'spawned' as const };
+    },
+  );
 
   router.handle('agent.killSession', ({ sessionId }) => {
     orchestrator.kill(sessionId);

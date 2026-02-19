@@ -85,9 +85,9 @@ The main process entry point (`src/main/index.ts`) delegates to 5 bootstrap modu
 | Module | Responsibility |
 |--------|---------------|
 | `lifecycle.ts` | Electron app lifecycle events, BrowserWindow creation, graceful shutdown (disposes all services including HealthRegistry + ErrorCollector last) |
-| `service-registry.ts` | Instantiates all service factories with dependency injection. Creates ErrorCollector + HealthRegistry early for crash resilience. Wraps non-critical services in `initNonCritical()` for graceful degradation. Wires AgentWatchdog (process monitoring), QaTrigger (automatic QA on session completion), and HealthRegistry enrollment (hubHeartbeat, hubWebSocket). |
+| `service-registry.ts` | Instantiates all service factories with dependency injection. Creates ErrorCollector + HealthRegistry early for crash resilience. Wraps non-critical services in `initNonCritical()` for graceful degradation. Wires AgentWatchdog (process monitoring), QaTrigger (automatic QA on session completion), and HealthRegistry enrollment (hubHeartbeat, hubWebSocket). Exposes `hubApiClient` in registry result for use by event-wiring (planning completion detection). |
 | `ipc-wiring.ts` | Registers all IPC handlers (connects handler files to router) |
-| `event-wiring.ts` | Sets up service event → renderer forwarding |
+| `event-wiring.ts` | Sets up service event → renderer forwarding. Includes planning completion detection: when a planning-phase agent completes, scans the project for plan files and transitions the task to `plan_ready` via Hub API. |
 | `index.ts` | Barrel re-export |
 
 ### Bootstrap Resilience Features
@@ -240,8 +240,8 @@ It manages headless Claude agent sessions via `child_process.spawn`:
 - **AgentOrchestrator** (`agent-orchestrator.ts`) — Session lifecycle: spawn, kill, getSession, listActive, dispose
 - **JsonlProgressWatcher** (`jsonl-progress-watcher.ts`) — Watches `{dataDir}/progress/*.jsonl` files using incremental tail parsing (100ms debounce)
 - **AgentWatchdog** (`agent-watchdog.ts`) — Health monitoring: 30s check interval, PID alive checks, heartbeat age thresholds (5min warn, 15min stale), auto-restart on context overflow (exit code 2)
-- **HooksTemplate** (`hooks-template.ts`) — Generates Claude hooks config (PostToolUse writes tool_use entries, Stop writes agent_stopped entries to JSONL)
-- **Types** (`types.ts`) — AgentSession, SpawnOptions, ProgressEntry (6 entry types)
+- **HooksTemplate** (`hooks-template.ts`) — Generates Claude hooks config (PostToolUse writes tool_use entries, Stop writes agent_stopped entries to JSONL). Merges hooks into `.claude/settings.local.json` rather than writing separate hook files, ensuring Claude CLI loads them. The original `settings.local.json` content is saved in `AgentSession.originalSettingsContent` and restored on cleanup.
+- **Types** (`types.ts`) — AgentSession (incl. `originalSettingsContent`), SpawnOptions, ProgressEntry (6 entry types)
 
 ### Session Lifecycle
 
@@ -271,12 +271,12 @@ spawn() → 'spawned' → 'active' → 'completed' | 'error' | 'killed'
 
 ### Renderer Integration
 
-- **useAgentMutations** — 4 mutation hooks (startPlanning, startExecution, killAgent, restartFromCheckpoint)
+- **useAgentMutations** — 5 mutation hooks (startPlanning, startExecution, replanWithFeedback, killAgent, restartFromCheckpoint)
 - **useAgentEvents** — 6 event listeners → optimistic cache updates + full invalidation
 - **useTaskEvents** — orchestrates useAgentEvents + useQaEvents, called by TaskDataGrid
 - **ActionsCell** — context-sensitive buttons wired to mutations
 - **StatusBadgeCell** — supports all statuses including `planning`, `plan_ready` with pulsing indicators
-- **TaskDetailRow** — expandable row with PlanViewer, QaReportViewer, SubtaskList, ExecutionLog, PRStatusPanel
+- **TaskDetailRow** — expandable row with PlanViewer (approve/request changes/reject), PlanFeedbackDialog, QaReportViewer, SubtaskList, ExecutionLog, PRStatusPanel
 
 ## QA System
 
