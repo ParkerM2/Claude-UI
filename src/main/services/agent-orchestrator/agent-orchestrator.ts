@@ -7,8 +7,11 @@
  */
 
 import { spawn } from 'node:child_process';
-import { createWriteStream, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { createWriteStream, existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+
+import { DEFAULT_SECURITY_SETTINGS } from '@shared/types/security';
+import type { SecuritySettings } from '@shared/types/security';
 
 import { agentLogger } from '@main/lib/logger';
 
@@ -26,6 +29,158 @@ import type { ChildProcess } from 'node:child_process';
 import type { WriteStream } from 'node:fs';
 
 const KILL_GRACE_PERIOD_MS = 5000;
+
+/** Regex pattern for valid taskId characters */
+const TASK_ID_PATTERN = /^[a-zA-Z0-9_.-]+$/;
+
+/**
+ * Converts a glob-like pattern to a RegExp.
+ * Supports '*' as wildcard (matches any characters).
+ * Pattern is anchored with ^ and $.
+ */
+function globToRegex(pattern: string): RegExp {
+  const escaped = pattern.replaceAll(/[.+?^${}()|[\]\\]/g, '\\$&');
+  const withWildcards = escaped.replaceAll('\\*', '.*');
+  return new RegExp(`^${withWildcards}$`);
+}
+
+/**
+ * Checks whether a given env var name matches any pattern in a list.
+ * Patterns support glob-like '*' wildcards.
+ */
+function matchesAnyPattern(name: string, patterns: string[]): boolean {
+  return patterns.some((pattern) => globToRegex(pattern).test(name));
+}
+
+/**
+ * Copies all defined process.env entries into the result object.
+ */
+function copyProcessEnv(result: Record<string, string>): void {
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      result[key] = value;
+    }
+  }
+}
+
+/**
+ * Filters process.env entries through allowlist and blocklist patterns.
+ * Allowlisted vars are always kept; blocklisted vars are removed;
+ * everything else passes through.
+ */
+function filterSandboxedEnv(
+  result: Record<string, string>,
+  allowPatterns: string[],
+  blockPatterns: string[],
+): void {
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    // Always pass through vars matching the allowlist
+    if (matchesAnyPattern(key, allowPatterns)) {
+      result[key] = value;
+      continue;
+    }
+
+    // Block vars matching the blocklist
+    if (matchesAnyPattern(key, blockPatterns)) {
+      continue;
+    }
+
+    // Not in either list — allow through
+    result[key] = value;
+  }
+}
+
+/**
+ * Scrubs environment variables according to security settings.
+ *
+ * - 'sandboxed' mode: filters out vars matching blocklist patterns,
+ *   always keeps vars matching envAlwaysPass patterns
+ * - 'unrestricted' mode: passes full process.env
+ *
+ * Adds a SECURITY_CONTEXT descriptor var and merges with extraEnv.
+ */
+export function scrubEnvironment(
+  settings: SecuritySettings,
+  extraEnv?: Record<string, string>,
+): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (settings.envMode === 'unrestricted') {
+    copyProcessEnv(result);
+  } else {
+    filterSandboxedEnv(result, settings.envAlwaysPass, settings.envBlocklist);
+  }
+
+  // Add security context descriptor
+  result.SECURITY_CONTEXT = JSON.stringify({
+    mode: settings.envMode,
+    blockedPatterns: settings.envMode === 'sandboxed' ? settings.envBlocklist : [],
+  });
+
+  // Merge extra env vars (these always take precedence)
+  if (extraEnv) {
+    for (const [key, value] of Object.entries(extraEnv)) {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Validates that the taskId contains only safe characters.
+ * Prevents shell metacharacter injection.
+ */
+function validateTaskId(taskId: string): void {
+  if (!TASK_ID_PATTERN.test(taskId)) {
+    throw new Error('Invalid taskId: contains disallowed characters');
+  }
+}
+
+/**
+ * Validates working directory: must exist, be a directory, and
+ * optionally be restricted to the user's home directory or project path.
+ */
+function validateWorkingDirectory(
+  cwd: string,
+  projectPath: string,
+  restricted: boolean,
+): void {
+  const resolved = resolve(cwd);
+
+  if (!existsSync(resolved)) {
+    throw new Error(`Working directory does not exist: ${resolved}`);
+  }
+
+  const stat = statSync(resolved);
+  if (!stat.isDirectory()) {
+    throw new Error(`Working directory path is not a directory: ${resolved}`);
+  }
+
+  if (restricted) {
+    const home = process.env.HOME ?? process.env.USERPROFILE ?? '';
+    const resolvedHome = home.length > 0 ? resolve(home) : '';
+    const resolvedProject = resolve(projectPath);
+    const normalizedCwd = resolved.toLowerCase();
+    const normalizedHome = resolvedHome.toLowerCase();
+    const normalizedProject = resolvedProject.toLowerCase();
+
+    const isUnderHome =
+      normalizedHome.length > 0 && normalizedCwd.startsWith(normalizedHome);
+    const isUnderProject = normalizedCwd.startsWith(normalizedProject);
+
+    if (!isUnderHome && !isUnderProject) {
+      throw new Error(
+        `Working directory is outside allowed paths. ` +
+          `cwd: ${resolved}, home: ${resolvedHome}, project: ${resolvedProject}`,
+      );
+    }
+  }
+}
 
 export function createAgentOrchestrator(
   progressBaseDir: string,
@@ -121,11 +276,21 @@ export function createAgentOrchestrator(
 
   return {
     spawn(options: SpawnOptions): Promise<AgentSession> {
-      const { taskId, projectPath, subProjectPath, prompt, phase, env } = options;
+      const { taskId, projectPath, subProjectPath, prompt, phase, env, securitySettings } =
+        options;
+
+      // ── Security: validate taskId ───────────────────────────────
+      validateTaskId(taskId);
+
+      const security = securitySettings ?? DEFAULT_SECURITY_SETTINGS;
 
       const timestamp = String(Date.now());
       const sessionId = `agent-${taskId}-${timestamp}`;
-      const cwd = subProjectPath ? join(projectPath, subProjectPath) : projectPath;
+      const rawCwd = subProjectPath ? join(projectPath, subProjectPath) : projectPath;
+
+      // ── Security: validate working directory ────────────────────
+      const cwd = resolve(rawCwd);
+      validateWorkingDirectory(cwd, projectPath, security.workdirRestricted);
 
       // Create progress directory
       const progressDir = join(progressBaseDir, 'progress');
@@ -162,13 +327,16 @@ export function createAgentOrchestrator(
       const logStream = createWriteStream(logFile, { flags: 'a' });
       logStreams.set(sessionId, logStream);
 
+      // ── Security: scrub environment variables ───────────────────
+      const scrubbedEnv = scrubEnvironment(security, env);
+
       // Spawn headless Claude agent
       const child = spawn('claude', ['-p', prompt], {
         cwd,
         stdio: 'pipe',
         detached: true,
         shell: true,
-        env: { ...process.env, ...env },
+        env: scrubbedEnv,
       });
 
       const pid = child.pid ?? 0;

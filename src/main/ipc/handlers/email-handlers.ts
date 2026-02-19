@@ -2,11 +2,20 @@
  * Email IPC handlers
  */
 
+import { createThrottle } from '../throttle';
+
 import type { EmailService } from '../../services/email/email-service';
 import type { IpcRouter } from '../router';
 
 export function registerEmailHandlers(router: IpcRouter, service: EmailService): void {
-  router.handle('email.send', (email) => service.sendEmail(email));
+  const allowSend = createThrottle(2000);
+
+  router.handle('email.send', (email) => {
+    if (!allowSend()) {
+      throw new Error('Too many requests. Please wait.');
+    }
+    return service.sendEmail(email);
+  });
 
   router.handle('email.getConfig', () => Promise.resolve(service.getConfig()));
 

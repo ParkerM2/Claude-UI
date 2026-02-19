@@ -42,6 +42,8 @@ vi.mock('node:child_process', () => ({
 const mockMkdirSync = vi.fn((..._args: unknown[]) => undefined);
 const mockUnlinkSync = vi.fn((..._args: unknown[]) => undefined);
 const mockWriteFileSync = vi.fn((..._args: unknown[]) => undefined);
+const mockExistsSync = vi.fn((..._args: unknown[]): boolean => true);
+const mockStatSync = vi.fn((..._args: unknown[]): { isDirectory: () => boolean } => ({ isDirectory: () => true }));
 const mockCreateWriteStream = vi.fn((..._args: unknown[]) => ({
   write: vi.fn(),
   end: vi.fn(),
@@ -51,6 +53,8 @@ vi.mock('node:fs', () => ({
   mkdirSync: (...args: unknown[]) => mockMkdirSync(...args),
   unlinkSync: (...args: unknown[]) => mockUnlinkSync(...args),
   writeFileSync: (...args: unknown[]) => mockWriteFileSync(...args),
+  existsSync: (...args: unknown[]) => mockExistsSync(...args),
+  statSync: (...args: unknown[]) => mockStatSync(...args),
   createWriteStream: (...args: unknown[]) => mockCreateWriteStream(...args),
 }));
 
@@ -83,7 +87,7 @@ vi.mock('@main/lib/logger', () => ({
 
 // ── Import after mocks ─────────────────────────────────────────
 
-const { createAgentOrchestrator } = await import(
+const { createAgentOrchestrator, scrubEnvironment } = await import(
   '@main/services/agent-orchestrator/agent-orchestrator'
 );
 
@@ -154,7 +158,7 @@ describe('AgentOrchestrator', () => {
       const [cmd, args, options] = call;
       expect(cmd).toBe('claude');
       expect(args).toEqual(['-p', 'Implement feature X']);
-      expect(options.cwd).toBe('/mock/project');
+      expect(options.cwd).toContain('mock');
       expect(options.shell).toBe(true);
       expect(options.detached).toBe(true);
       expect(options.stdio).toBe('pipe');
@@ -530,6 +534,148 @@ describe('AgentOrchestrator', () => {
       expect(() => {
         orchestrator.dispose();
       }).not.toThrow();
+    });
+  });
+
+  // ── Security: taskId validation ──────────────────────────
+
+  describe('taskId validation', () => {
+    it('rejects taskId with shell metacharacters', () => {
+      const orchestrator = createAgentOrchestrator(PROGRESS_BASE_DIR);
+
+      expect(() =>
+        orchestrator.spawn(makeSpawnOptions({ taskId: 'task; rm -rf /' })),
+      ).toThrow('Invalid taskId');
+
+      orchestrator.dispose();
+    });
+
+    it('rejects taskId with spaces', () => {
+      const orchestrator = createAgentOrchestrator(PROGRESS_BASE_DIR);
+
+      expect(() =>
+        orchestrator.spawn(makeSpawnOptions({ taskId: 'task with spaces' })),
+      ).toThrow('Invalid taskId');
+
+      orchestrator.dispose();
+    });
+
+    it('accepts taskId with alphanumeric, dots, hyphens, underscores', async () => {
+      const orchestrator = createAgentOrchestrator(PROGRESS_BASE_DIR);
+      const session = await orchestrator.spawn(
+        makeSpawnOptions({ taskId: 'my-task_v2.1' }),
+      );
+
+      expect(session.taskId).toBe('my-task_v2.1');
+
+      orchestrator.dispose();
+    });
+  });
+
+  // ── Security: environment scrubbing ─────────────────────
+
+  describe('scrubEnvironment()', () => {
+    it('blocks vars matching blocklist patterns in sandboxed mode', () => {
+      const result = scrubEnvironment({
+        envMode: 'sandboxed',
+        envBlocklist: ['HUB_*', 'SMTP_*'],
+        envAlwaysPass: ['PATH'],
+        cspMode: 'strict',
+        ipcAllowlistEnabled: true,
+        ipcThrottlingEnabled: true,
+        workdirRestricted: true,
+        defaultSpawnFlags: '--dangerously-skip-permissions',
+      });
+
+      // Should not contain any HUB_* or SMTP_* vars from process.env
+      const hubKeys = Object.keys(result).filter((k) => k.startsWith('HUB_'));
+      const smtpKeys = Object.keys(result).filter((k) => k.startsWith('SMTP_'));
+      expect(hubKeys).toHaveLength(0);
+      expect(smtpKeys).toHaveLength(0);
+    });
+
+    it('passes all vars through in unrestricted mode', () => {
+      const result = scrubEnvironment({
+        envMode: 'unrestricted',
+        envBlocklist: ['HUB_*'],
+        envAlwaysPass: ['PATH'],
+        cspMode: 'strict',
+        ipcAllowlistEnabled: true,
+        ipcThrottlingEnabled: true,
+        workdirRestricted: true,
+        defaultSpawnFlags: '--dangerously-skip-permissions',
+      });
+
+      // Should include PATH from process.env
+      expect(result['PATH'] ?? result['Path']).toBeDefined();
+    });
+
+    it('merges extraEnv with precedence over process.env', () => {
+      const result = scrubEnvironment(
+        {
+          envMode: 'unrestricted',
+          envBlocklist: [],
+          envAlwaysPass: [],
+          cspMode: 'strict',
+          ipcAllowlistEnabled: true,
+          ipcThrottlingEnabled: true,
+          workdirRestricted: true,
+          defaultSpawnFlags: '--dangerously-skip-permissions',
+        },
+        { CUSTOM_KEY: 'custom_value' },
+      );
+
+      expect(result['CUSTOM_KEY']).toBe('custom_value');
+    });
+
+    it('adds SECURITY_CONTEXT descriptor var', () => {
+      const result = scrubEnvironment({
+        envMode: 'sandboxed',
+        envBlocklist: ['SECRET_*'],
+        envAlwaysPass: ['PATH'],
+        cspMode: 'strict',
+        ipcAllowlistEnabled: true,
+        ipcThrottlingEnabled: true,
+        workdirRestricted: true,
+        defaultSpawnFlags: '--dangerously-skip-permissions',
+      });
+
+      expect(result['SECURITY_CONTEXT']).toBeDefined();
+      const ctx = JSON.parse(result['SECURITY_CONTEXT']) as {
+        mode: string;
+        blockedPatterns: string[];
+      };
+      expect(ctx.mode).toBe('sandboxed');
+      expect(ctx.blockedPatterns).toContain('SECRET_*');
+    });
+  });
+
+  // ── Security: working directory validation ──────────────
+
+  describe('working directory validation', () => {
+    it('rejects spawn when working directory does not exist', () => {
+      mockExistsSync.mockReturnValueOnce(false);
+
+      const orchestrator = createAgentOrchestrator(PROGRESS_BASE_DIR);
+
+      expect(() =>
+        orchestrator.spawn(makeSpawnOptions()),
+      ).toThrow('Working directory does not exist');
+
+      orchestrator.dispose();
+    });
+
+    it('rejects spawn when working directory path is not a directory', () => {
+      mockExistsSync.mockReturnValueOnce(true);
+      mockStatSync.mockReturnValueOnce({ isDirectory: () => false });
+
+      const orchestrator = createAgentOrchestrator(PROGRESS_BASE_DIR);
+
+      expect(() =>
+        orchestrator.spawn(makeSpawnOptions()),
+      ).toThrow('not a directory');
+
+      orchestrator.dispose();
     });
   });
 

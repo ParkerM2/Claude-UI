@@ -7,16 +7,26 @@
 
 import { readFileSync } from 'node:fs';
 
+import { createThrottle } from '../throttle';
+
 import type { AgentOrchestrator } from '../../services/agent-orchestrator/types';
 import type { TaskRepository } from '../../services/tasks/types';
 import type { IpcRouter } from '../router';
+
+const THROTTLE_ERROR = 'Too many requests. Please wait.';
 
 export function registerAgentOrchestratorHandlers(
   router: IpcRouter,
   orchestrator: AgentOrchestrator,
   taskRepository: TaskRepository,
 ): void {
+  const allowSpawn = createThrottle(5000);
+
   router.handle('agent.startPlanning', async ({ taskId, projectPath, taskDescription, subProjectPath }) => {
+    if (!allowSpawn()) {
+      throw new Error(THROTTLE_ERROR);
+    }
+
     // Update task status to 'planning' via Hub API
     await taskRepository.updateTaskStatus(taskId, 'planning');
 
@@ -32,6 +42,10 @@ export function registerAgentOrchestratorHandlers(
   });
 
   router.handle('agent.startExecution', async ({ taskId, projectPath, taskDescription, planRef, subProjectPath }) => {
+    if (!allowSpawn()) {
+      throw new Error(THROTTLE_ERROR);
+    }
+
     // Update task status to 'running' via Hub API
     await taskRepository.updateTaskStatus(taskId, 'running');
 
@@ -53,6 +67,10 @@ export function registerAgentOrchestratorHandlers(
   router.handle(
     'agent.replanWithFeedback',
     async ({ taskId, projectPath, taskDescription, feedback, previousPlanPath, subProjectPath }) => {
+      if (!allowSpawn()) {
+        throw new Error(THROTTLE_ERROR);
+      }
+
       // Update task status back to 'planning' via Hub API
       await taskRepository.updateTaskStatus(taskId, 'planning');
 
@@ -85,6 +103,10 @@ export function registerAgentOrchestratorHandlers(
   });
 
   router.handle('agent.restartFromCheckpoint', async ({ taskId, projectPath }) => {
+    if (!allowSpawn()) {
+      throw new Error(THROTTLE_ERROR);
+    }
+
     // Kill existing session if alive
     const existingSession = orchestrator.getSessionByTaskId(taskId);
     if (existingSession) {

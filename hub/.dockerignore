@@ -2,3 +2,9 @@ node_modules
 dist
 *.md
 .gitignore
+.env
+.env.*
+*.log
+tests/
+coverage/
+.git

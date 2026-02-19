@@ -1,0 +1,44 @@
+/**
+ * Security IPC handlers
+ *
+ * Maps security IPC channels to settings service operations.
+ * Security settings are stored as a sub-object within AppSettings.
+ */
+
+import { ipcInvokeContract } from '@shared/ipc-contract';
+import { DEFAULT_SECURITY_SETTINGS } from '@shared/types/security';
+import type { SecuritySettings } from '@shared/types/security';
+
+import type { SettingsService } from '../../services/settings/settings-service';
+import type { IpcRouter } from '../router';
+
+export function registerSecurityHandlers(router: IpcRouter, service: SettingsService): void {
+  router.handle('security.getSettings', () => {
+    const settings = service.getSettings();
+    return Promise.resolve(settings.securitySettings ?? DEFAULT_SECURITY_SETTINGS);
+  });
+
+  router.handle('security.updateSettings', (updates) => {
+    const current = service.getSettings();
+    const currentSecurity = current.securitySettings ?? DEFAULT_SECURITY_SETTINGS;
+    const merged: SecuritySettings = {
+      ...currentSecurity,
+      ...updates,
+    };
+    service.updateSettings({ securitySettings: merged });
+    return Promise.resolve(merged);
+  });
+
+  router.handle('security.exportAudit', () => {
+    const settings = service.getSettings();
+    const securitySettings = settings.securitySettings ?? DEFAULT_SECURITY_SETTINGS;
+    const channelCount = Object.keys(ipcInvokeContract).length;
+
+    return Promise.resolve({
+      exportedAt: new Date().toISOString(),
+      settings: securitySettings,
+      ipcChannelCount: channelCount,
+      activeAgentCount: 0,
+    });
+  });
+}

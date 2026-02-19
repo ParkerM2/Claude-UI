@@ -18,6 +18,11 @@ import type {
   EventChannel,
   EventPayload,
 } from '@shared/ipc-contract';
+import { ipcInvokeContract, ipcEventContract } from '@shared/ipc-contract';
+
+// ─── Channel Allowlists (defense-in-depth) ──────────────────
+const ALLOWED_INVOKE = new Set(Object.keys(ipcInvokeContract));
+const ALLOWED_EVENTS = new Set(Object.keys(ipcEventContract));
 
 export interface IpcBridge {
   invoke: <T extends InvokeChannel>(
@@ -33,10 +38,17 @@ export interface IpcBridge {
 
 const api: IpcBridge = {
   invoke(channel, input) {
+    if (!ALLOWED_INVOKE.has(channel)) {
+      return Promise.resolve({ success: false, error: `Unknown IPC channel: ${channel}` });
+    }
     return ipcRenderer.invoke(channel, input);
   },
 
   on<T extends EventChannel>(channel: T, handler: (payload: EventPayload<T>) => void) {
+    if (!ALLOWED_EVENTS.has(channel)) {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      return () => {};
+    }
     const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => {
       handler(payload as EventPayload<T>);
     };
