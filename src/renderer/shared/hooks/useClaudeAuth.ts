@@ -10,7 +10,7 @@ export function useClaudeAuth() {
   return useQuery({
     queryKey: ['app', 'claudeAuth'],
     queryFn: () => ipc('app.checkClaudeAuth', {}),
-    staleTime: 60_000,
-    refetchInterval: 120_000,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   });
 }

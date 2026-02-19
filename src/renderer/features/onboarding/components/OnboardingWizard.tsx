@@ -10,7 +10,6 @@ import { ThemeHydrator } from '@renderer/shared/stores';
 
 import { getStepIndex, getTotalSteps, useOnboardingStore } from '../store';
 
-import { ApiKeyStep } from './ApiKeyStep';
 import { ClaudeCliStep } from './ClaudeCliStep';
 import { CompleteStep } from './CompleteStep';
 import { IntegrationsStep } from './IntegrationsStep';
@@ -67,8 +66,6 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
         return <WelcomeStep onNext={nextStep} />;
       case 'claude-cli':
         return <ClaudeCliStep onBack={previousStep} onNext={nextStep} />;
-      case 'api-key':
-        return <ApiKeyStep onBack={previousStep} onNext={nextStep} />;
       case 'integrations':
         return (
           <IntegrationsStep onBack={previousStep} onNext={nextStep} onSkip={skipIntegrations} />

@@ -1,20 +1,23 @@
 /**
- * ClaudeCliStep — Check Claude CLI installation and auth status
+ * ClaudeCliStep — Claude Code authorization step in the onboarding wizard.
  *
- * Uses the existing useClaudeAuth hook to verify CLI is installed and authenticated.
+ * Shows an Authorize button immediately. Clicking it runs `claude auth login`
+ * in the background, which opens the Anthropic OAuth page in the browser.
+ * Auto-polls for auth completion and updates the UI.
  */
 
-import { ArrowLeft, ArrowRight, Check, ExternalLink, Loader2, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, Terminal } from 'lucide-react';
 
 import { useClaudeAuth } from '@renderer/shared/hooks';
+import { ipc } from '@renderer/shared/lib/ipc';
 import { cn } from '@renderer/shared/lib/utils';
 
 // ── Constants ───────────────────────────────────────────────
 
 const BUTTON_BASE =
   'inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-colors';
-
-const CLAUDE_DOCS_URL = 'https://docs.anthropic.com/en/docs/claude-code';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -23,149 +26,132 @@ interface ClaudeCliStepProps {
   onBack: () => void;
 }
 
-// ── Helper Components ────────────────────────────────────────
-
-interface InstructionMessageProps {
-  isInstalled: boolean;
-  isAuthenticated: boolean;
-}
-
-function InstructionMessage({ isInstalled, isAuthenticated }: InstructionMessageProps) {
-  if (!isInstalled) {
-    return (
-      <div className="bg-muted/50 mt-4 rounded-md p-3">
-        <p className="text-muted-foreground text-sm">
-          Please install the Claude CLI to continue. Visit the documentation for installation
-          instructions.
-        </p>
-        <a
-          className="text-primary mt-2 inline-flex items-center gap-1.5 text-sm font-medium hover:underline"
-          href={CLAUDE_DOCS_URL}
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Installation Guide
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <div className="bg-muted/50 mt-4 rounded-md p-3">
-        <p className="text-muted-foreground text-sm">
-          Run{' '}
-          <code className="text-foreground bg-muted rounded px-1.5 py-0.5 text-xs">
-            claude login
-          </code>{' '}
-          in your terminal to authenticate.
-        </p>
-      </div>
-    );
-  }
-
-  return null;
-}
-
-// ── Component ───────────────────────────────────────────────
+// ── Main Component ───────────────────────────────────────────
 
 export function ClaudeCliStep({ onNext, onBack }: ClaudeCliStepProps) {
-  const { data: auth, isLoading, refetch } = useClaudeAuth();
+  const { data: auth, refetch } = useClaudeAuth();
+  const [authorizing, setAuthorizing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const isInstalled = auth?.installed ?? false;
   const isAuthenticated = auth?.authenticated ?? false;
 
-  function handleRefresh() {
-    void refetch();
+  // Poll for auth status while authorizing
+  useEffect(() => {
+    if (!authorizing) return;
+    const interval = setInterval(() => {
+      void refetch();
+    }, 3000);
+    return () => {
+      clearInterval(interval);
+    };
+  }, [authorizing, refetch]);
+
+  // Stop polling once authenticated
+  useEffect(() => {
+    if (isAuthenticated && authorizing) {
+      setAuthorizing(false);
+    }
+  }, [isAuthenticated, authorizing]);
+
+  async function handleAuthorize() {
+    setError(null);
+    setAuthorizing(true);
+    const result = await ipc('app.launchClaudeAuth', {});
+    if (!result.success && !isAuthenticated) {
+      setError('Authorization failed. Make sure Claude Code is installed (npm install -g @anthropic-ai/claude-code).');
+      setAuthorizing(false);
+    }
   }
 
   return (
     <div className="flex flex-col items-center">
-      <h2 className="text-foreground mb-2 text-2xl font-bold">Claude CLI Check</h2>
-      <p className="text-muted-foreground mb-8 max-w-md text-center">
-        The Claude CLI is required to run autonomous coding agents. Let&apos;s verify it&apos;s
-        installed and authenticated.
+      <h2 className="mb-2 text-2xl font-bold text-foreground">Claude Code Setup</h2>
+      <p className="mb-6 max-w-md text-center text-sm text-muted-foreground">
+        ADC uses Claude Code to run autonomous coding agents. Authorize to connect your Anthropic
+        account.
       </p>
 
-      {/* Status Card */}
-      <div className="bg-card border-border mb-8 w-full max-w-md rounded-lg border p-6">
-        {isLoading ? (
-          <div className="flex items-center justify-center gap-3 py-4">
-            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
-            <span className="text-muted-foreground">Checking Claude CLI...</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Installation Status */}
-            <div className="flex items-center justify-between">
-              <span className="text-foreground text-sm font-medium">CLI Installed</span>
-              {isInstalled ? (
-                <span className="bg-success/10 text-success inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-                  <Check className="h-3.5 w-3.5" />
-                  Yes
-                </span>
-              ) : (
-                <span className="bg-destructive/10 text-destructive inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-                  <X className="h-3.5 w-3.5" />
-                  Not Found
-                </span>
-              )}
-            </div>
+      {/* Card */}
+      <div className="mb-5 w-full max-w-lg overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2.5">
+          <Terminal className="size-4 text-muted-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">
+            Claude Authorization
+          </span>
+        </div>
 
-            {/* Auth Status (only if installed) */}
-            {isInstalled ? (
-              <div className="flex items-center justify-between">
-                <span className="text-foreground text-sm font-medium">Authenticated</span>
-                {isAuthenticated ? (
-                  <span className="bg-success/10 text-success inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-                    <Check className="h-3.5 w-3.5" />
-                    Yes
-                  </span>
-                ) : (
-                  <span className="bg-warning/10 text-warning inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium">
-                    <X className="h-3.5 w-3.5" />
-                    Not Authenticated
-                  </span>
-                )}
+        <div className="space-y-4 p-5">
+          {isAuthenticated ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-5 text-success" />
+                <span className="text-sm font-bold text-card-foreground">Authorized</span>
               </div>
-            ) : null}
+              <p className="text-xs text-muted-foreground">
+                Claude Code is authorized. ADC can now launch and manage autonomous coding agents.
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Click <strong>Authorize</strong> to open the Anthropic authorization page in your
+                browser. Sign in and click Authorize to connect your account.
+              </p>
 
-            {/* Instructions based on status */}
-            <InstructionMessage isAuthenticated={isAuthenticated} isInstalled={isInstalled} />
+              {authorizing ? (
+                <div className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2.5">
+                  <Loader2 className="size-4 animate-spin text-primary" />
+                  <span className="text-xs text-primary">
+                    Browser opened — click Authorize on the Anthropic page...
+                  </span>
+                </div>
+              ) : null}
 
-            {/* Refresh button */}
-            <button
-              type="button"
-              className={cn(
-                BUTTON_BASE,
-                'border-border bg-background hover:bg-accent w-full justify-center border',
-              )}
-              onClick={handleRefresh}
-            >
-              Refresh Status
-            </button>
-          </div>
-        )}
+              {error ? (
+                <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {error}
+                </div>
+              ) : null}
+
+              <button
+                disabled={authorizing}
+                type="button"
+                className={cn(
+                  BUTTON_BASE,
+                  'w-full justify-center bg-primary text-primary-foreground',
+                  'hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-ring',
+                  'disabled:cursor-not-allowed disabled:opacity-50',
+                )}
+                onClick={() => {
+                  void handleAuthorize();
+                }}
+              >
+                <Terminal className="size-4" />
+                {authorizing ? 'Waiting...' : 'Authorize'}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Navigation */}
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <button
-          className={cn(BUTTON_BASE, 'border-border bg-background hover:bg-accent border')}
+          className={cn(BUTTON_BASE, 'border border-border bg-background hover:bg-accent')}
           type="button"
           onClick={onBack}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" />
           Back
         </button>
+
         <button
           className={cn(BUTTON_BASE, 'bg-primary text-primary-foreground hover:bg-primary/90')}
           type="button"
           onClick={onNext}
         >
           {isAuthenticated ? 'Continue' : 'Skip for Now'}
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="size-4" />
         </button>
       </div>
     </div>

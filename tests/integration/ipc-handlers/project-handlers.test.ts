@@ -11,7 +11,9 @@ import { ipcInvokeContract, type InvokeChannel } from '@shared/ipc-contract';
 import type { Project, SubProject } from '@shared/types';
 
 import type { IpcRouter } from '@main/ipc/router';
+import type { CodebaseAnalyzerService } from '@main/services/project/codebase-analyzer';
 import type { ProjectService } from '@main/services/project/project-service';
+import type { SetupPipelineService } from '@main/services/project/setup-pipeline';
 
 // ─── Mock Factory ──────────────────────────────────────────────
 
@@ -139,6 +141,8 @@ function createTestRouter(): {
 describe('Project IPC Handlers', () => {
   let projectStore: Map<string, Project>;
   let projectService: ProjectService;
+  let codebaseAnalyzer: CodebaseAnalyzerService;
+  let setupPipeline: SetupPipelineService;
   let router: IpcRouter;
   let invoke: ReturnType<typeof createTestRouter>['invoke'];
 
@@ -146,12 +150,32 @@ describe('Project IPC Handlers', () => {
     projectStore = new Map();
     projectService = createMockProjectService(projectStore);
 
+    codebaseAnalyzer = {
+      analyzeCodebase: vi.fn(() => ({
+        languages: [],
+        frameworks: [],
+        packageManager: null,
+        buildTool: null,
+        testFramework: null,
+        linter: null,
+        hasTypeScript: false,
+        hasTailwind: false,
+        nodeVersion: null,
+        monorepoTool: null,
+      })),
+    };
+
+    setupPipeline = {
+      runForExisting: vi.fn(() => Promise.resolve()),
+      runForNew: vi.fn(() => Promise.resolve()),
+    };
+
     const testRouter = createTestRouter();
     ({ router, invoke } = testRouter);
 
     // Dynamically import and register handlers
     const { registerProjectHandlers } = await import('@main/ipc/handlers/project-handlers');
-    registerProjectHandlers(router, projectService);
+    registerProjectHandlers(router, projectService, codebaseAnalyzer, setupPipeline);
   });
 
   afterEach(() => {

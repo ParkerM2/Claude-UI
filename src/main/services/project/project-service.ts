@@ -7,7 +7,7 @@
  */
 
 import { existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import { dialog } from 'electron';
 
@@ -130,13 +130,14 @@ export function createProjectService(deps: {
         ? `/api/workspaces/${encodeURIComponent(workspaceId)}/projects`
         : '/api/projects';
 
-      const result = await hubApiClient.hubGet<{ projects: Project[] }>(endpoint);
+      // Workspace endpoint returns { projects: [...] }, legacy returns raw array
+      const result = await hubApiClient.hubGet<Project[] | { projects: Project[] }>(endpoint);
 
       if (!result.ok || !result.data) {
         throw new Error(result.error ?? 'Failed to fetch projects');
       }
 
-      const { projects } = result.data;
+      const projects = Array.isArray(result.data) ? result.data : result.data.projects;
       updateCache(projects);
       return projects;
     },
@@ -146,9 +147,11 @@ export function createProjectService(deps: {
         ? `/api/workspaces/${encodeURIComponent(data.workspaceId)}/projects`
         : '/api/projects';
 
+      const projectName = data.name ?? basename(data.path);
+
       const result = await hubApiClient.hubPost<Project>(endpoint, {
         path: data.path,
-        name: data.name,
+        name: projectName,
         description: data.description,
         repoStructure: data.repoStructure,
         gitUrl: data.gitUrl,

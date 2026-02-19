@@ -19,7 +19,7 @@ import { cn } from '@renderer/shared/lib/utils';
 
 import { useWorkspaces } from '@features/workspaces';
 
-import { useAddProject, useCreateSubProject } from '../api/useProjects';
+import { useAddProject, useCreateSubProject, useSetupExisting } from '../api/useProjects';
 
 import {
   StepConfigure,
@@ -31,7 +31,7 @@ import {
 
 interface ProjectInitWizardProps {
   onClose: () => void;
-  onComplete: (projectId: string) => void;
+  onSetupStarted: (projectId: string) => void;
 }
 
 const STEP_LABELS = ['Select Folder', 'Detection', 'Sub-Repos', 'Configure', 'Confirm'] as const;
@@ -49,7 +49,7 @@ function getStepIndicatorClass(currentStep: number, stepIndex: number): string {
 
 // ── Main Component ───────────────────────────────────────────
 
-export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProps) {
+export function ProjectInitWizard({ onClose, onSetupStarted }: ProjectInitWizardProps) {
   const [step, setStep] = useState(0);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [repoType, setRepoType] = useState('single');
@@ -60,6 +60,7 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
 
   const addProject = useAddProject();
   const createSubProject = useCreateSubProject();
+  const setupExisting = useSetupExisting();
   const { data: workspaces } = useWorkspaces();
 
   const selectDirectory = useMutation({
@@ -133,7 +134,10 @@ export function ProjectInitWizard({ onClose, onComplete }: ProjectInitWizardProp
       );
     }
 
-    onComplete(project.id);
+    // Start the setup pipeline (fire-and-forget — progress tracked via events)
+    void setupExisting.mutateAsync({ projectId: project.id });
+
+    onSetupStarted(project.id);
   }
 
   return (

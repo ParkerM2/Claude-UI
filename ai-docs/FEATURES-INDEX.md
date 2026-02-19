@@ -97,7 +97,7 @@ Location: `src/main/services/`
 | **milestones** | Milestone CRUD | list, create, update, delete | - |
 | **notes** | Note CRUD | list, create, update, delete | - |
 | **planner** | Daily time blocks | listBlocks, createBlock, updateBlock | `event:planner.*` |
-| **project** | Project management. Sub-modules: `project-detector.ts`, `task-service.ts` (UUID support, metadata persistence), `task-slug.ts`, `task-spec-parser.ts`, `task-store.ts` (reads metadata, maps legacy statuses via `LEGACY_STATUS_MAP`) | list, add, remove, selectDirectory | `event:project.*` |
+| **project** | Project management. Sub-modules: `project-detector.ts`, `task-service.ts` (UUID support, metadata persistence), `task-slug.ts`, `task-spec-parser.ts`, `task-store.ts` (reads metadata, maps legacy statuses via `LEGACY_STATUS_MAP`), `codebase-analyzer.ts` (tech stack detection: languages, frameworks, package managers, build tools, test frameworks, linters, TypeScript, Tailwind, Node version, monorepo tools — sync, max 3 levels deep) | list, add, remove, selectDirectory, analyzeCodebase | `event:project.*` |
 | **settings** | App settings persistence. Sub-modules: `settings-defaults.ts`, `settings-encryption.ts`, `settings-store.ts` | get, update | `event:settings.changed` |
 | **spotify** | Spotify integration | getCurrentTrack, play, pause, skip | - |
 | **terminal** | PTY terminal management | create, sendInput, resize, kill | `event:terminal.*` |

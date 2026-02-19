@@ -152,7 +152,8 @@ describe('ProjectService', () => {
       expect(result.id).toBe('proj-new');
       expect(hubApiClient.hubPost).toHaveBeenCalledWith('/api/projects', {
         path: '/path/to/new',
-        name: undefined,
+        name: 'new',
+        description: undefined,
         repoStructure: undefined,
         gitUrl: undefined,
         defaultBranch: undefined,

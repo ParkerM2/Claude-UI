@@ -340,6 +340,19 @@
       "commit": null,
       "supersededBy": null,
       "tags": ["tracking", "infrastructure"]
+    },
+    "project-onboarding-pipeline": {
+      "title": "Project Onboarding Pipeline",
+      "status": "IN_PROGRESS",
+      "planFile": ".claude/progress/project-onboarding-pipeline-design.md",
+      "progressFile": "docs/progress/project-onboarding-pipeline-progress.md",
+      "created": "2026-02-19",
+      "statusChangedAt": "2026-02-19",
+      "branch": "feature/project-onboarding-pipeline",
+      "pr": null,
+      "commit": null,
+      "supersededBy": null,
+      "tags": ["projects", "onboarding", "setup"]
     }
   }
 }

@@ -40,6 +40,22 @@ export const appInvoke = {
     input: z.object({}),
     output: z.object({ enabled: z.boolean() }),
   },
+  'app.launchClaudeAuth': {
+    input: z.object({}),
+    output: SuccessResponseSchema,
+  },
+  'app.checkGitHubAuth': {
+    input: z.object({}),
+    output: z.object({
+      installed: z.boolean(),
+      authenticated: z.boolean(),
+      username: z.string().optional(),
+    }),
+  },
+  'app.launchGitHubAuth': {
+    input: z.object({}),
+    output: SuccessResponseSchema,
+  },
   'app.checkForUpdates': {
     input: z.object({}),
     output: z.object({

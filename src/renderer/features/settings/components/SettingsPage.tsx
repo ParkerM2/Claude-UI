@@ -16,7 +16,9 @@ import { useSettings, useUpdateSettings } from '../api/useSettings';
 
 import { AppearanceModeSection } from './AppearanceModeSection';
 import { BackgroundSettings } from './BackgroundSettings';
+import { ClaudeAuthSettings } from './ClaudeAuthSettings';
 import { ColorThemeSection } from './ColorThemeSection';
+import { GitHubAuthSettings } from './GitHubAuthSettings';
 import { HotkeySettings } from './HotkeySettings';
 import { HubSettings } from './HubSettings';
 import { OAuthProviderSettings } from './OAuthProviderSettings';
@@ -102,6 +104,22 @@ export function SettingsPage() {
           <span>English</span>
           <span className="text-muted-foreground text-xs">Only language available</span>
         </div>
+      </section>
+
+      {/* ── Claude Code ── */}
+      <section className="mb-8">
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium tracking-wider uppercase">
+          Claude Code
+        </h2>
+        <ClaudeAuthSettings />
+      </section>
+
+      {/* ── GitHub ── */}
+      <section className="mb-8">
+        <h2 className="text-muted-foreground mb-3 text-sm font-medium tracking-wider uppercase">
+          GitHub
+        </h2>
+        <GitHubAuthSettings />
       </section>
 
       {/* ── OAuth Providers ── */}

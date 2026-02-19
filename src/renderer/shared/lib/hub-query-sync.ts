@@ -24,6 +24,14 @@ const EVENT_TO_QUERY_MAP: Partial<Record<EventChannel, readonly string[]>> = {
 
 /** Wire up Hub event -> query invalidation. Returns cleanup function. */
 export function setupHubQuerySync(queryClient: QueryClient): () => void {
+  // Guard: window.api only exists in Electron (preload bridge)
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition, @typescript-eslint/strict-boolean-expressions
+  if (typeof window === 'undefined' || !window.api) {
+    return () => {
+      /* noop outside Electron */
+    };
+  }
+
   const cleanups: Array<() => void> = [];
 
   for (const [event, queryKeys] of Object.entries(EVENT_TO_QUERY_MAP)) {

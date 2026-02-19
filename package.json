@@ -142,7 +142,7 @@
       "out/**/*"
     ],
     "win": {
-      "icon": "resources/icon.png",
+      "icon": "resources/icon.ico",
       "target": [
         {
           "target": "nsis",
