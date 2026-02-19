@@ -77,18 +77,9 @@ These features have working services, IPC handlers, and contracts, but **no UI f
 
 **Needed**: Decide if workflow UI belongs in the tasks feature or gets its own page. The backend is ready.
 
-### 1d. Briefing — Not Accessible from Navigation
+### ~~1d. Briefing — Not Accessible from Navigation~~ — **RESOLVED** (2026-02-19)
 
-| Layer | Status |
-|-------|--------|
-| Service | `briefing/briefing-service.ts` — full implementation |
-| IPC | 5 channels working |
-| Route | `/briefing` exists, `BriefingPage` renders |
-| UI | **Not in sidebar** — only accessible via direct URL |
-
-**Gap**: Users have no way to discover or navigate to the briefing page. It's a hidden route.
-
-**Needed**: Add `/briefing` to sidebar `topLevelItems` array, or integrate into dashboard.
+Briefing IS in the sidebar. `Sidebar.tsx:56` has `{ label: 'Briefing', icon: Newspaper, path: ROUTES.BRIEFING }` in the `topLevelItems` array (second item). Gap analysis was incorrect.
 
 ### 1e. Calendar — No OAuth Setup Path
 
@@ -175,23 +166,23 @@ These features have working services, IPC handlers, and contracts, but **no UI f
 | `github.createIssue` | Handler exists, no UI form |
 | `app.getVersion` | Internal — could be wired to Settings > About |
 
-### 2h. Communications Event Hook Is Empty
+### ~~2h. Communications Event Hook Is Empty~~ — **RESOLVED** (2026-02-19)
 
 - **File**: `src/renderer/features/communications/hooks/useCommunicationsEvents.ts`
-- **Gap**: Hook body is entirely empty — no event subscriptions wired
-- **Impact**: MCP connection state changes won't update the Communications page
+- ~~**Gap**: Hook body is entirely empty — no event subscriptions wired~~
+- **Actual**: Hook subscribes to `event:hub.connectionChanged` and updates Slack/Discord status in the store. Was never empty — gap analysis was incorrect.
 
-### 2i. Feature Modules Not Exporting Their Internals
+### ~~2i. Feature Modules Not Exporting Their Internals~~ — **RESOLVED** (2026-02-19)
 
-These features have rich internal implementations but their barrel files under-export:
+~~These features have rich internal implementations but their barrel files under-export:~~
 
-| Feature | Has Internally | Barrel Exports |
-|---------|---------------|----------------|
-| **fitness** | 6 components, API hooks, event hook, store | Only `FitnessPage` |
-| **communications** | `useMcpTool` API hook | Not exported |
-| **productivity** | Zustand store, Spotify hooks | Store not exported |
-| **ideation** | `useIdeaEvents` hook | Not exported |
-| **roadmap** | `useMilestoneEvents` hook | Not exported |
+| Feature | Claimed Gap | Actual Status |
+|---------|------------|---------------|
+| ~~**fitness**~~ | "Only exports FitnessPage" | **Already complete** — exports 10 API hooks, queryKeys, event hook, store, and FitnessPage |
+| ~~**communications**~~ | "useMcpTool not exported" | **Fixed 2026-02-19** — `useMcpToolCall`, `useMcpConnectionState`, `useMcpConnectedServers` + types now exported |
+| ~~**productivity**~~ | "Store not exported" | **Fixed 2026-02-19** — `useProductivityStore` now exported |
+| ~~**ideation**~~ | "useIdeaEvents not exported" | **Already complete** — `useIdeaEvents` exported at `index.ts:9` |
+| ~~**roadmap**~~ | "useMilestoneEvents not exported" | **Already complete** — `useMilestoneEvents` exported at `index.ts:8` |
 
 ---
 
@@ -327,7 +318,7 @@ From `docs/plans/2026-02-14-p5-polish.md`:
 
 | # | Item | Status | Plan Exists |
 |---|------|--------|-------------|
-| 31 | Global Hub connection indicator in sidebar | **Not done** | Yes — detailed in P5 plan |
+| 31 | ~~Global Hub connection indicator in sidebar~~ | **RESOLVED** (2026-02-19) — `HubConnectionIndicator` rendered in `Sidebar.tsx:164`, fully implemented with status dots, tooltips, click-to-settings | Yes |
 | 32 | Configurable hotkeys UI (wire HotkeySettings) | **Not done** | Yes — detailed in P5 plan |
 | 33 | App launch at system startup | **Not done** | Yes — detailed in P5 plan |
 | 34 | Database migration versioning for Hub | **Not done** | Yes — detailed in P5 plan |

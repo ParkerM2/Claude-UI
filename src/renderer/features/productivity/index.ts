@@ -24,5 +24,8 @@ export {
 // Query keys
 export { calendarKeys, spotifyKeys } from './api/queryKeys';
 
+// Store
+export { useProductivityStore } from './store';
+
 // Components
 export { ProductivityPage } from './components/ProductivityPage';
