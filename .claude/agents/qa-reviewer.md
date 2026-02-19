@@ -97,6 +97,12 @@ For EVERY changed file, check against these categories:
 - [ ] No `<div>` used where `<button>` is appropriate
 
 #### D. Design System
+- [ ] **All UI uses design system primitives from `@ui`** — no raw HTML `<button>`, `<input>`, `<label>`, `<textarea>`, `<select>`
+- [ ] Buttons use `<Button>` from `@ui` with correct variant (default/secondary/destructive/outline/ghost/link)
+- [ ] Form fields use `<Input>`, `<Textarea>`, `<Label>` from `@ui`
+- [ ] Cards use `<Card>` + `<CardContent>` from `@ui`
+- [ ] Loading spinners use `<Spinner>` from `@ui` (not `<Loader2 className="animate-spin">`)
+- [ ] Dialogs use Radix `<Dialog>` from `@ui`, not custom modal divs
 - [ ] No hardcoded hex/rgb/rgba colors in utilities or components
 - [ ] Transparency uses `color-mix(in srgb, var(--token) XX%, transparent)`
 - [ ] Theme-aware Tailwind classes used (`bg-card` not `bg-gray-900`)

@@ -59,6 +59,29 @@ NEVER modify:
 - `wshobson/agents:accessibility-compliance` — WCAG/a11y compliance for interactive elements
 - `giuseppe-trisciuoglio/developer-kit:shadcn-ui` — Shadcn/Radix UI component patterns
 
+
+## Design System — MANDATORY
+
+**ALL UI components MUST use the design system primitives from `@ui`.** Never use raw HTML `<button>`, `<input>`, `<label>`, `<textarea>`, or `<select>` elements. The design system lives at `src/renderer/shared/components/ui/` and is imported via the `@ui` path alias.
+
+### Available Primitives (import from `@ui`)
+
+| Category | Components |
+|----------|-----------|
+| **Form** | `Button`, `Input`, `Textarea`, `Label` |
+| **Display** | `Badge`, `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`, `Spinner` |
+| **Layout** | `PageLayout`, `PageHeader`, `PageTitle`, `PageDescription`, `PageContent`, `PageActions`, `Typography`, `Grid`, `Stack`, `HStack`, `VStack`, `Flex`, `Container`, `Separator` |
+| **Radix** | `Dialog`, `AlertDialog`, `Select`, `DropdownMenu`, `Tooltip`, `Tabs`, `Switch`, `Checkbox`, `Toast`, `ScrollArea`, `Popover`, `Progress`, `Slider`, `Collapsible` |
+| **Form System** | `Form`, `FormField`, `FormInput`, `FormTextarea`, `FormSelect`, `FormCheckbox`, `FormSwitch`, `useForm` |
+
+### Key Rules
+- Import from `@ui` (barrel): `import { Button, Input, Card } from '@ui';`
+- Button variants: `default` (primary), `secondary`, `destructive`, `outline`, `ghost`, `link`
+- Button sizes: `default`, `sm`, `lg`, `icon`
+- Use `<Spinner />` instead of `<Loader2 className="animate-spin" />`
+- Use `<Card>` with `<CardContent>` instead of raw `<div>` wrappers
+- Use `<Label>` + `<Input>` instead of raw `<label>` + `<input>`
+
 ## Component Template (MANDATORY)
 
 ```tsx
@@ -123,7 +146,7 @@ export function TaskCard({ task, isSelected, onSelect }: TaskCardProps) {
       onClick={handleSelect}
       onKeyDown={handleKeyDown}
     >
-      <div className="flex items-start gap-2">
+      <CardContent className="flex items-start gap-2 p-3">
         <GripVertical className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
         <div className="min-w-0 flex-1">
           <h3 className="text-foreground truncate text-sm font-medium">
@@ -312,6 +335,7 @@ import { Home, Settings, ChevronRight } from 'lucide-react';
 
 Before marking work complete:
 
+- [ ] **ALL UI uses design system primitives from `@ui`** — no raw HTML button/input/label/textarea/select
 - [ ] Named function declaration for every component
 - [ ] Props interface defined with specific types
 - [ ] Component body follows order: hooks → derived state → handlers → render
@@ -327,15 +351,7 @@ Before marking work complete:
 - [ ] No array index as key
 - [ ] Max 300 lines per component file
 - [ ] `import type` for type-only imports
-- [ ] Import order: react → external → @shared → @renderer → @features → relative
-
-## Implementation Notes
-### Upcoming: shadcn/ui + Radix Migration
-The project is transitioning to shadcn/ui primitives built on Radix UI. When building new components:
-- Prefer Radix UI primitives (Dialog, Popover, DropdownMenu, Select, etc.) over custom implementations
-- Use the `jezweb/claude-skills:tailwind-v4-shadcn` skill for shadcn/Radix patterns
-- New dialogs should use Radix `Dialog`; new dropdowns should use Radix `DropdownMenu`
-- Existing custom components will be migrated incrementally
+- [ ] Import order: react → external → @shared → @renderer/@ui → @features → relative
 
 ## Handoff
 
@@ -344,6 +360,7 @@ After completing your work, notify the Team Leader with:
 COMPONENTS COMPLETE
 Components created: [list with paths]
 Components modified: [list with paths]
+Design system primitives used: [list of @ui imports]
 Hooks consumed: [list of hooks used]
 Store consumed: [list of store references]
 Ready for: QA Reviewer

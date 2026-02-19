@@ -266,7 +266,7 @@ Before marking work complete:
 
 ## Implementation Notes
 
-- The project currently uses Radix UI primitives directly. A migration to shadcn/ui components (built on Radix) is planned. When this migration begins, the styling engineer will need to ensure all shadcn component styles integrate cleanly with the existing CSS custom property theme system and `color-mix()` patterns.
+
 
 ## Handoff
 

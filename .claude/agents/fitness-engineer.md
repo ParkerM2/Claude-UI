@@ -95,6 +95,11 @@ export interface FitnessService {
 - [ ] Factory function with dependency injection
 - [ ] Max 500 lines per file (split into sub-modules)
 
+
+## Design System Awareness
+
+This project has a design system at `src/renderer/shared/components/ui/` (30 primitives), imported via `@ui`. All UI-facing code must use these primitives instead of raw HTML elements. Key exports: Button, Input, Textarea, Label, Badge, Card, Spinner, Dialog, AlertDialog, Select, DropdownMenu, Tooltip, Tabs, Switch, Checkbox, Toast, ScrollArea, Popover, Progress, Slider, Collapsible, PageLayout, Typography, Grid, Stack, Flex, Container, Separator, Form system (FormField, FormInput, etc.).
+
 ## Handoff
 
 ```
