@@ -137,7 +137,7 @@ export function GitHubAuthSettings() {
           </Button>
         ) : (
           <Button
-            className="bg-[#24292f] text-white hover:bg-[#24292f]/90"
+            className="bg-foreground text-background hover:bg-foreground/90"
             disabled={authorizing}
             onClick={handleConnect}
           >
