@@ -9,11 +9,59 @@ import { z } from 'zod';
 
 import { DataRetentionSettingsSchema } from '../data-management/schemas';
 
+// ── Theme Schemas ───────────────────────────────────────────────
+
+export const ThemeTokensSchema = z.object({
+  background: z.string(),
+  foreground: z.string(),
+  card: z.string(),
+  'card-foreground': z.string(),
+  primary: z.string(),
+  'primary-foreground': z.string(),
+  secondary: z.string(),
+  'secondary-foreground': z.string(),
+  muted: z.string(),
+  'muted-foreground': z.string(),
+  accent: z.string(),
+  'accent-foreground': z.string(),
+  destructive: z.string(),
+  'destructive-foreground': z.string(),
+  border: z.string(),
+  input: z.string(),
+  ring: z.string(),
+  sidebar: z.string(),
+  'sidebar-foreground': z.string(),
+  popover: z.string(),
+  'popover-foreground': z.string(),
+  success: z.string(),
+  'success-foreground': z.string(),
+  warning: z.string(),
+  'warning-foreground': z.string(),
+  info: z.string(),
+  'info-foreground': z.string(),
+  error: z.string(),
+  'error-light': z.string(),
+  'success-light': z.string(),
+  'warning-light': z.string(),
+  'info-light': z.string(),
+  'shadow-focus': z.string(),
+});
+
+export const CustomThemeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  light: ThemeTokensSchema,
+  dark: ThemeTokensSchema,
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
 // ── App Settings Schemas ────────────────────────────────────────
 
 export const AppSettingsSchema = z.object({
   theme: z.enum(['light', 'dark', 'system']),
   colorTheme: z.string(),
+  customThemes: z.array(CustomThemeSchema).optional(),
   language: z.string(),
   uiScale: z.number(),
   onboardingCompleted: z.boolean(),

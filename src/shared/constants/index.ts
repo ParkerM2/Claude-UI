@@ -10,5 +10,11 @@ export {
 export { ROUTES, PROJECT_VIEWS, ROUTE_PATTERNS, projectViewPath } from './routes';
 
 export { CLAUDE_MODELS, MODEL_SHORT_LABELS } from './models';
-export { COLOR_THEMES, COLOR_THEME_LABELS } from './themes';
+export {
+  THEME_TOKEN_KEYS,
+  DEFAULT_LIGHT_TOKENS,
+  DEFAULT_DARK_TOKENS,
+  COLOR_THEMES,
+  COLOR_THEME_LABELS,
+} from './themes';
 export type { ColorTheme } from './themes';
