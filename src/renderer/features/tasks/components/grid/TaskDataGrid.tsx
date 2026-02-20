@@ -13,6 +13,7 @@ import type { Task } from '@shared/types';
 import { useLooseParams } from '@renderer/shared/hooks';
 import { ipc } from '@renderer/shared/lib/ipc';
 import { cn } from '@renderer/shared/lib/utils';
+import { useThemeStore } from '@renderer/shared/stores/theme-store';
 
 import { Card, Spinner } from '@ui';
 
@@ -40,6 +41,7 @@ import { TaskDetailRow } from '../detail/TaskDetailRow';
 import { TaskFiltersToolbar } from '../TaskFiltersToolbar';
 
 import { registerAgGridModules } from './ag-grid-modules';
+import { createAdcGridTheme } from './ag-grid-theme';
 
 import type { ColDef, GridApi, GridReadyEvent, ICellRendererParams, RowClassParams } from 'ag-grid-community';
 
@@ -90,6 +92,13 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
   const toggleRowExpansion = useTaskUI((s) => s.toggleRowExpansion);
   const gridSearchText = useTaskUI((s) => s.gridSearchText);
   const filterStatuses = useTaskUI((s) => s.filterStatuses);
+
+  // Dynamic AG-Grid theme — switches color scheme with app mode
+  const themeMode = useThemeStore((s) => s.mode);
+  const gridTheme = useMemo(
+    () => createAdcGridTheme(themeMode === 'dark' || (themeMode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)),
+    [themeMode],
+  );
 
   // Grid API ref
   const gridApiRef = useRef<GridApi | null>(null);
@@ -486,6 +495,7 @@ export function TaskDataGrid({ projectId: projectIdProp }: TaskDataGridProps) {
             isFullWidthRow={isFullWidthRow}
             noRowsOverlayComponent={NoRowsOverlay}
             rowData={rowData}
+            theme={gridTheme}
             defaultColDef={{
               filter: false,
               resizable: true,
