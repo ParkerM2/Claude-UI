@@ -1,9 +1,10 @@
 import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { Page } from '@playwright/test';
 
-const SCREENSHOT_DIR = join(__dirname, '..', 'screenshots');
+const SCREENSHOT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'screenshots');
 
 // Ensure directory exists
 mkdirSync(SCREENSHOT_DIR, { recursive: true });
