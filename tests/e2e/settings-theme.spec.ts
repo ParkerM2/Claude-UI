@@ -1,17 +1,16 @@
 /**
- * E2E Tests: Settings Page & Theme Switching
+ * E2E Tests: Settings Page & Theme System
  *
  * Verifies:
  * - Settings page loads with all expected sections
  * - Theme/appearance mode selector is interactive (Light/Dark/System)
- * - Switching color theme changes data-theme attribute on <html>
  * - Dark mode toggle changes class on <html>
- * - Sidebar background adapts after theme change
- * - Card backgrounds adapt after theme change
  * - Background color changes after dark mode toggle
+ * - Navigate to theme editor via Customize Theme button
+ * - Theme editor page loads with color controls
  * - Hub settings section is visible
  * - Profile section is accessible
- * - No console errors during theme switching
+ * - No console errors during settings and theme editor navigation
  */
 
 import { test, expect } from './electron.setup';
@@ -31,7 +30,7 @@ async function navigateToSettings(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible({ timeout: 10_000 });
 }
 
-test.describe('Settings Page & Theme Switching', () => {
+test.describe('Settings Page & Theme System', () => {
   test('settings page loads with all expected sections', async ({ authenticatedWindow: page }) => {
     await navigateToSettings(page);
 
@@ -65,40 +64,6 @@ test.describe('Settings Page & Theme Switching', () => {
     await expect(lightButton).toHaveClass(/border-primary/);
   });
 
-  test('switching color theme changes data-theme attribute on html', async ({
-    authenticatedWindow: page,
-  }) => {
-    await navigateToSettings(page);
-
-    const htmlElement = page.locator('html');
-
-    // Default theme: data-theme attribute should be absent
-    const initialTheme = await htmlElement.getAttribute('data-theme');
-    // "default" theme removes the attribute entirely
-    expect(initialTheme).toBeNull();
-
-    // Scroll to Color Theme section and click the "Ocean" theme swatch
-    const oceanButton = page.getByRole('button', { name: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
-
-    // Verify data-theme changed to "ocean"
-    await expect(htmlElement).toHaveAttribute('data-theme', 'ocean');
-
-    // Switch to Forest
-    const forestButton = page.getByRole('button', { name: 'Forest' });
-    await forestButton.click();
-    await expect(htmlElement).toHaveAttribute('data-theme', 'forest');
-
-    // Switch back to default (Oscura)
-    const defaultButton = page.getByRole('button', { name: 'Oscura' });
-    await defaultButton.click();
-
-    // Default removes the attribute
-    const resetTheme = await htmlElement.getAttribute('data-theme');
-    expect(resetTheme).toBeNull();
-  });
-
   test('dark mode toggle changes class on html', async ({ authenticatedWindow: page }) => {
     await navigateToSettings(page);
 
@@ -126,59 +91,6 @@ test.describe('Settings Page & Theme Switching', () => {
     expect(hasDarkRestored).toBe(true);
   });
 
-  test('sidebar background adapts after theme change', async ({
-    authenticatedWindow: page,
-  }) => {
-    await navigateToSettings(page);
-
-    const sidebar = page.locator('aside').first();
-
-    // Capture sidebar background before theme change
-    const bgBefore = await sidebar.evaluate((el) => getComputedStyle(el).backgroundColor);
-
-    // Switch to Ocean theme
-    const oceanButton = page.getByRole('button', { name: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'ocean');
-
-    // Capture sidebar background after theme change
-    const bgAfter = await sidebar.evaluate((el) => getComputedStyle(el).backgroundColor);
-
-    // The background should have changed (different theme = different colors)
-    expect(bgAfter).not.toBe(bgBefore);
-
-    // Reset to default
-    const defaultButton = page.getByRole('button', { name: 'Oscura' });
-    await defaultButton.click();
-  });
-
-  test('card backgrounds adapt after theme change', async ({ authenticatedWindow: page }) => {
-    await navigateToSettings(page);
-
-    // Find an element with bg-card class (settings sections use border-border bg-card)
-    const cardElement = page.locator('.bg-card').first();
-
-    // Capture card background before theme change
-    const bgBefore = await cardElement.evaluate((el) => getComputedStyle(el).backgroundColor);
-
-    // Switch to Lime theme
-    const limeButton = page.getByRole('button', { name: 'Lime' });
-    await limeButton.scrollIntoViewIfNeeded();
-    await limeButton.click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'lime');
-
-    // Capture card background after theme change
-    const bgAfter = await cardElement.evaluate((el) => getComputedStyle(el).backgroundColor);
-
-    // The card background should differ between themes
-    expect(bgAfter).not.toBe(bgBefore);
-
-    // Reset to default
-    const defaultButton = page.getByRole('button', { name: 'Oscura' });
-    await defaultButton.click();
-  });
-
   test('background color changes after dark mode toggle', async ({
     authenticatedWindow: page,
   }) => {
@@ -203,6 +115,46 @@ test.describe('Settings Page & Theme Switching', () => {
     // Restore dark mode
     const darkButton = page.getByRole('button', { name: 'Dark' });
     await darkButton.click();
+  });
+
+  test('navigate to theme editor via Customize Theme button', async ({
+    authenticatedWindow: page,
+  }) => {
+    await navigateToSettings(page);
+
+    // The Color Theme section should show a "Customize Theme" button
+    const customizeButton = page.getByRole('button', { name: 'Customize Theme' });
+    await customizeButton.scrollIntoViewIfNeeded();
+    await expect(customizeButton).toBeVisible();
+
+    // Click the button to navigate to theme editor
+    await customizeButton.click();
+
+    // Verify URL changed to the theme editor route
+    await page.waitForURL(/\/settings\/themes/, { timeout: 10_000 });
+  });
+
+  test('theme editor page loads with color controls', async ({ authenticatedWindow: page }) => {
+    // Navigate directly to theme editor
+    await navigateToSettings(page);
+
+    const customizeButton = page.getByRole('button', { name: 'Customize Theme' });
+    await customizeButton.scrollIntoViewIfNeeded();
+    await customizeButton.click();
+    await page.waitForURL(/\/settings\/themes/, { timeout: 10_000 });
+
+    // Theme editor should have color section headings (Base, Brand, Semantic, etc.)
+    // Wait for the page to fully load
+    const bodyText = await page.locator('body').innerText();
+    expect(bodyText.length).toBeGreaterThan(0);
+
+    // Verify at least one color control section is visible
+    // The editor organizes controls in sections like "Base", "Card & Surface", "Brand"
+    const hasColorSection =
+      (await page.getByText('Base').isVisible().catch(() => false)) ||
+      (await page.getByText('Brand').isVisible().catch(() => false)) ||
+      (await page.getByText('Semantic').isVisible().catch(() => false));
+    expect(hasColorSection).toBe(true);
   });
 
   test('hub settings section is visible', async ({ authenticatedWindow: page }) => {
@@ -238,20 +190,13 @@ test.describe('Settings Page & Theme Switching', () => {
     await expect(addProfileButton).toBeVisible();
   });
 
-  test('no console errors during theme switching', async ({ authenticatedWindow: page }) => {
+  test('no console errors during settings and theme editor navigation', async ({
+    authenticatedWindow: page,
+  }) => {
     const collector = createConsoleCollector(page);
 
+    // Navigate to settings
     await navigateToSettings(page);
-
-    // Perform multiple theme switches to exercise theme system
-    const oceanButton = page.getByRole('button', { name: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'ocean');
-
-    const forestButton = page.getByRole('button', { name: 'Forest' });
-    await forestButton.click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'forest');
 
     // Toggle dark/light mode
     const lightButton = page.getByRole('button', { name: 'Light' });
@@ -262,15 +207,15 @@ test.describe('Settings Page & Theme Switching', () => {
     await darkButton.click();
     await expect(page.locator('html')).toHaveClass(/dark/);
 
-    // Switch to another theme while changing modes
-    const retroButton = page.getByRole('button', { name: 'Retro' });
-    await retroButton.scrollIntoViewIfNeeded();
-    await retroButton.click();
-    await expect(page.locator('html')).toHaveAttribute('data-theme', 'retro');
+    // Navigate to theme editor
+    const customizeButton = page.getByRole('button', { name: 'Customize Theme' });
+    await customizeButton.scrollIntoViewIfNeeded();
+    await customizeButton.click();
+    await page.waitForURL(/\/settings\/themes/, { timeout: 10_000 });
 
-    // Reset to default
-    const defaultButton = page.getByRole('button', { name: 'Oscura' });
-    await defaultButton.click();
+    // Navigate back (browser back or sidebar)
+    await page.goBack();
+    await page.waitForURL(/\/settings/, { timeout: 10_000 });
 
     // Assert no unexpected console errors occurred
     assertNoConsoleErrors(collector);

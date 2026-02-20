@@ -279,7 +279,7 @@ After auth + onboarding, the user sees the main app shell:
 |-----------|------|---------|
 | `RootLayout` | `src/renderer/app/layouts/RootLayout.tsx` | Shell: sidebar + topbar + outlet + notifications |
 | `Sidebar` | `src/renderer/app/layouts/Sidebar.tsx` | Nav items (top-level + project-scoped), collapsible |
-| `TopBar` | `src/renderer/app/layouts/TopBar.tsx` | Project tabs + add button (utility buttons moved to TitleBar; CommandBar replaced by AssistantWidget) |
+| `TopBar` | `src/renderer/app/layouts/TopBar.tsx` | Project tabs + add button (utility buttons moved to TitleBar; AssistantWidget provides global assistant access) |
 | `ProjectTabBar` | `src/renderer/app/layouts/ProjectTabBar.tsx` | Horizontal tab bar for switching between open projects |
 | `UserMenu` | `src/renderer/app/layouts/UserMenu.tsx` | Avatar + logout dropdown in sidebar footer (above HubConnectionIndicator) |
 | `AssistantWidget` | `src/renderer/features/assistant/components/AssistantWidget.tsx` | Floating chat widget (Ctrl+J toggle), renders WidgetFab + WidgetPanel |
@@ -569,7 +569,7 @@ Hub broadcasts WebSocket event
 - `src/renderer/features/tasks/store.ts` — UI state (expanded rows, filters)
 - `src/main/ipc/handlers/task-handlers.ts` — all task IPC handlers + transforms
 - `src/renderer/features/tasks/components/grid/ag-grid-modules.ts` — AG-Grid module registration
-- `src/renderer/features/tasks/components/grid/ag-grid-theme.css` — custom theme
+- `src/renderer/features/tasks/components/grid/ag-grid-modules.ts` — AG-Grid modules + Theming API config
 
 ---
 
@@ -867,7 +867,7 @@ Email integration:
 | **Background & Startup** | `BackgroundSettings.tsx` | `settings.update`, `app.setOpenAtLogin` | Open at login, minimize to tray |
 | **Profiles** | `ProfileSection.tsx` | `settings.getProfiles`, `settings.createProfile`, `settings.updateProfile`, `settings.deleteProfile`, `settings.setDefaultProfile` | Claude API profiles (name, API key, model) |
 | **Workspaces** | `WorkspacesTab.tsx` | `workspaces.list`, `workspaces.create`, `workspaces.update`, `workspaces.delete` | Workspace CRUD |
-| **Color Theme** | inline in `SettingsPage` | `settings.update` | 7 color themes (default, dusk, lime, ocean, retro, neo, forest) |
+| **Color Theme** | `ColorThemeSection.tsx` | `settings.update` | Shows active theme name + "Customize Theme" button → navigates to Theme Editor (`/settings/themes`) |
 | **UI Scale** | inline in `SettingsPage` | `settings.update` | 75%–150% scaling slider |
 | **Font Family** | inline in `SettingsPage` | `settings.update` | System/Inter/JetBrains Mono/Fira Code/SF Mono |
 | **Font Size** | inline in `SettingsPage` | `settings.update` | 12px–20px slider |
@@ -879,6 +879,60 @@ Email integration:
 | **Voice** | `VoiceSettings` (from `@features/voice`) | `voice.getConfig`, `voice.updateConfig`, `voice.checkPermission` | Enable/disable voice, language, input mode, synthesis test |
 | **Storage Management** | `StorageManagementSection.tsx` (+ `StorageUsageBar.tsx`, `RetentionControl.tsx`) | `dataManagement.getRegistry`, `dataManagement.getUsage`, `dataManagement.getRetention`, `dataManagement.updateRetention`, `dataManagement.clearStore`, `dataManagement.runCleanup`, `dataManagement.exportData`, `dataManagement.importData`, `event:dataManagement.cleanupComplete` | Storage usage bar, per-store retention policies, auto-cleanup toggle, manual cleanup, data export/import |
 | **About** | inline | — | Version number (v0.1.0) |
+
+### 23.0 Theme Editor Page
+
+**Route**: `/settings/themes`
+**Component**: `ThemeEditorPage`
+**File**: `src/renderer/features/settings/components/theme-editor/ThemeEditorPage.tsx`
+
+**Navigation**: Settings → "Customize Theme" button → Theme Editor Page
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ [← Back to Settings]  [Light/Dark]  [Import CSS] [Export]    │
+│                                          [Apply]  [Save]     │
+├────────────────────────────┬─────────────────────────────────┤
+│ Color Controls (left)      │  Live Preview (right)           │
+│                            │                                 │
+│ ▸ Base                     │  ┌─────────────────────────┐   │
+│   - Background             │  │ Isolated preview with   │   │
+│   - Foreground             │  │ current token values    │   │
+│   - Border                 │  │                         │   │
+│ ▸ Card & Surface           │  │ Card, buttons, inputs,  │   │
+│   - Card                   │  │ badges, sidebar mock    │   │
+│   - Card Foreground        │  └─────────────────────────┘   │
+│ ▸ Brand                    │                                 │
+│   - Primary                │                                 │
+│   - Secondary              │                                 │
+│ ▸ Semantic                 │                                 │
+│   - Success/Warning/Error  │                                 │
+│ ▸ Controls                 │                                 │
+│ ▸ Sidebar                  │                                 │
+│ ▸ Utility                  │                                 │
+├────────────────────────────┴─────────────────────────────────┤
+│ Saved Themes: [Theme A] [Theme B] [+]                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Data flow**:
+- Custom themes inject CSS vars at runtime via `document.documentElement.style.setProperty('--token', value)`
+- `data-theme` attribute set to UUID of the custom theme (not a name like "ocean")
+- Default theme: `data-theme` is removed; base `:root`/`.dark` vars apply
+- Themes saved to localStorage as JSON objects with all 33 token values
+- CSS import parses `:root { --token: value; }` blocks; CSS export generates them
+
+**Key files**:
+- `src/renderer/features/settings/components/theme-editor/ThemeEditorPage.tsx`
+- `src/renderer/features/settings/components/theme-editor/ColorControl.tsx`
+- `src/renderer/features/settings/components/theme-editor/ColorSection.tsx`
+- `src/renderer/features/settings/components/theme-editor/ThemePreview.tsx`
+- `src/renderer/features/settings/components/theme-editor/SavedThemesBar.tsx`
+- `src/renderer/features/settings/components/theme-editor/CssImportDialog.tsx`
+- `src/renderer/features/settings/components/theme-editor/css-parser.ts`
+- `src/renderer/features/settings/components/theme-editor/css-exporter.ts`
+- `src/renderer/features/settings/components/theme-editor/token-sections.ts`
+- `src/renderer/features/settings/components/ColorThemeSection.tsx` (settings page entry point)
 
 ### 23.1 Profile Save Flow (When User Clicks "Save" on a Profile)
 
@@ -1248,7 +1302,7 @@ Complete list of all registered IPC channels by domain:
 | G-7 | ~~Project delete confirmation~~ | Low | Projects | **RESOLVED** (2026-02-18) — `ProjectEditDialog.tsx` uses `ConfirmDialog` with `variant="destructive"`, `title="Delete Project"`, wired to `removeProject.mutate()`. |
 | G-8 | ~~Workspace assignment in project wizard~~ | Low | Projects | **RESOLVED** (2026-02-18) — `StepConfigure.tsx` renders workspace `<select>`, `ProjectInitWizard.tsx` passes `workspaceId` to `addProject.mutateAsync()`, handler persists it. |
 | G-9 | ~~Device selector unused~~ | Low | Settings | **RESOLVED** (2026-02-18) — `DeviceSelector.tsx` imported by `WorkspaceEditor.tsx` as "Host Device" selector when editing a workspace (Settings > Workspaces > Edit). |
-| G-10 | ~~CommandBar not wired~~ | Low | Navigation | **RESOLVED** (2026-02-18) — `CommandBar.tsx` imports `useSendCommand` + `useAssistantEvents` from `@features/assistant`, calls `ipc('assistant.sendCommand')`, subscribes to 4 assistant IPC events. Supports Ctrl+K, history, voice input. |
+| G-10 | ~~CommandBar not wired~~ | Low | Navigation | **RESOLVED** (2026-02-18) — CommandBar replaced by AssistantWidget (floating chat, Ctrl+J toggle). CommandBar.tsx removed as orphan (2026-02-20). |
 | G-11 | ~~Calendar feature no OAuth~~ | Low | Calendar | **RESOLVED** (2026-02-18) — OAuth IPC channels added (`oauth.authorize`, `oauth.isAuthenticated`, `oauth.revoke`). OAuthConnectionStatus component provides Connect/Disconnect buttons per provider in Settings → OAuth Providers. |
 | G-12 | ~~Voice feature no UI~~ | Low | Voice | **RESOLVED** (2026-02-18) — VoiceSettings mounted in Settings page (after Hotkeys, before About). ScreenshotButton mounted in TopBar. |
 | G-13 | ~~`/assistant` route defined but not wired~~ | Low | Navigation | **RESOLVED** (2026-02-15) — Assistant is now globally accessible via floating `AssistantWidget` (Ctrl+J toggle). Route constant remains for potential future full-page view. |

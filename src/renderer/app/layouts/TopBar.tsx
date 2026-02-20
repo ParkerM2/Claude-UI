@@ -3,7 +3,7 @@
  *
  * Displays open project tabs and an "Add project" button.
  * Utility buttons (screenshot, health, hub status) live in TitleBar.
- * The AssistantWidget (chat popup) replaces the former CommandBar.
+ * The AssistantWidget (chat popup) provides global assistant access.
  */
 
 import { useNavigate } from '@tanstack/react-router';
