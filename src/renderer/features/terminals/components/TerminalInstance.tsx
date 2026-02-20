@@ -22,6 +22,45 @@ interface TerminalInstanceProps {
   isActive: boolean;
 }
 
+/**
+ * Reads a CSS custom property from the document root and returns its value.
+ * Falls back to the provided default if the property is not set.
+ */
+function getCssVar(name: string, fallback: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+/**
+ * Builds an xterm.js ITheme from the active CSS custom properties.
+ * This ensures the terminal adapts to whichever color theme is active.
+ */
+function getTerminalTheme(): Record<string, string> {
+  return {
+    background: getCssVar('--background', '#0a0a0a'),
+    foreground: getCssVar('--foreground', '#e4e4e7'),
+    cursor: getCssVar('--foreground', '#e4e4e7'),
+    cursorAccent: getCssVar('--background', '#0a0a0a'),
+    selectionBackground: getCssVar('--muted', '#3f3f46'),
+    black: getCssVar('--secondary', '#18181b'),
+    red: getCssVar('--destructive', '#f87171'),
+    green: getCssVar('--success', '#4ade80'),
+    yellow: getCssVar('--warning', '#facc15'),
+    blue: getCssVar('--info', '#60a5fa'),
+    magenta: getCssVar('--accent-foreground', '#c084fc'),
+    cyan: getCssVar('--info', '#22d3ee'),
+    white: getCssVar('--foreground', '#e4e4e7'),
+    brightBlack: getCssVar('--muted-foreground', '#52525b'),
+    brightRed: getCssVar('--error', '#fca5a5'),
+    brightGreen: getCssVar('--success', '#86efac'),
+    brightYellow: getCssVar('--warning', '#fde68a'),
+    brightBlue: getCssVar('--info', '#93c5fd'),
+    brightMagenta: getCssVar('--accent-foreground', '#d8b4fe'),
+    brightCyan: getCssVar('--info', '#67e8f9'),
+    brightWhite: getCssVar('--card-foreground', '#fafafa'),
+  };
+}
+
 export function TerminalInstance({ session, isActive }: TerminalInstanceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -32,29 +71,7 @@ export function TerminalInstance({ session, isActive }: TerminalInstanceProps) {
     if (!containerRef.current) return;
 
     const term = new XTerm({
-      theme: {
-        background: '#0a0a0a',
-        foreground: '#e4e4e7',
-        cursor: '#e4e4e7',
-        cursorAccent: '#0a0a0a',
-        selectionBackground: '#3f3f46',
-        black: '#18181b',
-        red: '#f87171',
-        green: '#4ade80',
-        yellow: '#facc15',
-        blue: '#60a5fa',
-        magenta: '#c084fc',
-        cyan: '#22d3ee',
-        white: '#e4e4e7',
-        brightBlack: '#52525b',
-        brightRed: '#fca5a5',
-        brightGreen: '#86efac',
-        brightYellow: '#fde68a',
-        brightBlue: '#93c5fd',
-        brightMagenta: '#d8b4fe',
-        brightCyan: '#67e8f9',
-        brightWhite: '#fafafa',
-      },
+      theme: getTerminalTheme(),
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
       cursorBlink: true,

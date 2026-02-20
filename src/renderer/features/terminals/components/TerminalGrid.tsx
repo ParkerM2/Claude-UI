@@ -102,18 +102,18 @@ export function TerminalGrid() {
       </div>
 
       {/* Terminal content area */}
-      <div className="relative flex-1 bg-[#0a0a0a]">
+      <div className="relative flex-1 bg-background">
         {terminals?.map((term) => (
           <TerminalInstance key={term.id} isActive={term.id === activeTerminalId} session={term} />
         ))}
 
         {/* Empty state */}
         {(terminals === undefined || terminals.length === 0) && (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-zinc-500">
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <TerminalIcon className="h-8 w-8" />
             <p className="text-sm">No terminal open</p>
             <button
-              className="rounded-md bg-zinc-800 px-3 py-1.5 text-sm text-zinc-300 hover:bg-zinc-700"
+              className="rounded-md bg-secondary px-3 py-1.5 text-sm text-secondary-foreground hover:bg-accent"
               onClick={handleCreateTerminal}
             >
               Create Terminal

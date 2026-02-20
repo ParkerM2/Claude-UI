@@ -381,6 +381,43 @@ import type { ColorTheme } from '@shared/constants';
 
 When adding a theme, update BOTH `globals.css` AND `src/shared/constants/themes.ts`.
 
+### Terminal Theme Integration (xterm.js)
+
+The terminal uses CSS custom properties at runtime to adapt to the active theme:
+
+```typescript
+function getCssVar(name: string, fallback: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function getTerminalTheme(): Record<string, string> {
+  return {
+    background: getCssVar('--background', '#0a0a0a'),
+    foreground: getCssVar('--foreground', '#e4e4e7'),
+    cursor: getCssVar('--foreground', '#e4e4e7'),
+    // ... maps ANSI colors to semantic CSS vars (--destructive, --success, --warning, --info, etc.)
+  };
+}
+```
+
+Key file: `src/renderer/features/terminals/components/TerminalInstance.tsx`
+
+### GitHub / Brand Buttons (Theme-Adaptive)
+
+For branded buttons that need a dark appearance on light backgrounds and vice versa, use `bg-foreground text-background` instead of hardcoded hex like `bg-[#24292f]`:
+
+```tsx
+// CORRECT — adapts to any theme
+<Button className="bg-foreground text-background hover:bg-foreground/90">
+  <GitHubIcon className="size-4" />
+  Connect GitHub
+</Button>
+
+// WRONG — hardcoded GitHub brand color
+<Button className="bg-[#24292f] text-white hover:bg-[#24292f]/90">
+```
+
 ## Security — Secret Storage Pattern
 
 All secrets (OAuth credentials, webhook secrets, API keys) MUST be encrypted using Electron's `safeStorage` API.
