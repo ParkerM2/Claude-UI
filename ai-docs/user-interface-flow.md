@@ -1099,8 +1099,8 @@ Visual pipeline page showing a task's journey through 7 workflow steps as a conn
 
 Complete list of all registered IPC channels by domain:
 
-### Auth (5 channels)
-`auth.login` · `auth.register` · `auth.me` · `auth.logout` · `auth.refresh`
+### Auth (6 channels)
+`auth.login` · `auth.register` · `auth.me` · `auth.logout` · `auth.refresh` · `auth.restore`
 
 ### Agents (7)
 `agents.list` · `agents.listAll` · `agents.stop` · `agents.pause` · `agents.resume` · `agents.getQueueStatus` · `agents.getTokenUsage`
