@@ -527,6 +527,47 @@ For branded buttons that need a dark appearance on light backgrounds and vice ve
 <Button className="bg-[#24292f] text-white hover:bg-[#24292f]/90">
 ```
 
+## AG-Grid Theming Pattern
+
+AG-Grid v35 uses the quartz theme with design-system token overrides. The theme CSS lives at `src/renderer/features/tasks/components/grid/ag-grid-theme.css` and is imported in `globals.css`.
+
+### How It Works
+
+1. **Base theme**: `ag-theme-quartz` (imported from `ag-grid-community/styles/`)
+2. **Override class**: `ag-theme-claude` stacked with quartz for compound specificity
+3. **CSS variables**: `--ag-*` properties mapped to design system tokens (`var(--card)`, `var(--foreground)`, etc.)
+4. **Interactive states**: Use `color-mix()` for hover/selection (NEVER hardcode hex/rgb)
+
+### CSS Selector Pattern
+
+```css
+/* Compound selector ensures overrides beat quartz defaults */
+.ag-theme-quartz.ag-theme-claude {
+  --ag-background-color: var(--card);
+  --ag-foreground-color: var(--foreground);
+  --ag-header-background-color: var(--muted);
+  --ag-row-hover-color: color-mix(in srgb, var(--accent) 50%, transparent);
+  /* ... */
+}
+```
+
+### Component Usage
+
+```tsx
+<Card className="border-border bg-card min-h-0 flex-1 overflow-hidden rounded-lg border">
+  <div className={cn('ag-theme-quartz ag-theme-claude h-full')}>
+    <AgGridReact ... />
+  </div>
+</Card>
+```
+
+### Rules
+- **ALWAYS** use compound selector `.ag-theme-quartz.ag-theme-claude` (not `.ag-theme-claude` alone)
+- **ALWAYS** wrap grid in `<Card>` from `@ui` for visual containment
+- **NEVER** hardcode colors in the theme CSS -- use `var()` and `color-mix()` only
+- **ALWAYS** add `?? []` fallback when passing `task.subtasks` to child components
+- **ALWAYS** add `?? ''` fallback when accessing `task.description` in search/filter logic
+
 ## Security — Secret Storage Pattern
 
 All secrets (OAuth credentials, webhook secrets, API keys) MUST be encrypted using Electron's `safeStorage` API.
