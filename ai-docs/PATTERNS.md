@@ -545,8 +545,10 @@ AG-Grid v35 uses the quartz theme with design-system token overrides. Theme conf
 
 1. **Base theme**: `ag-theme-quartz` (imported from `ag-grid-community/styles/`)
 2. **Override class**: `ag-theme-claude` stacked with quartz for compound specificity
-3. **Theming API**: AG-Grid's `themeQuartz.withParams()` maps `--ag-*` params to design system CSS vars at runtime
-4. **Custom themes**: Because AG-Grid reads CSS custom properties, custom themes applied via `setProperty()` are automatically picked up
+3. **Theming API**: AG-Grid's `themeQuartz.withPart(colorSchemeDark).withParams()` maps theme params to design system CSS vars at runtime (defined in `ag-grid-theme.ts`)
+4. **Custom themes**: Because AG-Grid reads CSS custom properties, custom themes applied via `setProperty()` are automatically picked up — no AG-Grid-specific reconfiguration needed
+5. **Interactive states**: Use `color-mix()` for hover/selection (NEVER hardcode hex/rgb)
+6. **Dark mode**: `colorSchemeDark` part handles native scrollbar/control rendering
 
 ### Component Usage
 
@@ -562,6 +564,7 @@ AG-Grid v35 uses the quartz theme with design-system token overrides. Theme conf
 - **ALWAYS** use compound selector `.ag-theme-quartz.ag-theme-claude` (not `.ag-theme-claude` alone)
 - **ALWAYS** wrap grid in `<Card>` from `@ui` for visual containment
 - **NEVER** hardcode colors in the theme CSS -- use `var()` and `color-mix()` only
+- **ALWAYS** set `--ag-data-background-color` alongside `--ag-background-color` — omitting it causes white viewport in dark mode
 - **ALWAYS** add `?? []` fallback when passing `task.subtasks` to child components
 - **ALWAYS** add `?? ''` fallback when accessing `task.description` in search/filter logic
 

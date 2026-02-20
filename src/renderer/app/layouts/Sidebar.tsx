@@ -163,7 +163,9 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="bg-card flex h-full w-full flex-col overflow-hidden">
+    <aside
+      className="bg-sidebar text-sidebar-foreground flex h-full w-full flex-col overflow-hidden"
+    >
       {/* Header */}
       <div className="border-border flex h-12 items-center justify-between border-b px-3">
         {sidebarCollapsed ? null : (

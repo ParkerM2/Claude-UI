@@ -388,10 +388,10 @@ Location: `src/renderer/app/layouts/`
 
 | Layout | Purpose |
 |--------|---------|
-| `RootLayout.tsx` | Root shell: renders TitleBar at top, then `react-resizable-panels` (Group/Panel/Separator) for sidebar + content layout with localStorage persistence. Sidebar panel is collapsible and syncs with layout store. |
+| `RootLayout.tsx` | Root shell: renders TitleBar at top, then `react-resizable-panels` (Group/Panel/Separator) for sidebar + content layout with localStorage persistence. Sidebar panel is collapsible (collapses to 56px, minSize 160px, maxSize 300px) and syncs with layout store. |
 | `TitleBar.tsx` | Custom frameless window title bar (32px). Drag region for window movement, utility buttons (screenshot, health indicator, hub status) separated by vertical divider from minimize/maximize/close window controls. Uses `window.*` IPC channels. |
 | `TitleBarScreenshot.tsx` | Camera icon button that captures the primary screen via `screen.listSources` + `screen.capture` IPC channels and copies PNG to clipboard. Shows checkmark feedback for 1.5s on success. |
-| `Sidebar.tsx` | Navigation sidebar (fills its parent panel, collapse state driven by layout store) |
+| `Sidebar.tsx` | Navigation sidebar (fills its parent panel, collapse state driven by layout store). Uses `bg-sidebar text-sidebar-foreground` theme variables. |
 | `TopBar.tsx` | Top bar with project tabs + add button |
 | `ProjectTabBar.tsx` | Horizontal tab bar for switching between open projects |
 | `UserMenu.tsx` | Avatar + logout dropdown in sidebar footer |
