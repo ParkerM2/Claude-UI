@@ -33,7 +33,7 @@ Location: `src/renderer/features/`
 | **communications** | Slack/Discord integration | SlackPanel, DiscordPanel | MCP tools |
 | **dashboard** | Home dashboard | DashboardPage, TodayView, DailyStats, ActiveAgents | multiple |
 | **fitness** | Health/fitness tracking | FitnessPage, WorkoutLog, MetricsChart | `fitness.*` |
-| **github** | GitHub integration | GitHubPage, PRList, IssueList | `github.*` |
+| **github** | GitHub integration | GitHubPage, GitHubConnectionStatus, PRList, IssueList, NotificationList, PrDetailModal, IssueCreateForm; **Hooks**: useGitHubAuthStatus, useGitHubRepos, useGitHubPrs, useGitHubIssues, useGitHubNotifications, useCreateIssue, useGitHubEvents | `github.*` |
 | **hub-setup** | Pre-auth Hub configuration wizard | HubSetupPage, validateHubUrl | `hub.getConfig`, `hub.connect` |
 | **ideation** | Idea capture & tracking | IdeationPage, IdeaEditForm | `ideas.*` |
 | **insights** | Analytics dashboard | InsightsPage, MetricsCards, Charts | `insights.*` |
