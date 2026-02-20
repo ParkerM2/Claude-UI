@@ -2,17 +2,22 @@
  * Settings route group — Settings page
  */
 
-import { type AnyRoute, createRoute } from '@tanstack/react-router';
+import {
+  type AnyRoute,
+  createRoute,
+  lazyRouteComponent,
+} from '@tanstack/react-router';
 
 import { ROUTES } from '@shared/constants';
-
-import { SettingsPage } from '@features/settings';
 
 export function createSettingsRoutes(appLayoutRoute: AnyRoute) {
   const settingsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.SETTINGS,
-    component: SettingsPage,
+    component: lazyRouteComponent(
+      () => import('@features/settings'),
+      'SettingsPage',
+    ),
   });
 
   return [settingsRoute] as const;

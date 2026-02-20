@@ -8,8 +8,34 @@
 4. Add hooks: `api/use<Name>.ts`
 5. Add components: `components/<Name>.tsx`
 6. Add IPC event handler if needed: `hooks/use<Name>Events.ts`
-7. Add route in `src/renderer/app/router.tsx`
+7. Add lazy-loaded route in `src/renderer/app/routes/<group>.routes.ts` (see "Route Lazy Loading" below)
 8. Add nav item in `src/renderer/app/layouts/Sidebar.tsx`
+
+## Route Lazy Loading
+
+All page-level route components use `lazyRouteComponent` from `@tanstack/react-router` for code splitting. This reduces the initial bundle size by loading page components on-demand.
+
+```typescript
+import { type AnyRoute, createRoute, lazyRouteComponent } from '@tanstack/react-router';
+
+// Lazy-load via dynamic import + named export
+const dashboardRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/dashboard',
+  component: lazyRouteComponent(
+    () => import('@features/dashboard'),
+    'DashboardPage',
+  ),
+});
+```
+
+**Rules:**
+- Use `lazyRouteComponent(() => import('@features/<name>'), 'ComponentName')` for all page routes
+- The second argument is the **named export** from the feature barrel (`index.ts`)
+- Layout routes (`AuthGuard`, `RootLayout`) stay eagerly loaded — they render on every page
+- Redirect-only routes (no `component`) don't need lazy loading
+- The router provides `defaultPendingComponent` (spinner) and `defaultErrorComponent` (error card) as fallbacks
+- Auth page wrappers (which inject `useNavigate` callbacks) are eagerly loaded but wrap lazy page components with `<Suspense>`
 
 ## Adding a New IPC Channel
 
