@@ -1,17 +1,21 @@
 /**
- * ProjectListPage — Shows all projects with add/remove controls
+ * ProjectListPage — Projects dashboard with search, metrics, and rich project cards
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useNavigate } from '@tanstack/react-router';
-import { FolderOpen, Layers, Loader2, Pencil, Sparkles, Trash2, Wand2 } from 'lucide-react';
+import { FolderOpen, Layers, Pencil, Search, Sparkles, Trash2, Wand2 } from 'lucide-react';
 
 import { PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 import type { Project, RepoType } from '@shared/types';
 
-import { cn, formatRelativeTime } from '@renderer/shared/lib/utils';
+import { formatRelativeTime } from '@renderer/shared/lib/utils';
 import { useLayoutStore, useToastStore } from '@renderer/shared/stores';
+
+import { Badge, Button, Card, CardContent, Input, Separator, Spinner } from '@ui';
+
+import { useAllTasks } from '@features/tasks';
 
 import { useProjects, useRemoveProject, useSubProjects } from '../api/useProjects';
 
@@ -19,10 +23,10 @@ import { CreateProjectWizard } from './CreateProjectWizard';
 import { ProjectEditDialog } from './ProjectEditDialog';
 import { ProjectInitWizard } from './ProjectInitWizard';
 
-function repoStructureBadgeClass(structure: RepoType): string {
-  if (structure === 'monorepo') return 'bg-info/10 text-info';
-  if (structure === 'multi-repo') return 'bg-warning/10 text-warning';
-  return 'bg-muted text-muted-foreground';
+function repoStructureBadgeVariant(structure: RepoType): 'default' | 'secondary' | 'outline' {
+  if (structure === 'monorepo') return 'default';
+  if (structure === 'multi-repo') return 'secondary';
+  return 'outline';
 }
 
 function repoStructureLabel(structure: RepoType): string {
@@ -31,92 +35,147 @@ function repoStructureLabel(structure: RepoType): string {
   return 'single';
 }
 
-interface ProjectRowProps {
+interface ProjectCardProps {
   project: Project;
+  taskCount: number;
   onEdit: (e: React.MouseEvent | React.KeyboardEvent, project: Project) => void;
   onOpen: (projectId: string) => void;
   onRemove: (e: React.MouseEvent | React.KeyboardEvent, projectId: string) => void;
 }
 
-function ProjectRow({ project, onEdit, onOpen, onRemove }: ProjectRowProps) {
+function ProjectCard({ project, taskCount, onEdit, onOpen, onRemove }: ProjectCardProps) {
   const { data: subProjects } = useSubProjects(project.id);
   const subCount = subProjects?.length ?? 0;
 
   return (
-    <button
-      className={cn(
-        'border-border flex w-full items-center justify-between rounded-lg border p-4',
-        'hover:bg-accent text-left transition-colors',
-      )}
+    <Card
+      className="hover:bg-accent/50 cursor-pointer transition-colors"
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(project.id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen(project.id);
+        }
+      }}
     >
-      <div className="flex items-center gap-3">
-        <FolderOpen className="text-muted-foreground h-5 w-5" />
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-medium">{project.name}</p>
-            {project.repoStructure ? (
-              <span
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-xs font-medium',
-                  repoStructureBadgeClass(project.repoStructure),
-                )}
-              >
-                {repoStructureLabel(project.repoStructure)}
-              </span>
-            ) : null}
-            {subCount > 0 ? (
-              <span className="text-muted-foreground flex items-center gap-1 text-xs">
-                <Layers className="h-3 w-3" />
-                {String(subCount)} sub-project{subCount === 1 ? '' : 's'}
-              </span>
-            ) : null}
+      <CardContent className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <FolderOpen className="text-muted-foreground h-5 w-5 shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="truncate font-medium">{project.name}</p>
+              {project.repoStructure ? (
+                <Badge variant={repoStructureBadgeVariant(project.repoStructure)}>
+                  {repoStructureLabel(project.repoStructure)}
+                </Badge>
+              ) : null}
+              {subCount > 0 ? (
+                <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <Layers className="h-3 w-3" />
+                  {String(subCount)} sub-project{subCount === 1 ? '' : 's'}
+                </span>
+              ) : null}
+            </div>
+            <p className="text-muted-foreground truncate text-xs">{project.path}</p>
           </div>
-          <p className="text-muted-foreground text-xs">{project.path}</p>
         </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-muted-foreground text-xs">
-          {formatRelativeTime(project.updatedAt)}
-        </span>
-        <span
-          aria-label={`Edit ${project.name}`}
-          className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1"
-          role="button"
-          tabIndex={0}
-          onClick={(e) => onEdit(e, project)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') onEdit(e, project);
-          }}
-        >
-          <Pencil className="h-4 w-4" />
-        </span>
-        <span
-          aria-label={`Remove ${project.name}`}
-          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
-          role="button"
-          tabIndex={0}
-          onClick={(e) => onRemove(e, project.id)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') onRemove(e, project.id);
-          }}
-        >
-          <Trash2 className="h-4 w-4" />
-        </span>
-      </div>
-    </button>
+        <div className="flex items-center gap-3">
+          {taskCount > 0 ? (
+            <Badge variant="outline">
+              {String(taskCount)} task{taskCount === 1 ? '' : 's'}
+            </Badge>
+          ) : null}
+          <span className="text-muted-foreground text-xs whitespace-nowrap">
+            {formatRelativeTime(project.updatedAt)}
+          </span>
+          <span
+            aria-label={`Edit ${project.name}`}
+            className="text-muted-foreground hover:bg-accent hover:text-foreground rounded p-1"
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(e, project);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onEdit(e, project);
+              }
+            }}
+          >
+            <Pencil className="h-4 w-4" />
+          </span>
+          <span
+            aria-label={`Remove ${project.name}`}
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded p-1"
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove(e, project.id);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                onRemove(e, project.id);
+              }
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 export function ProjectListPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
+  const { data: allTasks } = useAllTasks();
   const removeProject = useRemoveProject();
   const { addProjectTab } = useLayoutStore();
   const { addToast } = useToastStore();
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [createWizardOpen, setCreateWizardOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredProjects = useMemo(() => {
+    if (!projects) return [];
+    const query = searchQuery.toLowerCase().trim();
+    if (query.length === 0) return projects;
+    return projects.filter(
+      (p) => p.name.toLowerCase().includes(query) || p.path.toLowerCase().includes(query),
+    );
+  }, [projects, searchQuery]);
+
+  const metrics = useMemo(() => {
+    const tasks = allTasks ?? [];
+    const totalProjects = projects?.length ?? 0;
+    const activeTasks = tasks.filter((t) => ['in_progress', 'running'].includes(t.status)).length;
+    const activeAgents = tasks.filter(
+      (t) =>
+        t.status === 'running' &&
+        Boolean((t.metadata as Record<string, unknown> | undefined)?.agentName),
+    ).length;
+    return { totalProjects, activeTasks, activeAgents };
+  }, [allTasks, projects]);
+
+  const taskCountByProject = useMemo(() => {
+    const tasks = allTasks ?? [];
+    const counts = new Map<string, number>();
+    for (const task of tasks) {
+      const pid = task.projectId;
+      if (pid) {
+        counts.set(pid, (counts.get(pid) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }, [allTasks]);
 
   function handleOpenProject(projectId: string) {
     addProjectTab(projectId);
@@ -150,61 +209,115 @@ export function ProjectListPage() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+        <Spinner className="h-6 w-6" />
       </div>
     );
   }
 
-  return (
-    <div className="mx-auto max-w-3xl p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Projects</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className={cn(
-              'border-border text-foreground flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium',
-              'hover:bg-accent transition-colors',
-            )}
-            onClick={() => setWizardOpen(true)}
-          >
-            <Wand2 className="h-4 w-4" />
-            Init Wizard
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'border-border text-foreground flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium',
-              'hover:bg-accent transition-colors',
-            )}
-            onClick={() => setCreateWizardOpen(true)}
-          >
-            <Sparkles className="h-4 w-4" />
-            New Project
-          </button>
-        </div>
-      </div>
+  const hasProjects = (projects?.length ?? 0) > 0;
+  const hasFilteredResults = filteredProjects.length > 0;
 
-      {projects && projects.length > 0 ? (
-        <div className="space-y-2">
-          {projects.map((project) => (
-            <ProjectRow
-              key={project.id}
-              project={project}
-              onEdit={handleEditProject}
-              onOpen={handleOpenProject}
-              onRemove={handleRemoveProject}
-            />
-          ))}
-        </div>
-      ) : (
+  function renderProjectList() {
+    if (!hasProjects) {
+      return (
         <div className="border-border rounded-lg border border-dashed p-12 text-center">
           <FolderOpen className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
           <p className="text-lg font-medium">No projects yet</p>
           <p className="text-muted-foreground mt-1 text-sm">Add a project folder to get started</p>
         </div>
-      )}
+      );
+    }
 
+    if (!hasFilteredResults) {
+      return (
+        <div className="border-border rounded-lg border border-dashed p-12 text-center">
+          <Search className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+          <p className="text-lg font-medium">No matching projects</p>
+          <p className="text-muted-foreground mt-1 text-sm">Try a different search term</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-3">
+        {filteredProjects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            taskCount={taskCountByProject.get(project.id) ?? 0}
+            onEdit={handleEditProject}
+            onOpen={handleOpenProject}
+            onRemove={handleRemoveProject}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl p-8">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Projects</h1>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setWizardOpen(true)}>
+            <Wand2 className="h-4 w-4" />
+            Init Wizard
+          </Button>
+          <Button variant="outline" onClick={() => setCreateWizardOpen(true)}>
+            <Sparkles className="h-4 w-4" />
+            New Project
+          </Button>
+        </div>
+      </div>
+
+      {/* Search */}
+      {hasProjects ? (
+        <div className="relative mb-4">
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+          <Input
+            className="pl-10"
+            placeholder="Search projects by name or path..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      ) : null}
+
+      {/* Metrics */}
+      <div className="mb-6 grid grid-cols-3 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Total Projects
+            </p>
+            <p className="mt-1 text-2xl font-bold">{String(metrics.totalProjects)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Active Tasks
+            </p>
+            <p className="mt-1 text-2xl font-bold">{String(metrics.activeTasks)}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+              Active Agents
+            </p>
+            <p className="mt-1 text-2xl font-bold">{String(metrics.activeAgents)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Separator className="mb-6" />
+
+      {/* Project list */}
+      {renderProjectList()}
+
+      {/* Wizards and dialogs */}
       {wizardOpen ? (
         <ProjectInitWizard
           onClose={() => setWizardOpen(false)}
@@ -218,10 +331,7 @@ export function ProjectListPage() {
         onProjectCreated={handleProjectCreated}
       />
 
-      <ProjectEditDialog
-        project={editingProject}
-        onClose={() => setEditingProject(null)}
-      />
+      <ProjectEditDialog project={editingProject} onClose={() => setEditingProject(null)} />
     </div>
   );
 }

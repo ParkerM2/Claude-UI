@@ -27,7 +27,7 @@ Location: `src/renderer/features/`
 |---------|---------|----------------|--------------|
 | **agents** | Agent process management | AgentDashboard, AgentControls, AgentLogs | `agents.*` |
 | **alerts** | Reminder/alert system | AlertsPage, AlertForm, AlertList | `alerts.*` |
-| **assistant** | Built-in Claude assistant | AssistantWidget (WidgetFab, WidgetPanel, WidgetInput, WidgetMessageArea), CommandBar (TopBar) | `assistant.*` |
+| **assistant** | Built-in Claude assistant | AssistantWidget (WidgetFab, WidgetPanel, WidgetInput, WidgetMessageArea) | `assistant.*` |
 | **auth** | User authentication | LoginPage (TanStack Form + Zod), RegisterPage (TanStack Form + Zod), AuthGuard, UserMenu (in layouts); **Hooks**: useForceLogout (IPC-driven logout on token refresh failure) | `auth.*` |
 | **changelog** | Project changelog viewer | ChangelogPage, ChangelogEntry | `changelog.*` |
 | **communications** | Slack/Discord integration | SlackPanel, DiscordPanel | MCP tools |
@@ -42,8 +42,8 @@ Location: `src/renderer/features/`
 | **productivity** | Productivity widgets | CalendarWidget, SpotifyWidget | `calendar.*`, `spotify.*` |
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager, ProjectEditDialog, GitStatusIndicator (branch name + clean/changed badge in project list) | `projects.*`, `git.status` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
-| **settings** | App settings | SettingsPage, ProfileFormModal (TanStack Form + Zod + FormSelect), HubSettings (ConnectionForm uses TanStack Form + Zod), OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings (SlackForm + GitHubForm use TanStack Form + Zod), StorageManagementSection, StorageUsageBar, RetentionControl | `settings.*`, `oauth.*`, `dataManagement.*` |
-| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid (AG-Grid v35 wrapped in `<Card>` from `@ui`; themed via compound `.ag-theme-quartz.ag-theme-claude` CSS class with design-system token overrides in `ag-grid-theme.css`), TaskFiltersToolbar, TaskDetailRow (subtasks use `?? []` fallback for Hub data), TaskStatusBadge, CreateTaskDialog, PlanFeedbackDialog, TaskResultView (status/duration/cost/log summary for completed tasks), CreatePrDialog (GitHub PR creation post-task-completion); **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations (useStartPlanning, useStartExecution, useReplanWithFeedback, useKillAgent, useRestartFromCheckpoint), useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*` (incl. `agent.replanWithFeedback`), `qa.*`, `git.createPr`, `event:agent.orchestrator.*`, `event:qa.*` |
+| **settings** | App settings | SettingsPage, ProfileFormModal (TanStack Form + Zod + FormSelect), HubSettings (ConnectionForm uses TanStack Form + Zod), OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings (SlackForm + GitHubForm use TanStack Form + Zod), StorageManagementSection, StorageUsageBar, RetentionControl, ColorThemeSection; **Theme Editor** (`components/theme-editor/`, 10 files): ThemeEditorPage, ColorControl, ColorSection, ThemePreview, SavedThemesBar, CssImportDialog, css-parser.ts, css-exporter.ts, token-sections.ts — Route: `/settings/themes` | `settings.*`, `oauth.*`, `dataManagement.*` |
+| **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid (AG-Grid v35 wrapped in `<Card>` from `@ui`; themed via compound `.ag-theme-quartz.ag-theme-claude` CSS class with design-system token overrides via AG-Grid Theming API in `ag-grid-modules.ts`), TaskFiltersToolbar, TaskDetailRow (subtasks use `?? []` fallback for Hub data), TaskStatusBadge, CreateTaskDialog, PlanFeedbackDialog, TaskResultView (status/duration/cost/log summary for completed tasks), CreatePrDialog (GitHub PR creation post-task-completion); **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations (useStartPlanning, useStartExecution, useReplanWithFeedback, useKillAgent, useRestartFromCheckpoint), useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*` (incl. `agent.replanWithFeedback`), `qa.*`, `git.createPr`, `event:agent.orchestrator.*`, `event:qa.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
 | **merge** | Branch merge workflow | MergeConfirmModal, MergePreviewPanel, ConflictResolver, FileDiffViewer (`@git-diff-view/react`) | `merge.*` |
@@ -388,11 +388,11 @@ Location: `src/renderer/app/layouts/`
 
 | Layout | Purpose |
 |--------|---------|
-| `RootLayout.tsx` | Root shell: renders TitleBar at top, then `react-resizable-panels` (Group/Panel/Separator) for sidebar + content layout with localStorage persistence. Sidebar panel is collapsible (collapses to 56px, minSize 160px so labels are visible when expanded, maxSize 300px) and syncs with layout store. |
-| `TitleBar.tsx` | Custom frameless window title bar (32px). Drag region for window movement + minimize/maximize/close controls. Uses `window.*` IPC channels. |
+| `RootLayout.tsx` | Root shell: renders TitleBar at top, then `react-resizable-panels` (Group/Panel/Separator) for sidebar + content layout with localStorage persistence. Sidebar panel is collapsible (collapses to 56px, minSize 160px, maxSize 300px) and syncs with layout store. |
+| `TitleBar.tsx` | Custom frameless window title bar (32px). Drag region for window movement, utility buttons (screenshot, health indicator, hub status) separated by vertical divider from minimize/maximize/close window controls. Uses `window.*` IPC channels. |
+| `TitleBarScreenshot.tsx` | Camera icon button that captures the primary screen via `screen.listSources` + `screen.capture` IPC channels and copies PNG to clipboard. Shows checkmark feedback for 1.5s on success. |
 | `Sidebar.tsx` | Navigation sidebar (fills its parent panel, collapse state driven by layout store). Uses `bg-sidebar text-sidebar-foreground` theme variables. |
-| `TopBar.tsx` | Top bar with assistant command input |
-| `CommandBar.tsx` | Global command palette (Cmd+K) |
+| `TopBar.tsx` | Top bar with project tabs + add button |
 | `ProjectTabBar.tsx` | Horizontal tab bar for switching between open projects |
 | `UserMenu.tsx` | Avatar + logout dropdown in sidebar footer |
 
@@ -474,7 +474,6 @@ Location: `src/renderer/shared/stores/`
 | Store | Purpose |
 |-------|---------|
 | `assistant-widget-store.ts` | Floating assistant widget open/close state (`useAssistantWidgetStore`) |
-| `command-bar-store.ts` | CommandBar processing state, input history, toast visibility |
 | `layout-store.ts` | Sidebar state, active project, project tabs, resizable panel layout (persisted via `react-resizable-panels` `useDefaultLayout`) |
 | `theme-store.ts` | Dark/light mode, color theme, UI scale |
 | `toast-store.ts` | Toast notification queue (max 3, auto-dismiss 5s) |
@@ -541,7 +540,7 @@ ADC/
 │   │   │   │   └── ui/          # 30 design system primitives (shadcn/ui pattern, barrel: @ui)
 │   │   │   ├── hooks/           # 6 shared hooks (+ useLooseParams)
 │   │   │   ├── lib/             # Utilities (cn, ipc helper)
-│   │   │   └── stores/          # 5 Zustand stores + ThemeHydrator
+│   │   │   └── stores/          # 4 Zustand stores + ThemeHydrator
 │   │   └── styles/globals.css   # Theme tokens + Tailwind
 │   └── shared/                  # Shared between main + renderer
 │       ├── ipc-contract.ts      # Thin re-export from ipc/ barrel

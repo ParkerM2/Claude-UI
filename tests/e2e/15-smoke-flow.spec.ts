@@ -9,8 +9,8 @@
  * 2. All top-level sidebar items (Dashboard -> Briefing -> ... -> Comms)
  * 3. Projects list via TopBar "+" button, open first project if available
  * 4. Project-scoped sidebar items (Tasks -> Terminals -> ... -> Insights)
- * 5. Settings via sidebar footer, theme switching
- * 6. Keyboard shortcuts (Ctrl+K CommandBar, Ctrl+J Assistant)
+ * 5. Settings via sidebar footer, theme mode toggle
+ * 6. Keyboard shortcuts (Ctrl+J Assistant)
  * 7. Return to Dashboard
  * 8. Assert clean console
  */
@@ -83,36 +83,21 @@ test.describe('Full Smoke Flow', () => {
     await expect(page).toHaveURL(/\/settings/, { timeout: 10_000 });
     await assertPageLoaded(page);
 
-    // Switch to Ocean theme
-    const oceanButton = page.locator('button', { hasText: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
+    // Toggle light mode and back to confirm settings UI works
+    await page.locator('button', { hasText: 'Light' }).click();
+    const lightClasses = await page.locator('html').getAttribute('class');
+    expect(lightClasses).toContain('light');
 
-    const dataThemeAfterOcean = await page.locator('html').getAttribute('data-theme');
-    expect(dataThemeAfterOcean).toBe('ocean');
-    await takeScreenshot(page, 'smoke-settings-ocean');
-
-    // Reset to Oscura (default)
-    const oscuraButton = page.locator('button', { hasText: 'Oscura' });
-    await oscuraButton.scrollIntoViewIfNeeded();
-    await oscuraButton.click();
-
-    const dataThemeAfterReset = await page.locator('html').getAttribute('data-theme');
-    expect(dataThemeAfterReset).toBeNull();
+    await page.locator('button', { hasText: 'Dark' }).click();
+    const darkClasses = await page.locator('html').getAttribute('class');
+    expect(darkClasses).toContain('dark');
+    await takeScreenshot(page, 'smoke-settings-dark');
 
     // ── Step 6: Keyboard shortcuts ───────────────────────────────────
 
-    // Navigate away from Settings first so CommandBar input is accessible
+    // Navigate away from Settings first
     await navigateToSidebarItem(page, 'Dashboard');
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
-
-    // Ctrl+K — focus CommandBar
-    const commandInput = page.getByPlaceholder('Ask Claude... (notes, tasks, reminders)');
-    await page.keyboard.press('Control+k');
-    await expect(commandInput).toBeFocused({ timeout: 5_000 });
-
-    // Escape — dismiss CommandBar focus
-    await page.keyboard.press('Escape');
 
     // Ctrl+J — open Assistant panel
     await page.keyboard.press('Control+j');

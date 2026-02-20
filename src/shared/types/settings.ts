@@ -35,10 +35,51 @@ export interface AppSettings {
   dataRetention?: DataRetentionSettings;
 }
 
+/** All CSS variable tokens that make up a color theme */
+export interface ThemeTokens {
+  background: string;
+  foreground: string;
+  card: string;
+  'card-foreground': string;
+  primary: string;
+  'primary-foreground': string;
+  secondary: string;
+  'secondary-foreground': string;
+  muted: string;
+  'muted-foreground': string;
+  accent: string;
+  'accent-foreground': string;
+  destructive: string;
+  'destructive-foreground': string;
+  border: string;
+  input: string;
+  ring: string;
+  sidebar: string;
+  'sidebar-foreground': string;
+  popover: string;
+  'popover-foreground': string;
+  success: string;
+  'success-foreground': string;
+  warning: string;
+  'warning-foreground': string;
+  info: string;
+  'info-foreground': string;
+  error: string;
+  'error-light': string;
+  'success-light': string;
+  'warning-light': string;
+  'info-light': string;
+  'shadow-focus': string;
+}
+
+/** A saved custom theme with light and dark palettes */
 export interface CustomTheme {
   id: string;
   name: string;
-  css: string;
+  light: ThemeTokens;
+  dark: ThemeTokens;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Profile {

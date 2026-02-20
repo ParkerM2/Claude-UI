@@ -1,7 +1,7 @@
 /**
  * Sidebar -- Navigation sidebar
  *
- * Shows nav items for the active project's views.
+ * Shows nav items grouped into collapsible "Personal" and "Development" sections.
  * Collapses to icon-only mode.
  */
 
@@ -12,6 +12,7 @@ import {
   Bot,
   Briefcase,
   CalendarDays,
+  ChevronDown,
   Dumbbell,
   Globe,
   GitBranch,
@@ -23,6 +24,7 @@ import {
   Newspaper,
   PanelLeft,
   PanelLeftClose,
+  Plus,
   ScrollText,
   Settings,
   StickyNote,
@@ -35,6 +37,8 @@ import { ROUTES, PROJECT_VIEWS, projectViewPath } from '@shared/constants';
 import { HubConnectionIndicator } from '@renderer/shared/components/HubConnectionIndicator';
 import { cn } from '@renderer/shared/lib/utils';
 import { useLayoutStore } from '@renderer/shared/stores';
+
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@ui';
 
 import { UserMenu } from './UserMenu';
 
@@ -51,8 +55,8 @@ const INACTIVE_STYLE = 'text-muted-foreground';
 const ACTIVE_STYLE = 'bg-accent text-foreground font-medium';
 const COLLAPSED_STYLE = 'justify-center px-0';
 
-/** Top-level nav items (not project-scoped) */
-const topLevelItems: NavItem[] = [
+/** Personal nav items (not project-scoped) */
+const personalItems: NavItem[] = [
   { label: 'Dashboard', icon: Home, path: ROUTES.DASHBOARD },
   { label: 'Briefing', icon: Newspaper, path: ROUTES.BRIEFING },
   { label: 'My Work', icon: Briefcase, path: ROUTES.MY_WORK },
@@ -64,8 +68,8 @@ const topLevelItems: NavItem[] = [
   { label: 'Comms', icon: Globe, path: ROUTES.COMMUNICATIONS },
 ];
 
-/** Project-scoped nav items */
-const projectItems: NavItem[] = [
+/** Development nav items (project-scoped) */
+const developmentItems: NavItem[] = [
   { label: 'Tasks', icon: ListTodo, path: PROJECT_VIEWS.TASKS },
   { label: 'Terminals', icon: Terminal, path: PROJECT_VIEWS.TERMINALS },
   { label: 'Agents', icon: Bot, path: PROJECT_VIEWS.AGENTS },
@@ -96,6 +100,68 @@ export function Sidebar() {
     void navigate({ to: projectViewPath(activeProjectId, path) });
   }
 
+  function renderPersonalItem(item: NavItem) {
+    const isActive =
+      currentPath === item.path || currentPath.startsWith(`${item.path}/`);
+    return (
+      <button
+        key={item.path}
+        title={sidebarCollapsed ? item.label : undefined}
+        className={cn(
+          NAV_BASE_STYLE,
+          NAV_HOVER_STYLE,
+          isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
+          sidebarCollapsed && COLLAPSED_STYLE,
+        )}
+        onClick={() => void navigate({ to: item.path })}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        {sidebarCollapsed ? null : <span>{item.label}</span>}
+      </button>
+    );
+  }
+
+  function renderDevelopmentItem(item: NavItem) {
+    const isActive =
+      activeProjectId !== null && currentPath.endsWith(`/${item.path}`);
+    return (
+      <button
+        key={item.path}
+        disabled={activeProjectId === null}
+        title={sidebarCollapsed ? item.label : undefined}
+        className={cn(
+          NAV_BASE_STYLE,
+          NAV_HOVER_STYLE,
+          'disabled:pointer-events-none disabled:opacity-40',
+          isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
+          sidebarCollapsed && COLLAPSED_STYLE,
+        )}
+        onClick={() => handleNav(item.path)}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        {sidebarCollapsed ? null : <span>{item.label}</span>}
+      </button>
+    );
+  }
+
+  function renderAddProjectButton() {
+    return (
+      <button
+        title={sidebarCollapsed ? 'Add Project' : undefined}
+        className={cn(
+          NAV_BASE_STYLE,
+          NAV_HOVER_STYLE,
+          INACTIVE_STYLE,
+          sidebarCollapsed && COLLAPSED_STYLE,
+        )}
+        onClick={() => void navigate({ to: ROUTES.PROJECTS })}
+      >
+        <Plus className="h-4 w-4 shrink-0" />
+        {sidebarCollapsed ? null : <span>Add Project</span>}
+      </button>
+    );
+  }
+
   return (
     <aside
       className="bg-sidebar text-sidebar-foreground flex h-full w-full flex-col overflow-hidden"
@@ -119,56 +185,46 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 p-2">
-        {/* Top-level items */}
-        {topLevelItems.map((item) => {
-          const isActive =
-            currentPath === item.path || currentPath.startsWith(`${item.path}/`);
-          return (
-            <button
-              key={item.path}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={cn(
-                NAV_BASE_STYLE,
-                NAV_HOVER_STYLE,
-                isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
-                sidebarCollapsed && COLLAPSED_STYLE,
-              )}
-              onClick={() => void navigate({ to: item.path })}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {sidebarCollapsed ? null : <span>{item.label}</span>}
-            </button>
-          );
-        })}
+      <nav className="flex-1 overflow-y-auto p-2">
+        {sidebarCollapsed ? (
+          <>
+            {/* Collapsed: icon-only items without section headers */}
+            <div className="space-y-1">
+              {personalItems.map(renderPersonalItem)}
+            </div>
+            <div className="my-1">{renderAddProjectButton()}</div>
+            <div className="space-y-1">
+              {developmentItems.map(renderDevelopmentItem)}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Personal section */}
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider">
+                <span>Personal</span>
+                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=closed]:-rotate-90" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {personalItems.map(renderPersonalItem)}
+              </CollapsibleContent>
+            </Collapsible>
 
-        {/* Divider */}
-        <div className="border-border my-1 border-t" />
+            {/* Add Project button */}
+            <div className="my-1">{renderAddProjectButton()}</div>
 
-        {/* Project views */}
-        {projectItems.map((item) => {
-          const isActive =
-            activeProjectId !== null &&
-            currentPath.endsWith(`/${item.path}`);
-          return (
-            <button
-              key={item.path}
-              disabled={activeProjectId === null}
-              title={sidebarCollapsed ? item.label : undefined}
-              className={cn(
-                NAV_BASE_STYLE,
-                NAV_HOVER_STYLE,
-                'disabled:pointer-events-none disabled:opacity-40',
-                isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
-                sidebarCollapsed && COLLAPSED_STYLE,
-              )}
-              onClick={() => handleNav(item.path)}
-            >
-              <item.icon className="h-4 w-4 shrink-0" />
-              {sidebarCollapsed ? null : <span>{item.label}</span>}
-            </button>
-          );
-        })}
+            {/* Development section */}
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider">
+                <span>Development</span>
+                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=closed]:-rotate-90" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {developmentItems.map(renderDevelopmentItem)}
+              </CollapsibleContent>
+            </Collapsible>
+          </>
+        )}
       </nav>
 
       {/* Footer: User menu + Hub indicator + Settings */}

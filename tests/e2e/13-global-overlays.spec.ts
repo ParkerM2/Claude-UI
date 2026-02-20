@@ -1,68 +1,13 @@
 /**
  * Global overlays + keyboard shortcuts E2E tests.
  *
- * Verifies CommandBar (top bar input, Ctrl+K focus, Escape dismiss)
- * and AssistantWidget (FAB, panel open/close, chat input, Ctrl+J toggle).
+ * Verifies AssistantWidget (FAB, panel open/close, chat input, Ctrl+J toggle).
  */
 
 import { expect, test } from './electron.setup';
 import { assertNoConsoleErrors, createConsoleCollector } from './helpers/console-collector';
 
 import type { ConsoleCollector } from './helpers/console-collector';
-
-// ─── CommandBar ──────────────────────────────────────────────────
-
-test.describe('CommandBar', () => {
-  let collector: ConsoleCollector;
-
-  test.beforeEach(async ({ authenticatedWindow }) => {
-    collector = createConsoleCollector(authenticatedWindow);
-    // Ensure we are on the dashboard (authenticated layout loaded)
-    await expect(authenticatedWindow).toHaveURL(/\/dashboard/, { timeout: 15_000 });
-    await expect(authenticatedWindow.locator('aside').first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test('CommandBar visible in TopBar', async ({ authenticatedWindow }) => {
-    // The CommandBar renders an input with placeholder "Ask Claude..."
-    const commandInput = authenticatedWindow.getByPlaceholder('Ask Claude... (notes, tasks, reminders)');
-    await expect(commandInput).toBeVisible({ timeout: 10_000 });
-  });
-
-  test('CommandBar accepts text', async ({ authenticatedWindow }) => {
-    const commandInput = authenticatedWindow.getByPlaceholder('Ask Claude... (notes, tasks, reminders)');
-    await commandInput.click();
-    await commandInput.fill('hello test');
-    await expect(commandInput).toHaveValue('hello test');
-  });
-
-  test('CommandBar Escape clears and blurs', async ({ authenticatedWindow }) => {
-    const commandInput = authenticatedWindow.getByPlaceholder('Ask Claude... (notes, tasks, reminders)');
-    await commandInput.click();
-    await commandInput.fill('some text to clear');
-    await expect(commandInput).toHaveValue('some text to clear');
-
-    // Press Escape — should clear the input value and blur it
-    await authenticatedWindow.keyboard.press('Escape');
-    await expect(commandInput).toHaveValue('');
-  });
-
-  test('Ctrl+K focuses CommandBar', async ({ authenticatedWindow }) => {
-    const commandInput = authenticatedWindow.getByPlaceholder('Ask Claude... (notes, tasks, reminders)');
-
-    // Click somewhere else first to ensure CommandBar is not focused
-    await authenticatedWindow.locator('aside').first().click();
-
-    // Press Ctrl+K
-    await authenticatedWindow.keyboard.press('Control+k');
-
-    // The CommandBar input should now be focused
-    await expect(commandInput).toBeFocused({ timeout: 5_000 });
-  });
-
-  test('no unexpected console errors during CommandBar interactions', async () => {
-    assertNoConsoleErrors(collector);
-  });
-});
 
 // ─── Assistant Widget ────────────────────────────────────────────
 

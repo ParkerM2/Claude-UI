@@ -470,25 +470,35 @@ Every theme block must define all tokens. Template:
 
 ### Theme Switching Flow
 
+Custom themes inject CSS variables at runtime via `document.documentElement.style.setProperty('--token', value)`.
+
 ```
-User selects theme → useThemeStore.setColorTheme('ocean')
+User selects custom theme → useThemeStore.setColorTheme(themeId)
   → Zustand state updates
-  → applyColorTheme() sets data-theme="ocean" on <html>
-  → CSS [data-theme="ocean"] variables take effect
+  → applyColorTheme() sets data-theme="{uuid}" on <html>
+  → applyCustomTokens() calls setProperty() for all 33 CSS tokens
   → All Tailwind classes (bg-primary, etc.) automatically use new values
   → color-mix() expressions automatically use new values
+  → AG-Grid reads the same CSS vars automatically via its Theming API
+
+User selects default theme → useThemeStore.setColorTheme('default')
+  → removeProperty() clears all custom CSS var overrides
+  → data-theme attribute is removed from <html>
+  → Base :root / .dark CSS variables take effect
 ```
 
-### Constants for Theme Names
+### Custom Theme Token Injection
 
-```typescript
-import { COLOR_THEMES } from '@shared/constants';
-import type { ColorTheme } from '@shared/constants';
+Custom themes inject CSS variables at runtime via `document.documentElement.style.setProperty('--token', value)`.
+The theme store's `applyCustomTokens()` function applies all 33 tokens when a custom theme is selected.
+To clear custom tokens: `removeProperty('--token')` for each key.
+AG-Grid reads the same CSS vars automatically via its Theming API configuration in `ag-grid-modules.ts`.
 
-// Available: 'default' | 'dusk' | 'lime' | 'ocean' | 'retro' | 'neo' | 'forest'
-```
-
-When adding a theme, update BOTH `globals.css` AND `src/shared/constants/themes.ts`.
+The Theme Editor page (`/settings/themes`) provides:
+- Color pickers organized in sections (Base, Card & Surface, Brand, Semantic, Controls, Sidebar, Utility)
+- Live preview with isolated CSS scope
+- CSS import/export for theme portability
+- Save/load named themes to local storage
 
 ### Terminal Theme Integration (xterm.js)
 
@@ -529,51 +539,16 @@ For branded buttons that need a dark appearance on light backgrounds and vice ve
 
 ## AG-Grid Theming Pattern
 
-AG-Grid v35 uses the quartz theme with design-system token overrides. The theme CSS lives at `src/renderer/features/tasks/components/grid/ag-grid-theme.css` and is imported in `globals.css`.
+AG-Grid v35 uses the quartz theme with design-system token overrides. Theme configuration is defined programmatically via the AG-Grid Theming API in `src/renderer/features/tasks/components/grid/ag-grid-modules.ts`, reading CSS custom properties at runtime.
 
 ### How It Works
 
 1. **Base theme**: `ag-theme-quartz` (imported from `ag-grid-community/styles/`)
 2. **Override class**: `ag-theme-claude` stacked with quartz for compound specificity
-3. **CSS variables**: `--ag-*` properties mapped to design system tokens (`var(--card)`, `var(--foreground)`, etc.)
-4. **Interactive states**: Use `color-mix()` for hover/selection (NEVER hardcode hex/rgb)
-5. **Dark mode**: `.dark .ag-theme-quartz.ag-theme-claude` sets `color-scheme: dark` for native scrollbars/controls
-6. **Explicit fallbacks**: `.ag-root-wrapper` and `.ag-body-viewport` get direct `background-color` overrides in case CSS variable inheritance doesn't cascade through AG-Grid's internal DOM
-
-### Variable Categories
-
-The theme CSS defines variables across these groups:
-- **Core**: `--ag-background-color`, `--ag-foreground-color`, `--ag-data-background-color`, `--ag-border-color`, `--ag-secondary-border-color`
-- **Header**: `--ag-header-background-color`, `--ag-header-foreground-color`, `--ag-header-cell-hover-background-color`
-- **Rows**: `--ag-odd-row-background-color`, `--ag-row-hover-color`, `--ag-row-border-color`, `--ag-selected-row-background-color`, `--ag-range-selection-background-color`
-- **Controls**: `--ag-input-focus-border-color`, `--ag-input-border-color`, `--ag-checkbox-checked-color`, `--ag-toggle-button-on-background-color`
-- **Text**: `--ag-secondary-foreground-color`, `--ag-disabled-foreground-color`
-- **Panels/Menus**: `--ag-control-panel-background-color`, `--ag-menu-background-color`, `--ag-panel-background-color`, `--ag-modal-overlay-background-color`, `--ag-tooltip-background-color`
-
-**Critical**: `--ag-data-background-color` MUST be set explicitly — it controls the data viewport area and defaults to white if omitted, breaking dark mode.
-
-### CSS Selector Pattern
-
-```css
-/* Compound selector ensures overrides beat quartz defaults */
-.ag-theme-quartz.ag-theme-claude {
-  --ag-background-color: var(--card);
-  --ag-foreground-color: var(--foreground);
-  --ag-data-background-color: var(--card);
-  --ag-header-background-color: var(--muted);
-  --ag-row-hover-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  /* ... */
-}
-
-/* Dark mode: native scrollbar + control dark rendering */
-.dark .ag-theme-quartz.ag-theme-claude {
-  color-scheme: dark;
-}
-
-/* Explicit background fallbacks for AG-Grid internal DOM */
-.ag-theme-quartz.ag-theme-claude .ag-root-wrapper { background-color: var(--card); }
-.ag-theme-quartz.ag-theme-claude .ag-body-viewport { background-color: var(--card); }
-```
+3. **Theming API**: AG-Grid's `themeQuartz.withPart(colorSchemeDark).withParams()` maps theme params to design system CSS vars at runtime (defined in `ag-grid-theme.ts`)
+4. **Custom themes**: Because AG-Grid reads CSS custom properties, custom themes applied via `setProperty()` are automatically picked up — no AG-Grid-specific reconfiguration needed
+5. **Interactive states**: Use `color-mix()` for hover/selection (NEVER hardcode hex/rgb)
+6. **Dark mode**: `colorSchemeDark` part handles native scrollbar/control rendering
 
 ### Component Usage
 

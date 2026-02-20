@@ -2,8 +2,8 @@
  * E2E: Settings Page — Full sweep
  *
  * Verifies all Settings page sections render correctly,
- * theme mode toggling works (light/dark), color theme switching
- * applies data-theme attributes, and interactive controls are visible.
+ * theme mode toggling works (light/dark), Customize Theme button
+ * navigates to theme editor, and interactive controls are visible.
  */
 
 import { test, expect } from './electron.setup';
@@ -69,48 +69,17 @@ test.describe('Settings Page', () => {
     await expect(sectionHeading).toBeVisible();
   });
 
-  test('Click Ocean theme swatch sets data-theme="ocean"', async ({
+  test('Customize Theme button navigates to theme editor', async ({
     authenticatedWindow: page,
   }) => {
     await navigateToSettings(page);
 
-    const oceanButton = page.locator('button', { hasText: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
+    const customizeButton = page.locator('button', { hasText: 'Customize Theme' });
+    await customizeButton.scrollIntoViewIfNeeded();
+    await customizeButton.click();
 
-    const dataTheme = await page.locator('html').getAttribute('data-theme');
-    expect(dataTheme).toBe('ocean');
-    await takeScreenshot(page, 'settings-ocean-theme');
-  });
-
-  test('Switch to Forest theme sets data-theme="forest"', async ({
-    authenticatedWindow: page,
-  }) => {
-    await navigateToSettings(page);
-
-    const forestButton = page.locator('button', { hasText: 'Forest' });
-    await forestButton.scrollIntoViewIfNeeded();
-    await forestButton.click();
-
-    const dataTheme = await page.locator('html').getAttribute('data-theme');
-    expect(dataTheme).toBe('forest');
-  });
-
-  test('Reset to Oscura (default) removes data-theme', async ({ authenticatedWindow: page }) => {
-    await navigateToSettings(page);
-
-    // First set a non-default theme
-    const oceanButton = page.locator('button', { hasText: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
-
-    // Now click Oscura to reset
-    const oscuraButton = page.locator('button', { hasText: 'Oscura' });
-    await oscuraButton.scrollIntoViewIfNeeded();
-    await oscuraButton.click();
-
-    const dataTheme = await page.locator('html').getAttribute('data-theme');
-    expect(dataTheme).toBeNull();
+    await expect(page).toHaveURL(/\/settings\/themes/, { timeout: 10_000 });
+    await takeScreenshot(page, 'settings-theme-editor');
   });
 
   test('UI Scale section visible with range input', async ({ authenticatedWindow: page }) => {
@@ -193,23 +162,15 @@ test.describe('Settings Page', () => {
     await expect(page.locator('text=ADC v0.1.0')).toBeVisible();
   });
 
-  test('Reset to Dark mode and Oscura theme as defaults', async ({
-    authenticatedWindow: page,
-  }) => {
+  test('Reset to Dark mode as default', async ({ authenticatedWindow: page }) => {
     await navigateToSettings(page);
 
-    // Ensure Dark mode
+    // Switch to Light, then back to Dark to confirm toggle works
+    await page.locator('button', { hasText: 'Light' }).click();
     await page.locator('button', { hasText: 'Dark' }).click();
+
     const htmlClasses = await page.locator('html').getAttribute('class');
     expect(htmlClasses).toContain('dark');
-
-    // Ensure Oscura (default) color theme
-    const oscuraButton = page.locator('button', { hasText: 'Oscura' });
-    await oscuraButton.scrollIntoViewIfNeeded();
-    await oscuraButton.click();
-
-    const dataTheme = await page.locator('html').getAttribute('data-theme');
-    expect(dataTheme).toBeNull();
   });
 
   test('No console errors during settings interaction', async ({ authenticatedWindow: page }) => {
@@ -220,14 +181,6 @@ test.describe('Settings Page', () => {
     // Exercise various sections to trigger any lazy-loaded errors
     await page.locator('button', { hasText: 'Light' }).click();
     await page.locator('button', { hasText: 'Dark' }).click();
-
-    const oceanButton = page.locator('button', { hasText: 'Ocean' });
-    await oceanButton.scrollIntoViewIfNeeded();
-    await oceanButton.click();
-
-    const oscuraButton = page.locator('button', { hasText: 'Oscura' });
-    await oscuraButton.scrollIntoViewIfNeeded();
-    await oscuraButton.click();
 
     // Scroll to bottom to trigger all lazy sections
     const aboutHeading = page.locator('h2', { hasText: 'About' });
