@@ -227,16 +227,18 @@ Location: `src/main/ipc/handlers/`
 
 The router has been split from a single `router.tsx` into **8 route group files**:
 
-| File | Routes Covered |
-|------|----------------|
-| `auth.routes.tsx` | `/login`, `/register` |
-| `communication.routes.ts` | `/communications` |
-| `dashboard.routes.ts` | `/dashboard`, `/my-work` |
-| `misc.routes.ts` | `/alerts`, `/briefing`, `/fitness`, `/notes`, `/planner`, `/planner/weekly` |
-| `productivity.routes.ts` | `/productivity` |
-| `project.routes.ts` | `/projects`, `/projects/$projectId/**` (tasks, terminals, agents, etc.) |
-| `settings.routes.ts` | `/settings` |
-| `index.ts` | Barrel that assembles all route groups into the router |
+| File | Routes Covered | Pending Skeleton |
+|------|----------------|------------------|
+| `auth.routes.tsx` | `/login`, `/register` | none (eagerly loaded) |
+| `communication.routes.ts` | `/communications` | `GenericPageSkeleton` |
+| `dashboard.routes.ts` | `/dashboard`, `/my-work` | `DashboardSkeleton` |
+| `misc.routes.ts` | `/briefing`, `/fitness` | `GenericPageSkeleton` |
+| `productivity.routes.ts` | `/alerts`, `/notes`, `/planner`, `/planner/weekly`, `/productivity` | `GenericPageSkeleton` |
+| `project.routes.ts` | `/projects`, `/projects/$projectId/**` (tasks, terminals, agents, etc.) | `ProjectSkeleton` |
+| `settings.routes.ts` | `/settings` | `SettingsSkeleton` |
+| `index.ts` | Barrel that assembles all route groups into the router | — |
+
+Route-group-specific loading skeletons live in `src/renderer/app/components/route-skeletons.tsx`. Each route sets a `pendingComponent` that matches its page layout (card grid, data table, form sections, etc.).
 
 ### Bootstrap Modules (`src/main/bootstrap/`)
 
@@ -423,6 +425,7 @@ All primitives follow the **shadcn/ui pattern**: CVA variants, `data-slot` attri
 | **1: Form** | Label | `ui/label.tsx` | `Label`, `labelVariants` — variants: default, required (red asterisk), error |
 | **1: Display** | Badge | `ui/badge.tsx` | `Badge`, `badgeVariants` — variants: default, secondary, destructive, outline, success, warning, info, error |
 | **1: Display** | Card | `ui/card.tsx` | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` — compound component, variants: default, interactive, elevated |
+| **1: Display** | Skeleton | `ui/skeleton.tsx` | `Skeleton` — pulse-animated placeholder, variants: line, circle, card |
 | **1: Display** | Spinner | `ui/spinner.tsx` | `Spinner`, `spinnerVariants` — wraps Lucide Loader2, sizes: sm, md, lg |
 | **1: Layout** | PageLayout | `ui/page-layout.tsx` | `PageLayout`, `PageHeader`, `PageContent` — consistent full-width page shell, mobile responsive |
 | **1: Layout** | Typography | `ui/typography.tsx` | `Heading` (h1-h4 via `as` prop), `Text` (default/muted/error/success), `Code` |

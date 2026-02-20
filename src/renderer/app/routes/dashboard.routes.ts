@@ -10,10 +10,13 @@ import {
 
 import { ROUTES } from '@shared/constants';
 
+import { DashboardSkeleton } from '../components/route-skeletons';
+
 export function createDashboardRoutes(appLayoutRoute: AnyRoute) {
   const dashboardRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.DASHBOARD,
+    pendingComponent: DashboardSkeleton,
     component: lazyRouteComponent(
       () => import('@features/dashboard'),
       'DashboardPage',
@@ -23,6 +26,7 @@ export function createDashboardRoutes(appLayoutRoute: AnyRoute) {
   const myWorkRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.MY_WORK,
+    pendingComponent: DashboardSkeleton,
     component: lazyRouteComponent(
       () => import('@features/my-work'),
       'MyWorkPage',

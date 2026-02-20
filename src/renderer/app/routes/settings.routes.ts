@@ -10,10 +10,13 @@ import {
 
 import { ROUTES } from '@shared/constants';
 
+import { SettingsSkeleton } from '../components/route-skeletons';
+
 export function createSettingsRoutes(appLayoutRoute: AnyRoute) {
   const settingsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.SETTINGS,
+    pendingComponent: SettingsSkeleton,
     component: lazyRouteComponent(
       () => import('@features/settings'),
       'SettingsPage',

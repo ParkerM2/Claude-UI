@@ -10,10 +10,13 @@ import {
 
 import { ROUTES } from '@shared/constants';
 
+import { GenericPageSkeleton } from '../components/route-skeletons';
+
 export function createCommunicationRoutes(appLayoutRoute: AnyRoute) {
   const communicationsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.COMMUNICATIONS,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/communications'),
       'CommunicationsPage',

@@ -29,6 +29,9 @@ export {
   cardVariants,
 } from './card';
 
+export { Skeleton } from './skeleton';
+export type { SkeletonProps } from './skeleton';
+
 export { Spinner, spinnerVariants } from './spinner';
 export type { SpinnerProps } from './spinner';
 

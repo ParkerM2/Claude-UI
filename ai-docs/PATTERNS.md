@@ -36,6 +36,33 @@ const dashboardRoute = createRoute({
 - Redirect-only routes (no `component`) don't need lazy loading
 - The router provides `defaultPendingComponent` (spinner) and `defaultErrorComponent` (error card) as fallbacks
 - Auth page wrappers (which inject `useNavigate` callbacks) are eagerly loaded but wrap lazy page components with `<Suspense>`
+- Every route SHOULD set a `pendingComponent` matching its page layout (see below)
+
+## Route Loading Skeletons
+
+Each route group uses a layout-appropriate loading skeleton instead of the generic spinner. Skeletons live in `src/renderer/app/components/route-skeletons.tsx` and use the `Skeleton` primitive from `@ui`.
+
+```typescript
+import { DashboardSkeleton } from '../components/route-skeletons';
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/dashboard',
+  pendingComponent: DashboardSkeleton,
+  component: lazyRouteComponent(
+    () => import('@features/dashboard'),
+    'DashboardPage',
+  ),
+});
+```
+
+**Available skeletons:**
+- `DashboardSkeleton` — card-grid layout (stat cards + content area)
+- `ProjectSkeleton` — toolbar + table rows (for data-grid pages)
+- `SettingsSkeleton` — form sections (label + input placeholders)
+- `GenericPageSkeleton` — title + content cards (for misc pages)
+
+**Adding a new skeleton:** If a new page layout doesn't match existing skeletons, add a new exported function to `route-skeletons.tsx` and wire it via `pendingComponent` on the route.
 
 ## Adding a New IPC Channel
 
