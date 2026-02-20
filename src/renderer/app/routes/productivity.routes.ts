@@ -10,10 +10,13 @@ import {
 
 import { ROUTES } from '@shared/constants';
 
+import { GenericPageSkeleton } from '../components/route-skeletons';
+
 export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const alertsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.ALERTS,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/alerts'),
       'AlertsPage',
@@ -23,6 +26,7 @@ export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const notesRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.NOTES,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/notes'),
       'NotesPage',
@@ -32,6 +36,7 @@ export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const plannerRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PLANNER,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/planner'),
       'PlannerPage',
@@ -41,6 +46,7 @@ export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const plannerWeeklyRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PLANNER_WEEKLY,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/planner'),
       'WeeklyReviewPage',
@@ -50,6 +56,7 @@ export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const productivityRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PRODUCTIVITY,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/productivity'),
       'ProductivityPage',

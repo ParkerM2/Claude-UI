@@ -10,10 +10,13 @@ import {
 
 import { ROUTES } from '@shared/constants';
 
+import { GenericPageSkeleton } from '../components/route-skeletons';
+
 export function createMiscRoutes(appLayoutRoute: AnyRoute) {
   const briefingRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.BRIEFING,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/briefing'),
       'BriefingPage',
@@ -23,6 +26,7 @@ export function createMiscRoutes(appLayoutRoute: AnyRoute) {
   const fitnessRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.FITNESS,
+    pendingComponent: GenericPageSkeleton,
     component: lazyRouteComponent(
       () => import('@features/fitness'),
       'FitnessPage',

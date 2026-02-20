@@ -87,12 +87,12 @@ export function Sidebar() {
   // Sync URL → store: if we're on a /projects/:id/* route but the store lost the active project
   // (e.g. after page reload), re-hydrate it from the URL.
   const urlProjectId = /^\/projects\/([^/]+)/.exec(currentPath)?.[1] ?? null;
-  if (urlProjectId && urlProjectId !== activeProjectId) {
+  if (urlProjectId !== null && urlProjectId !== activeProjectId) {
     addProjectTab(urlProjectId);
   }
 
   function handleNav(path: string) {
-    if (!activeProjectId) return;
+    if (activeProjectId === null) return;
     void navigate({ to: projectViewPath(activeProjectId, path) });
   }
 
@@ -102,10 +102,11 @@ export function Sidebar() {
     >
       {/* Header */}
       <div className="border-border flex h-12 items-center justify-between border-b px-3">
-        {!sidebarCollapsed && (
+        {sidebarCollapsed ? null : (
           <span className="text-foreground text-sm font-semibold">ADC</span>
         )}
         <button
+          aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className="text-muted-foreground hover:bg-accent hover:text-foreground rounded-md p-1.5"
           onClick={toggleSidebar}
         >
@@ -120,33 +121,39 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 space-y-1 p-2">
         {/* Top-level items */}
-        {topLevelItems.map((item) => (
-          <button
-            key={item.path}
-            title={sidebarCollapsed ? item.label : undefined}
-            className={cn(
-              NAV_BASE_STYLE,
-              NAV_HOVER_STYLE,
-              currentPath === item.path ? ACTIVE_STYLE : INACTIVE_STYLE,
-              sidebarCollapsed && COLLAPSED_STYLE,
-            )}
-            onClick={() => void navigate({ to: item.path })}
-          >
-            <item.icon className="h-4 w-4 shrink-0" />
-            {!sidebarCollapsed && <span>{item.label}</span>}
-          </button>
-        ))}
+        {topLevelItems.map((item) => {
+          const isActive =
+            currentPath === item.path || currentPath.startsWith(`${item.path}/`);
+          return (
+            <button
+              key={item.path}
+              title={sidebarCollapsed ? item.label : undefined}
+              className={cn(
+                NAV_BASE_STYLE,
+                NAV_HOVER_STYLE,
+                isActive ? ACTIVE_STYLE : INACTIVE_STYLE,
+                sidebarCollapsed && COLLAPSED_STYLE,
+              )}
+              onClick={() => void navigate({ to: item.path })}
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {sidebarCollapsed ? null : <span>{item.label}</span>}
+            </button>
+          );
+        })}
 
         {/* Divider */}
         <div className="border-border my-1 border-t" />
 
         {/* Project views */}
         {projectItems.map((item) => {
-          const isActive = currentPath.includes(`/${item.path}`);
+          const isActive =
+            activeProjectId !== null &&
+            currentPath.endsWith(`/${item.path}`);
           return (
             <button
               key={item.path}
-              disabled={!activeProjectId}
+              disabled={activeProjectId === null}
               title={sidebarCollapsed ? item.label : undefined}
               className={cn(
                 NAV_BASE_STYLE,
@@ -158,7 +165,7 @@ export function Sidebar() {
               onClick={() => handleNav(item.path)}
             >
               <item.icon className="h-4 w-4 shrink-0" />
-              {!sidebarCollapsed && <span>{item.label}</span>}
+              {sidebarCollapsed ? null : <span>{item.label}</span>}
             </button>
           );
         })}
@@ -171,17 +178,15 @@ export function Sidebar() {
         <button
           title={sidebarCollapsed ? 'Settings' : undefined}
           className={cn(
-            INACTIVE_STYLE,
             NAV_BASE_STYLE,
             NAV_HOVER_STYLE,
-            'transition-colors',
-            currentPath.includes(ROUTES.SETTINGS) && ACTIVE_STYLE,
+            currentPath.startsWith(ROUTES.SETTINGS) ? ACTIVE_STYLE : INACTIVE_STYLE,
             sidebarCollapsed && COLLAPSED_STYLE,
           )}
-          onClick={() => navigate({ to: ROUTES.SETTINGS })}
+          onClick={() => void navigate({ to: ROUTES.SETTINGS })}
         >
           <Settings className="h-4 w-4 shrink-0" />
-          {!sidebarCollapsed && <span>Settings</span>}
+          {sidebarCollapsed ? null : <span>Settings</span>}
         </button>
       </div>
     </aside>

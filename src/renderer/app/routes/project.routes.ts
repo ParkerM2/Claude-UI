@@ -11,10 +11,13 @@ import {
 
 import { ROUTE_PATTERNS, ROUTES } from '@shared/constants';
 
+import { ProjectSkeleton } from '../components/route-skeletons';
+
 export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const projectsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PROJECTS,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/projects'),
       'ProjectListPage',
@@ -33,6 +36,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const tasksRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_TASKS,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/tasks'),
       'TaskDataGrid',
@@ -42,6 +46,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const terminalsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_TERMINALS,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/terminals'),
       'TerminalGrid',
@@ -51,6 +56,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const agentsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_AGENTS,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/agents'),
       'AgentDashboard',
@@ -60,6 +66,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const githubRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_GITHUB,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/github'),
       'GitHubPage',
@@ -69,6 +76,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const roadmapRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_ROADMAP,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/roadmap'),
       'RoadmapPage',
@@ -78,6 +86,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const ideationRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_IDEATION,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/ideation'),
       'IdeationPage',
@@ -87,6 +96,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const changelogRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_CHANGELOG,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/changelog'),
       'ChangelogPage',
@@ -96,6 +106,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const insightsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_INSIGHTS,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/insights'),
       'InsightsPage',
@@ -105,6 +116,7 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const workflowRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_WORKFLOW,
+    pendingComponent: ProjectSkeleton,
     component: lazyRouteComponent(
       () => import('@features/workflow-pipeline'),
       'WorkflowPipelinePage',
