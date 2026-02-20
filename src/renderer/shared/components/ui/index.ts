@@ -29,6 +29,9 @@ export {
   cardVariants,
 } from './card';
 
+export { Skeleton } from './skeleton';
+export type { SkeletonProps } from './skeleton';
+
 export { Spinner, spinnerVariants } from './spinner';
 export type { SpinnerProps } from './spinner';
 
@@ -164,6 +167,7 @@ export type { CollapsibleContentProps, CollapsibleProps, CollapsibleTriggerProps
 // Tier 3: Form System (TanStack Form + Zod v4)
 // Note: import { useForm } from '@tanstack/react-form' directly — not re-exported here
 export {
+  Form,
   FormCheckbox,
   FormField,
   FormInput,
@@ -175,6 +179,7 @@ export type {
   FormCheckboxProps,
   FormFieldProps,
   FormInputProps,
+  FormProps,
   FormSelectOption,
   FormSelectProps,
   FormSwitchProps,

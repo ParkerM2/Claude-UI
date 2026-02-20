@@ -8,8 +8,61 @@
 4. Add hooks: `api/use<Name>.ts`
 5. Add components: `components/<Name>.tsx`
 6. Add IPC event handler if needed: `hooks/use<Name>Events.ts`
-7. Add route in `src/renderer/app/router.tsx`
+7. Add lazy-loaded route in `src/renderer/app/routes/<group>.routes.ts` (see "Route Lazy Loading" below)
 8. Add nav item in `src/renderer/app/layouts/Sidebar.tsx`
+
+## Route Lazy Loading
+
+All page-level route components use `lazyRouteComponent` from `@tanstack/react-router` for code splitting. This reduces the initial bundle size by loading page components on-demand.
+
+```typescript
+import { type AnyRoute, createRoute, lazyRouteComponent } from '@tanstack/react-router';
+
+// Lazy-load via dynamic import + named export
+const dashboardRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/dashboard',
+  component: lazyRouteComponent(
+    () => import('@features/dashboard'),
+    'DashboardPage',
+  ),
+});
+```
+
+**Rules:**
+- Use `lazyRouteComponent(() => import('@features/<name>'), 'ComponentName')` for all page routes
+- The second argument is the **named export** from the feature barrel (`index.ts`)
+- Layout routes (`AuthGuard`, `RootLayout`) stay eagerly loaded — they render on every page
+- Redirect-only routes (no `component`) don't need lazy loading
+- The router provides `defaultPendingComponent` (spinner) and `defaultErrorComponent` (error card) as fallbacks
+- Auth page wrappers (which inject `useNavigate` callbacks) are eagerly loaded but wrap lazy page components with `<Suspense>`
+- Every route SHOULD set a `pendingComponent` matching its page layout (see below)
+
+## Route Loading Skeletons
+
+Each route group uses a layout-appropriate loading skeleton instead of the generic spinner. Skeletons live in `src/renderer/app/components/route-skeletons.tsx` and use the `Skeleton` primitive from `@ui`.
+
+```typescript
+import { DashboardSkeleton } from '../components/route-skeletons';
+
+const dashboardRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/dashboard',
+  pendingComponent: DashboardSkeleton,
+  component: lazyRouteComponent(
+    () => import('@features/dashboard'),
+    'DashboardPage',
+  ),
+});
+```
+
+**Available skeletons:**
+- `DashboardSkeleton` — card-grid layout (stat cards + content area)
+- `ProjectSkeleton` — toolbar + table rows (for data-grid pages)
+- `SettingsSkeleton` — form sections (label + input placeholders)
+- `GenericPageSkeleton` — title + content cards (for misc pages)
+
+**Adding a new skeleton:** If a new page layout doesn't match existing skeletons, add a new exported function to `route-skeletons.tsx` and wire it via `pendingComponent` on the route.
 
 ## Adding a New IPC Channel
 
@@ -381,6 +434,43 @@ import type { ColorTheme } from '@shared/constants';
 
 When adding a theme, update BOTH `globals.css` AND `src/shared/constants/themes.ts`.
 
+### Terminal Theme Integration (xterm.js)
+
+The terminal uses CSS custom properties at runtime to adapt to the active theme:
+
+```typescript
+function getCssVar(name: string, fallback: string): string {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function getTerminalTheme(): Record<string, string> {
+  return {
+    background: getCssVar('--background', '#0a0a0a'),
+    foreground: getCssVar('--foreground', '#e4e4e7'),
+    cursor: getCssVar('--foreground', '#e4e4e7'),
+    // ... maps ANSI colors to semantic CSS vars (--destructive, --success, --warning, --info, etc.)
+  };
+}
+```
+
+Key file: `src/renderer/features/terminals/components/TerminalInstance.tsx`
+
+### GitHub / Brand Buttons (Theme-Adaptive)
+
+For branded buttons that need a dark appearance on light backgrounds and vice versa, use `bg-foreground text-background` instead of hardcoded hex like `bg-[#24292f]`:
+
+```tsx
+// CORRECT — adapts to any theme
+<Button className="bg-foreground text-background hover:bg-foreground/90">
+  <GitHubIcon className="size-4" />
+  Connect GitHub
+</Button>
+
+// WRONG — hardcoded GitHub brand color
+<Button className="bg-[#24292f] text-white hover:bg-[#24292f]/90">
+```
+
 ## Security — Secret Storage Pattern
 
 All secrets (OAuth credentials, webhook secrets, API keys) MUST be encrypted using Electron's `safeStorage` API.
@@ -590,6 +680,92 @@ Key rules:
 - **Inline errors** — Show validation/mutation errors inside the dialog, not as toasts
 - **No autoFocus** — `jsx-a11y/no-autofocus` rule forbids `autoFocus` prop
 - **Form submit** — Use `<form onSubmit>` for Enter key support (except in textareas)
+
+## TanStack Form + Zod Validation Pattern
+
+For forms using TanStack Form with Zod schema validation and the design system `FormInput` primitives:
+
+```typescript
+import { useForm } from '@tanstack/react-form';
+import { z } from 'zod';
+
+import { Button, Form, FormInput, Spinner } from '@ui';
+
+// Define Zod schema with validation messages
+const myFormSchema = z.object({
+  email: z.email('Enter a valid email address'),
+  name: z.string().min(1, 'Name is required'),
+});
+
+export function MyFormPage() {
+  const mutation = useMyMutation();
+
+  const form = useForm({
+    defaultValues: { email: '', name: '' },
+    validators: { onChange: myFormSchema },
+    onSubmit: ({ value }) => {
+      mutation.mutate(value);
+    },
+  });
+
+  function handleFormSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    void form.handleSubmit();
+  }
+
+  return (
+    <Form onSubmit={handleFormSubmit}>
+      <form.Field name="email">
+        {(field) => (
+          <FormInput
+            required
+            field={field}
+            label="Email"
+            placeholder="you@example.com"
+            type="email"
+          />
+        )}
+      </form.Field>
+
+      <form.Subscribe selector={(state) => [state.canSubmit]}>
+        {([canSubmit]) => (
+          <Button disabled={!canSubmit || mutation.isPending} type="submit">
+            {mutation.isPending ? <Spinner size="sm" /> : 'Submit'}
+          </Button>
+        )}
+      </form.Subscribe>
+    </Form>
+  );
+}
+```
+
+Key rules:
+- **Import `useForm`** from `@tanstack/react-form` directly (NOT from `@ui`)
+- **Import `Form`, `FormInput`** from `@ui` barrel
+- **Zod schemas** passed to `validators: { onChange: schema }` for real-time validation
+- **Zod 4** uses `z.email()` (not `z.string().email()` which is deprecated)
+- **`form.Field`** renders children with a `field` API passed to `FormInput`
+- **`form.Subscribe`** for reactive `canSubmit` state on the submit button
+- **`void form.handleSubmit()`** — must use `void` to satisfy `no-floating-promises`
+- **Shorthand props first** — `required` before `field`, `label`, etc. (`react/jsx-sort-props`)
+- **Cross-field validation** — use `.refine()` on the Zod schema with `path` targeting specific field
+- **`FormSelect`** — use for dropdowns: `<FormSelect field={field} label="Model" options={[{label, value}]} placeholder="..." />`
+- **`FormField` for custom layouts** — wrap custom render (e.g., password toggle) inside `<FormField label="...">` and bind `field.handleBlur`/`field.handleChange` manually
+- **Multiple forms in one component** — extract each form into its own sub-component with its own `useForm` instance (see WebhookSettings: SlackForm + GitHubForm)
+- **Dialog forms** — use `form.reset()` + `form.setFieldValue()` in a `useEffect` triggered by `open` prop to sync external state into form defaults
+
+### Migrated forms
+
+All app forms now use TanStack Form + Zod:
+
+| Form | Location | Notes |
+|------|----------|-------|
+| LoginPage | `features/auth/components/LoginPage.tsx` | Email + password, rate limiting |
+| RegisterPage | `features/auth/components/RegisterPage.tsx` | Email + password + confirm |
+| ProfileFormModal | `features/settings/components/ProfileFormModal.tsx` | Name (required), API key (password toggle), Model (FormSelect) |
+| ConnectionForm | `features/settings/components/HubSettings.tsx` | Hub URL (z.url) + API key, async validateHubUrl on submit |
+| SlackForm | `features/settings/components/WebhookSettings.tsx` | Bot token + signing secret (both optional) |
+| GitHubForm | `features/settings/components/WebhookSettings.tsx` | Webhook secret (required) |
 
 ## Floating Widget Pattern
 

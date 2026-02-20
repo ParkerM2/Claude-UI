@@ -28,7 +28,7 @@ Location: `src/renderer/features/`
 | **agents** | Agent process management | AgentDashboard, AgentControls, AgentLogs | `agents.*` |
 | **alerts** | Reminder/alert system | AlertsPage, AlertForm, AlertList | `alerts.*` |
 | **assistant** | Built-in Claude assistant | AssistantWidget (WidgetFab, WidgetPanel, WidgetInput, WidgetMessageArea), CommandBar (TopBar) | `assistant.*` |
-| **auth** | User authentication | LoginPage, RegisterPage, AuthGuard, UserMenu (in layouts); **Hooks**: useForceLogout (IPC-driven logout on token refresh failure) | `auth.*` |
+| **auth** | User authentication | LoginPage (TanStack Form + Zod), RegisterPage (TanStack Form + Zod), AuthGuard, UserMenu (in layouts); **Hooks**: useForceLogout (IPC-driven logout on token refresh failure) | `auth.*` |
 | **changelog** | Project changelog viewer | ChangelogPage, ChangelogEntry | `changelog.*` |
 | **communications** | Slack/Discord integration | SlackPanel, DiscordPanel | MCP tools |
 | **dashboard** | Home dashboard | DashboardPage, TodayView, DailyStats, ActiveAgents | multiple |
@@ -42,7 +42,7 @@ Location: `src/renderer/features/`
 | **productivity** | Productivity widgets | CalendarWidget, SpotifyWidget | `calendar.*`, `spotify.*` |
 | **projects** | Project management | ProjectListPage, ProjectSettings, WorktreeManager, ProjectEditDialog, GitStatusIndicator (branch name + clean/changed badge in project list) | `projects.*`, `git.status` |
 | **roadmap** | Project roadmap | RoadmapPage, MilestoneCard | `milestones.*` |
-| **settings** | App settings | SettingsPage, HubSettings, OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings, StorageManagementSection, StorageUsageBar, RetentionControl | `settings.*`, `oauth.*`, `dataManagement.*` |
+| **settings** | App settings | SettingsPage, ProfileFormModal (TanStack Form + Zod + FormSelect), HubSettings (ConnectionForm uses TanStack Form + Zod), OAuthProviderSettings, OAuthConnectionStatus, WebhookSettings (SlackForm + GitHubForm use TanStack Form + Zod), StorageManagementSection, StorageUsageBar, RetentionControl | `settings.*`, `oauth.*`, `dataManagement.*` |
 | **tasks** | Task management (AG-Grid dashboard) | TaskDataGrid (AG-Grid wrapped in `<Card>` from `@ui`), TaskFiltersToolbar, TaskDetailRow, TaskStatusBadge, CreateTaskDialog, PlanFeedbackDialog, TaskResultView (status/duration/cost/log summary for completed tasks), CreatePrDialog (GitHub PR creation post-task-completion); **Hooks**: useTaskEvents (→ useAgentEvents + useQaEvents), useAgentMutations (useStartPlanning, useStartExecution, useReplanWithFeedback, useKillAgent, useRestartFromCheckpoint), useQaMutations, QaReportViewer | `hub.tasks.*`, `tasks.*`, `agent.*` (incl. `agent.replanWithFeedback`), `qa.*`, `git.createPr`, `event:agent.orchestrator.*`, `event:qa.*` |
 | **terminals** | Terminal emulator | TerminalGrid, TerminalInstance | `terminals.*` |
 | **briefing** | Daily briefing & suggestions | BriefingPage, SuggestionCard | `briefing.*` |
@@ -227,16 +227,18 @@ Location: `src/main/ipc/handlers/`
 
 The router has been split from a single `router.tsx` into **8 route group files**:
 
-| File | Routes Covered |
-|------|----------------|
-| `auth.routes.tsx` | `/login`, `/register` |
-| `communication.routes.ts` | `/communications` |
-| `dashboard.routes.ts` | `/dashboard`, `/my-work` |
-| `misc.routes.ts` | `/alerts`, `/briefing`, `/fitness`, `/notes`, `/planner`, `/planner/weekly` |
-| `productivity.routes.ts` | `/productivity` |
-| `project.routes.ts` | `/projects`, `/projects/$projectId/**` (tasks, terminals, agents, etc.) |
-| `settings.routes.ts` | `/settings` |
-| `index.ts` | Barrel that assembles all route groups into the router |
+| File | Routes Covered | Pending Skeleton |
+|------|----------------|------------------|
+| `auth.routes.tsx` | `/login`, `/register` | none (eagerly loaded) |
+| `communication.routes.ts` | `/communications` | `GenericPageSkeleton` |
+| `dashboard.routes.ts` | `/dashboard`, `/my-work` | `DashboardSkeleton` |
+| `misc.routes.ts` | `/briefing`, `/fitness` | `GenericPageSkeleton` |
+| `productivity.routes.ts` | `/alerts`, `/notes`, `/planner`, `/planner/weekly`, `/productivity` | `GenericPageSkeleton` |
+| `project.routes.ts` | `/projects`, `/projects/$projectId/**` (tasks, terminals, agents, etc.) | `ProjectSkeleton` |
+| `settings.routes.ts` | `/settings` | `SettingsSkeleton` |
+| `index.ts` | Barrel that assembles all route groups into the router | — |
+
+Route-group-specific loading skeletons live in `src/renderer/app/components/route-skeletons.tsx`. Each route sets a `pendingComponent` that matches its page layout (card grid, data table, form sections, etc.).
 
 ### Bootstrap Modules (`src/main/bootstrap/`)
 
@@ -384,8 +386,8 @@ Location: `src/renderer/app/layouts/`
 
 | Layout | Purpose |
 |--------|---------|
-| `RootLayout.tsx` | Root shell: sidebar + content area + notifications + AssistantWidget |
-| `Sidebar.tsx` | Navigation sidebar |
+| `RootLayout.tsx` | Root shell: uses `react-resizable-panels` (Group/Panel/Separator) for sidebar + content layout with localStorage persistence. Sidebar panel is collapsible and syncs with layout store. |
+| `Sidebar.tsx` | Navigation sidebar (fills its parent panel, collapse state driven by layout store) |
 | `TopBar.tsx` | Top bar with assistant command input |
 | `CommandBar.tsx` | Global command palette (Cmd+K) |
 | `ProjectTabBar.tsx` | Horizontal tab bar for switching between open projects |
@@ -423,6 +425,7 @@ All primitives follow the **shadcn/ui pattern**: CVA variants, `data-slot` attri
 | **1: Form** | Label | `ui/label.tsx` | `Label`, `labelVariants` — variants: default, required (red asterisk), error |
 | **1: Display** | Badge | `ui/badge.tsx` | `Badge`, `badgeVariants` — variants: default, secondary, destructive, outline, success, warning, info, error |
 | **1: Display** | Card | `ui/card.tsx` | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter` — compound component, variants: default, interactive, elevated |
+| **1: Display** | Skeleton | `ui/skeleton.tsx` | `Skeleton` — pulse-animated placeholder, variants: line, circle, card |
 | **1: Display** | Spinner | `ui/spinner.tsx` | `Spinner`, `spinnerVariants` — wraps Lucide Loader2, sizes: sm, md, lg |
 | **1: Layout** | PageLayout | `ui/page-layout.tsx` | `PageLayout`, `PageHeader`, `PageContent` — consistent full-width page shell, mobile responsive |
 | **1: Layout** | Typography | `ui/typography.tsx` | `Heading` (h1-h4 via `as` prop), `Text` (default/muted/error/success), `Code` |
@@ -445,7 +448,7 @@ All primitives follow the **shadcn/ui pattern**: CVA variants, `data-slot` attri
 | **2: Radix** | Progress | `ui/progress.tsx` | Progress bar with CVA sizes |
 | **2: Radix** | Slider | `ui/slider.tsx` | Slider with track/range/thumb |
 | **2: Radix** | Collapsible | `ui/collapsible.tsx` | Collapsible, CollapsibleTrigger, CollapsibleContent |
-| **3: Form** | Form System | `ui/form.tsx` | `Form`, `FormField`, `FormInput`, `FormTextarea`, `FormSelect`, `FormCheckbox`, `FormSwitch`, `useForm` — TanStack Form + Zod v4 integration |
+| **3: Form** | Form System | `ui/form.tsx` | `Form`, `FormField`, `FormInput`, `FormTextarea`, `FormSelect`, `FormCheckbox`, `FormSwitch` — TanStack Form + Zod v4 integration. `Form` and field components exported from `@ui` barrel. Import `useForm` from `@tanstack/react-form` directly. |
 
 ## 6.6 Shared Hooks
 
@@ -468,7 +471,7 @@ Location: `src/renderer/shared/stores/`
 |-------|---------|
 | `assistant-widget-store.ts` | Floating assistant widget open/close state (`useAssistantWidgetStore`) |
 | `command-bar-store.ts` | CommandBar processing state, input history, toast visibility |
-| `layout-store.ts` | Sidebar state, active project, project tabs |
+| `layout-store.ts` | Sidebar state, active project, project tabs, resizable panel layout (persisted via `react-resizable-panels` `useDefaultLayout`) |
 | `theme-store.ts` | Dark/light mode, color theme, UI scale |
 | `toast-store.ts` | Toast notification queue (max 3, auto-dismiss 5s) |
 | `ThemeHydrator.tsx` | Component that hydrates theme CSS vars on `<html>` (co-located with theme-store) |

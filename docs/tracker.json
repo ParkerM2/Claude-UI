@@ -393,6 +393,19 @@
       "supersededBy": null,
       "tags": ["sprint", "hardening", "e2e-pipeline", "git", "auth", "tasks"]
     },
+    "sprint-3-ux-ui": {
+      "title": "Sprint 3: UX/UI",
+      "status": "IMPLEMENTED",
+      "planFile": "docs/sprints/sprint-3-ux-ui.md",
+      "progressFile": "docs/progress/sprint-3-ux-ui-progress.md",
+      "created": "2026-02-20",
+      "statusChangedAt": "2026-02-20",
+      "branch": "feature/sprint-3-ux-ui",
+      "pr": null,
+      "commit": null,
+      "supersededBy": null,
+      "tags": ["sprint", "ux", "ui", "composition", "layout", "theme"]
+    },
     "sprint-2-feature-hardening": {
       "title": "Sprint 2: Feature Hardening",
       "status": "IMPLEMENTED",

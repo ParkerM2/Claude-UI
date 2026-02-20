@@ -2,44 +2,65 @@
  * Productivity route group — Planner, notes, alerts, productivity
  */
 
-import { type AnyRoute, createRoute } from '@tanstack/react-router';
+import {
+  type AnyRoute,
+  createRoute,
+  lazyRouteComponent,
+} from '@tanstack/react-router';
 
 import { ROUTES } from '@shared/constants';
 
-import { AlertsPage } from '@features/alerts';
-import { NotesPage } from '@features/notes';
-import { PlannerPage, WeeklyReviewPage } from '@features/planner';
-import { ProductivityPage } from '@features/productivity';
+import { GenericPageSkeleton } from '../components/route-skeletons';
 
 export function createProductivityRoutes(appLayoutRoute: AnyRoute) {
   const alertsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.ALERTS,
-    component: AlertsPage,
+    pendingComponent: GenericPageSkeleton,
+    component: lazyRouteComponent(
+      () => import('@features/alerts'),
+      'AlertsPage',
+    ),
   });
 
   const notesRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.NOTES,
-    component: NotesPage,
+    pendingComponent: GenericPageSkeleton,
+    component: lazyRouteComponent(
+      () => import('@features/notes'),
+      'NotesPage',
+    ),
   });
 
   const plannerRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PLANNER,
-    component: PlannerPage,
+    pendingComponent: GenericPageSkeleton,
+    component: lazyRouteComponent(
+      () => import('@features/planner'),
+      'PlannerPage',
+    ),
   });
 
   const plannerWeeklyRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PLANNER_WEEKLY,
-    component: WeeklyReviewPage,
+    pendingComponent: GenericPageSkeleton,
+    component: lazyRouteComponent(
+      () => import('@features/planner'),
+      'WeeklyReviewPage',
+    ),
   });
 
   const productivityRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PRODUCTIVITY,
-    component: ProductivityPage,
+    pendingComponent: GenericPageSkeleton,
+    component: lazyRouteComponent(
+      () => import('@features/productivity'),
+      'ProductivityPage',
+    ),
   });
 
   return [

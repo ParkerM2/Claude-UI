@@ -135,8 +135,8 @@ export function IntegrationsStep({ onBack, onNext, onSkip }: IntegrationsStepPro
           type="button"
           className={cn(
             BUTTON_BASE,
-            'w-full justify-center bg-[#24292f] text-white',
-            'hover:bg-[#24292f]/90 focus:outline-none focus:ring-2 focus:ring-ring',
+            'w-full justify-center bg-foreground text-background',
+            'hover:bg-foreground/90 focus:outline-none focus:ring-2 focus:ring-ring',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}
           onClick={() => {
