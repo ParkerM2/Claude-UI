@@ -189,16 +189,28 @@ export function Sidebar() {
         {sidebarCollapsed ? (
           <>
             {/* Collapsed: icon-only items without section headers */}
-            <div className="space-y-1">
-              {personalItems.map(renderPersonalItem)}
-            </div>
             <div className="my-1">{renderAddProjectButton()}</div>
             <div className="space-y-1">
               {developmentItems.map(renderDevelopmentItem)}
             </div>
+            <div className="space-y-1">
+              {personalItems.map(renderPersonalItem)}
+            </div>
           </>
         ) : (
           <>
+            {/* Development section */}
+            <Collapsible defaultOpen>
+              <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider">
+                <span>Development</span>
+                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=closed]:-rotate-90" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1">
+                {renderAddProjectButton()}
+                {developmentItems.map(renderDevelopmentItem)}
+              </CollapsibleContent>
+            </Collapsible>
+
             {/* Personal section */}
             <Collapsible defaultOpen>
               <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider">
@@ -207,20 +219,6 @@ export function Sidebar() {
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-1">
                 {personalItems.map(renderPersonalItem)}
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Add Project button */}
-            <div className="my-1">{renderAddProjectButton()}</div>
-
-            {/* Development section */}
-            <Collapsible defaultOpen>
-              <CollapsibleTrigger className="group text-muted-foreground hover:text-foreground flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wider">
-                <span>Development</span>
-                <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=closed]:-rotate-90" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-1">
-                {developmentItems.map(renderDevelopmentItem)}
               </CollapsibleContent>
             </Collapsible>
           </>
