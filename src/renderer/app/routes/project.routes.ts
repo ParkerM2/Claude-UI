@@ -2,26 +2,23 @@
  * Project route group — Project list + nested project views
  */
 
-import { type AnyRoute, createRoute, redirect } from '@tanstack/react-router';
+import {
+  type AnyRoute,
+  createRoute,
+  lazyRouteComponent,
+  redirect,
+} from '@tanstack/react-router';
 
 import { ROUTE_PATTERNS, ROUTES } from '@shared/constants';
-
-import { AgentDashboard } from '@features/agents';
-import { ChangelogPage } from '@features/changelog';
-import { GitHubPage } from '@features/github';
-import { IdeationPage } from '@features/ideation';
-import { InsightsPage } from '@features/insights';
-import { ProjectListPage } from '@features/projects';
-import { RoadmapPage } from '@features/roadmap';
-import { TaskDataGrid } from '@features/tasks';
-import { TerminalGrid } from '@features/terminals';
-import { WorkflowPipelinePage } from '@features/workflow-pipeline';
 
 export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const projectsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTES.PROJECTS,
-    component: ProjectListPage,
+    component: lazyRouteComponent(
+      () => import('@features/projects'),
+      'ProjectListPage',
+    ),
   });
 
   const projectRoute = createRoute({
@@ -36,55 +33,82 @@ export function createProjectRoutes(appLayoutRoute: AnyRoute) {
   const tasksRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_TASKS,
-    component: TaskDataGrid,
+    component: lazyRouteComponent(
+      () => import('@features/tasks'),
+      'TaskDataGrid',
+    ),
   });
 
   const terminalsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_TERMINALS,
-    component: TerminalGrid,
+    component: lazyRouteComponent(
+      () => import('@features/terminals'),
+      'TerminalGrid',
+    ),
   });
 
   const agentsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_AGENTS,
-    component: AgentDashboard,
+    component: lazyRouteComponent(
+      () => import('@features/agents'),
+      'AgentDashboard',
+    ),
   });
 
   const githubRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_GITHUB,
-    component: GitHubPage,
+    component: lazyRouteComponent(
+      () => import('@features/github'),
+      'GitHubPage',
+    ),
   });
 
   const roadmapRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_ROADMAP,
-    component: RoadmapPage,
+    component: lazyRouteComponent(
+      () => import('@features/roadmap'),
+      'RoadmapPage',
+    ),
   });
 
   const ideationRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_IDEATION,
-    component: IdeationPage,
+    component: lazyRouteComponent(
+      () => import('@features/ideation'),
+      'IdeationPage',
+    ),
   });
 
   const changelogRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_CHANGELOG,
-    component: ChangelogPage,
+    component: lazyRouteComponent(
+      () => import('@features/changelog'),
+      'ChangelogPage',
+    ),
   });
 
   const insightsRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_INSIGHTS,
-    component: InsightsPage,
+    component: lazyRouteComponent(
+      () => import('@features/insights'),
+      'InsightsPage',
+    ),
   });
 
   const workflowRoute = createRoute({
     getParentRoute: () => appLayoutRoute,
     path: ROUTE_PATTERNS.PROJECT_WORKFLOW,
-    component: WorkflowPipelinePage,
+    component: lazyRouteComponent(
+      () => import('@features/workflow-pipeline'),
+      'WorkflowPipelinePage',
+    ),
   });
 
   return [

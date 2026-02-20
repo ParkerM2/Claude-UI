@@ -3,9 +3,12 @@
  * Auth route group — Login, register, hub setup (standalone, no sidebar)
  */
 
+import { Suspense } from 'react';
+
 import {
   type AnyRoute,
   createRoute,
+  lazyRouteComponent,
   redirect,
   useNavigate,
 } from '@tanstack/react-router';
@@ -14,8 +17,9 @@ import { ROUTES } from '@shared/constants';
 
 import { ipc } from '@renderer/shared/lib/ipc';
 
-import { LoginPage, RegisterPage, useAuthStore } from '@features/auth';
-import { HubSetupPage } from '@features/hub-setup';
+import { useAuthStore } from '@features/auth';
+
+import { Spinner } from '@ui/spinner';
 
 function redirectIfAuthenticated() {
   const { isAuthenticated } = useAuthStore.getState();
@@ -63,6 +67,35 @@ async function redirectIfHubAlreadyConfigured(): Promise<void> {
   }
 }
 
+// ─── Lazy Page Components ─────────────────────────────────────
+
+const LazyLoginPage = lazyRouteComponent(
+  () => import('@features/auth'),
+  'LoginPage',
+);
+
+const LazyRegisterPage = lazyRouteComponent(
+  () => import('@features/auth'),
+  'RegisterPage',
+);
+
+const LazyHubSetupPage = lazyRouteComponent(
+  () => import('@features/hub-setup'),
+  'HubSetupPage',
+);
+
+// ─── Auth Suspense Fallback ───────────────────────────────────
+
+function AuthPendingFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Spinner aria-label="Loading" size="lg" />
+    </div>
+  );
+}
+
+// ─── Route Factory ────────────────────────────────────────────
+
 export function createAuthRoutes(rootRoute: AnyRoute) {
   const loginRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -103,17 +136,19 @@ function LoginRouteComponent() {
   const navigate = useNavigate();
 
   return (
-    <LoginPage
-      onNavigateToHubSetup={() => {
-        void navigate({ to: ROUTES.HUB_SETUP });
-      }}
-      onNavigateToRegister={() => {
-        void navigate({ to: ROUTES.REGISTER });
-      }}
-      onSuccess={() => {
-        void navigate({ to: ROUTES.DASHBOARD });
-      }}
-    />
+    <Suspense fallback={<AuthPendingFallback />}>
+      <LazyLoginPage
+        onNavigateToHubSetup={() => {
+          void navigate({ to: ROUTES.HUB_SETUP });
+        }}
+        onNavigateToRegister={() => {
+          void navigate({ to: ROUTES.REGISTER });
+        }}
+        onSuccess={() => {
+          void navigate({ to: ROUTES.DASHBOARD });
+        }}
+      />
+    </Suspense>
   );
 }
 
@@ -121,17 +156,19 @@ function RegisterRouteComponent() {
   const navigate = useNavigate();
 
   return (
-    <RegisterPage
-      onNavigateToHubSetup={() => {
-        void navigate({ to: ROUTES.HUB_SETUP });
-      }}
-      onNavigateToLogin={() => {
-        void navigate({ to: ROUTES.LOGIN });
-      }}
-      onSuccess={() => {
-        void navigate({ to: ROUTES.DASHBOARD });
-      }}
-    />
+    <Suspense fallback={<AuthPendingFallback />}>
+      <LazyRegisterPage
+        onNavigateToHubSetup={() => {
+          void navigate({ to: ROUTES.HUB_SETUP });
+        }}
+        onNavigateToLogin={() => {
+          void navigate({ to: ROUTES.LOGIN });
+        }}
+        onSuccess={() => {
+          void navigate({ to: ROUTES.DASHBOARD });
+        }}
+      />
+    </Suspense>
   );
 }
 
@@ -139,13 +176,15 @@ function HubSetupRouteComponent() {
   const navigate = useNavigate();
 
   return (
-    <HubSetupPage
-      onNavigateToLogin={() => {
-        void navigate({ to: ROUTES.LOGIN });
-      }}
-      onSuccess={() => {
-        void navigate({ to: ROUTES.LOGIN });
-      }}
-    />
+    <Suspense fallback={<AuthPendingFallback />}>
+      <LazyHubSetupPage
+        onNavigateToLogin={() => {
+          void navigate({ to: ROUTES.LOGIN });
+        }}
+        onSuccess={() => {
+          void navigate({ to: ROUTES.LOGIN });
+        }}
+      />
+    </Suspense>
   );
 }
