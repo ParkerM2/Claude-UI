@@ -470,25 +470,35 @@ Every theme block must define all tokens. Template:
 
 ### Theme Switching Flow
 
+Custom themes inject CSS variables at runtime via `document.documentElement.style.setProperty('--token', value)`.
+
 ```
-User selects theme → useThemeStore.setColorTheme('ocean')
+User selects custom theme → useThemeStore.setColorTheme(themeId)
   → Zustand state updates
-  → applyColorTheme() sets data-theme="ocean" on <html>
-  → CSS [data-theme="ocean"] variables take effect
+  → applyColorTheme() sets data-theme="{uuid}" on <html>
+  → applyCustomTokens() calls setProperty() for all 33 CSS tokens
   → All Tailwind classes (bg-primary, etc.) automatically use new values
   → color-mix() expressions automatically use new values
+  → AG-Grid reads the same CSS vars automatically via its Theming API
+
+User selects default theme → useThemeStore.setColorTheme('default')
+  → removeProperty() clears all custom CSS var overrides
+  → data-theme attribute is removed from <html>
+  → Base :root / .dark CSS variables take effect
 ```
 
-### Constants for Theme Names
+### Custom Theme Token Injection
 
-```typescript
-import { COLOR_THEMES } from '@shared/constants';
-import type { ColorTheme } from '@shared/constants';
+Custom themes inject CSS variables at runtime via `document.documentElement.style.setProperty('--token', value)`.
+The theme store's `applyCustomTokens()` function applies all 33 tokens when a custom theme is selected.
+To clear custom tokens: `removeProperty('--token')` for each key.
+AG-Grid reads the same CSS vars automatically via its Theming API configuration in `ag-grid-modules.ts`.
 
-// Available: 'default' | 'dusk' | 'lime' | 'ocean' | 'retro' | 'neo' | 'forest'
-```
-
-When adding a theme, update BOTH `globals.css` AND `src/shared/constants/themes.ts`.
+The Theme Editor page (`/settings/themes`) provides:
+- Color pickers organized in sections (Base, Card & Surface, Brand, Semantic, Controls, Sidebar, Utility)
+- Live preview with isolated CSS scope
+- CSS import/export for theme portability
+- Save/load named themes to local storage
 
 ### Terminal Theme Integration (xterm.js)
 
@@ -529,27 +539,14 @@ For branded buttons that need a dark appearance on light backgrounds and vice ve
 
 ## AG-Grid Theming Pattern
 
-AG-Grid v35 uses the quartz theme with design-system token overrides. The theme CSS lives at `src/renderer/features/tasks/components/grid/ag-grid-theme.css` and is imported in `globals.css`.
+AG-Grid v35 uses the quartz theme with design-system token overrides. Theme configuration is defined programmatically via the AG-Grid Theming API in `src/renderer/features/tasks/components/grid/ag-grid-modules.ts`, reading CSS custom properties at runtime.
 
 ### How It Works
 
 1. **Base theme**: `ag-theme-quartz` (imported from `ag-grid-community/styles/`)
 2. **Override class**: `ag-theme-claude` stacked with quartz for compound specificity
-3. **CSS variables**: `--ag-*` properties mapped to design system tokens (`var(--card)`, `var(--foreground)`, etc.)
-4. **Interactive states**: Use `color-mix()` for hover/selection (NEVER hardcode hex/rgb)
-
-### CSS Selector Pattern
-
-```css
-/* Compound selector ensures overrides beat quartz defaults */
-.ag-theme-quartz.ag-theme-claude {
-  --ag-background-color: var(--card);
-  --ag-foreground-color: var(--foreground);
-  --ag-header-background-color: var(--muted);
-  --ag-row-hover-color: color-mix(in srgb, var(--accent) 50%, transparent);
-  /* ... */
-}
-```
+3. **Theming API**: AG-Grid's `themeQuartz.withParams()` maps `--ag-*` params to design system CSS vars at runtime
+4. **Custom themes**: Because AG-Grid reads CSS custom properties, custom themes applied via `setProperty()` are automatically picked up
 
 ### Component Usage
 
