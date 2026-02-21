@@ -284,9 +284,14 @@ export function createHubAuthService(deps: HubAuthServiceDeps): HubAuthService {
           expiresAt: result.data.expiresAt,
           tokenType: 'Bearer',
         });
-      } else {
-        // Refresh failed, clear tokens
+      } else if (result.statusCode === 401) {
+        // Only clear tokens when the server explicitly rejects them.
+        // Network errors or other failures should preserve tokens so
+        // the user stays logged in and can retry later.
+        hubLogger.warn('[HubAuth] Refresh token rejected by server (401) — clearing tokens');
         tokenStore.deleteTokens(HUB_PROVIDER);
+      } else {
+        hubLogger.warn(`[HubAuth] Token refresh failed (${result.error ?? 'unknown'}) — keeping tokens for retry`);
       }
 
       return result;
@@ -309,25 +314,49 @@ export function createHubAuthService(deps: HubAuthServiceDeps): HubAuthService {
 
       // Attempt to refresh the stored token
       const refreshResult = await this.refreshToken();
-      if (!refreshResult.ok || !refreshResult.data) {
-        hubLogger.warn('[HubAuth] Session restore failed: token refresh failed');
+
+      if (refreshResult.ok && refreshResult.data) {
+        // Refresh succeeded — fetch current user with the fresh token
+        const userResult = await this.getCurrentUser();
+        if (userResult.ok && userResult.data) {
+          return {
+            restored: true,
+            user: userResult.data,
+            accessToken: refreshResult.data.accessToken,
+            refreshToken: refreshResult.data.refreshToken,
+            expiresAt: refreshResult.data.expiresAt,
+          };
+        }
+        hubLogger.warn('[HubAuth] Session restore: refreshed tokens but could not fetch user');
+      }
+
+      // Refresh failed — if tokens were cleared (401), give up
+      if (!tokenStore.hasTokens(HUB_PROVIDER)) {
+        hubLogger.warn('[HubAuth] Session restore failed: tokens were revoked');
         return { restored: false };
       }
 
-      // Fetch current user with the fresh access token
-      const userResult = await this.getCurrentUser();
-      if (!userResult.ok || !userResult.data) {
-        hubLogger.warn('[HubAuth] Session restore failed: could not fetch user');
-        return { restored: false };
+      // Tokens still exist (network/Hub error, not 401). Try the existing
+      // access token — it may still be valid if it hasn't expired yet.
+      const existingTokens = tokenStore.getTokens(HUB_PROVIDER);
+      if (existingTokens?.accessToken) {
+        const userResult = await this.getCurrentUser();
+        if (userResult.ok && userResult.data) {
+          hubLogger.info('[HubAuth] Session restored using existing access token (refresh failed)');
+          return {
+            restored: true,
+            user: userResult.data,
+            accessToken: existingTokens.accessToken,
+            refreshToken: existingTokens.refreshToken ?? '',
+            expiresAt: existingTokens.expiresAt ?? new Date(Date.now() + 900_000).toISOString(),
+          };
+        }
       }
 
-      return {
-        restored: true,
-        user: userResult.data,
-        accessToken: refreshResult.data.accessToken,
-        refreshToken: refreshResult.data.refreshToken,
-        expiresAt: refreshResult.data.expiresAt,
-      };
+      // Both refresh and existing token failed — Hub is unreachable.
+      // Return false but tokens are preserved for next attempt.
+      hubLogger.warn('[HubAuth] Session restore failed: Hub unreachable — tokens preserved for retry');
+      return { restored: false };
     },
   };
 }

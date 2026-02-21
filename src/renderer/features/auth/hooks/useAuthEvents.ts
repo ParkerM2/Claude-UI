@@ -53,12 +53,19 @@ export function useAuthInit(): void {
           setAuth(result.user, result.tokens);
           setExpiresAt(Date.now() + result.tokens.expiresIn * 1000);
           void queryClient.invalidateQueries({ queryKey: authKeys.me() });
-        } else {
+        } else if (!isAuthenticated) {
+          // Only clear auth if we don't already have a cached session.
+          // If localStorage has valid auth data from a previous session,
+          // keep the user logged in — the token refresh hook will retry.
           clearAuth();
         }
+        // If restore failed but isAuthenticated is true (from localStorage),
+        // keep the cached session. Hub may be temporarily unreachable.
       } catch {
-        // Network error or main process error — treat as not restored
-        clearAuth();
+        if (!isAuthenticated) {
+          clearAuth();
+        }
+        // Keep cached session on network errors
       } finally {
         setInitializing(false);
       }
