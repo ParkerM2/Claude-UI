@@ -45,30 +45,25 @@ const mockEncryptSecret = vi.fn((value: string) => ({
   useSafeStorage: true,
 }));
 
-const mockDecryptSecret = vi.fn(
-  (entry: { encrypted: string; useSafeStorage: boolean }) => {
-    const raw = Buffer.from(entry.encrypted, 'base64').toString();
-    return raw.replace('enc:', '');
-  },
+const mockDecryptSecret = vi.fn((entry: { encrypted: string; useSafeStorage: boolean }) => {
+  const raw = Buffer.from(entry.encrypted, 'base64').toString();
+  return raw.replace('enc:', '');
+});
+
+const mockIsEncryptedEntry = vi.fn((value: unknown): boolean => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  return typeof obj.encrypted === 'string' && typeof obj.useSafeStorage === 'boolean';
+});
+
+const mockIsWebhookSecretKey = vi.fn((key: string): boolean =>
+  ['webhookSlackBotToken', 'webhookSlackSigningSecret', 'webhookGithubSecret'].includes(key),
 );
 
-const mockIsEncryptedEntry = vi.fn(
-  (value: unknown): boolean => {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-    const obj = value as Record<string, unknown>;
-    return typeof obj.encrypted === 'string' && typeof obj.useSafeStorage === 'boolean';
-  },
-);
-
-const mockIsWebhookSecretKey = vi.fn(
-  (key: string): boolean =>
-    ['webhookSlackBotToken', 'webhookSlackSigningSecret', 'webhookGithubSecret'].includes(key),
-);
-
-const mockIsProfileSecretKey = vi.fn(
-  (key: string): boolean => ['apiKey', 'oauthToken'].includes(key),
+const mockIsProfileSecretKey = vi.fn((key: string): boolean =>
+  ['apiKey', 'oauthToken'].includes(key),
 );
 
 vi.mock('@main/services/settings/settings-encryption', () => ({
@@ -80,12 +75,10 @@ vi.mock('@main/services/settings/settings-encryption', () => ({
 }));
 
 // Import after mocks are set up
-const { loadSettingsFile, saveSettingsFile } = await import(
-  '@main/services/settings/settings-store'
-);
-const { DEFAULT_SETTINGS, DEFAULT_PROFILES } = await import(
-  '@main/services/settings/settings-defaults'
-);
+const { loadSettingsFile, saveSettingsFile } =
+  await import('@main/services/settings/settings-store');
+const { DEFAULT_SETTINGS, DEFAULT_PROFILES } =
+  await import('@main/services/settings/settings-defaults');
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -109,10 +102,12 @@ function resetFs(files: Record<string, string> = {}): void {
 // app.getPath('userData') returns '/mock/userData' via the electron mock
 const SETTINGS_FILE = posix.join('/mock/userData', 'settings.json');
 
-function makeSettingsFile(overrides: {
-  settings?: Record<string, unknown>;
-  profiles?: Array<Record<string, unknown>>;
-} = {}): string {
+function makeSettingsFile(
+  overrides: {
+    settings?: Record<string, unknown>;
+    profiles?: Array<Record<string, unknown>>;
+  } = {},
+): string {
   const settings = overrides.settings ?? { ...DEFAULT_SETTINGS };
   const profiles = overrides.profiles ?? [...DEFAULT_PROFILES];
   return JSON.stringify({ settings, profiles }, null, 2);
@@ -139,7 +134,13 @@ describe('SettingsStore', () => {
 
       const result = loadSettingsFile();
 
-      expect(result.data.settings).toEqual(DEFAULT_SETTINGS);
+      // In test mode (ELECTRON_IS_TEST=1), onboardingCompleted is auto-set to true
+      const expectedSettings = {
+        ...DEFAULT_SETTINGS,
+        onboardingCompleted:
+          process.env.ELECTRON_IS_TEST === '1' ? true : DEFAULT_SETTINGS.onboardingCompleted,
+      };
+      expect(result.data.settings).toEqual(expectedSettings);
       expect(result.data.profiles).toEqual(DEFAULT_PROFILES);
       expect(result.needsMigration).toBe(false);
     });
@@ -182,9 +183,9 @@ describe('SettingsStore', () => {
       const result = loadSettingsFile();
 
       expect(mockDecryptSecret).toHaveBeenCalledWith(encryptedToken);
-      expect((result.data.settings as unknown as Record<string, unknown>).webhookSlackBotToken).toBe(
-        'xoxb-slack-token',
-      );
+      expect(
+        (result.data.settings as unknown as Record<string, unknown>).webhookSlackBotToken,
+      ).toBe('xoxb-slack-token');
     });
 
     it('marks needsMigration for plaintext webhook secrets', () => {
@@ -256,9 +257,7 @@ describe('SettingsStore', () => {
 
       resetFs({
         [SETTINGS_FILE]: makeSettingsFile({
-          profiles: [
-            { id: 'default', name: 'Default', isDefault: true, apiKey: encryptedApiKey },
-          ],
+          profiles: [{ id: 'default', name: 'Default', isDefault: true, apiKey: encryptedApiKey }],
         }),
       });
 
@@ -271,9 +270,7 @@ describe('SettingsStore', () => {
     it('marks needsMigration for plaintext profile secrets', () => {
       resetFs({
         [SETTINGS_FILE]: makeSettingsFile({
-          profiles: [
-            { id: 'default', name: 'Default', isDefault: true, apiKey: 'plaintext-key' },
-          ],
+          profiles: [{ id: 'default', name: 'Default', isDefault: true, apiKey: 'plaintext-key' }],
         }),
       });
 
@@ -294,9 +291,7 @@ describe('SettingsStore', () => {
 
       resetFs({
         [SETTINGS_FILE]: makeSettingsFile({
-          profiles: [
-            { id: 'default', name: 'Default', isDefault: true, apiKey: encryptedKey },
-          ],
+          profiles: [{ id: 'default', name: 'Default', isDefault: true, apiKey: encryptedKey }],
         }),
       });
 
@@ -461,9 +456,7 @@ describe('SettingsStore', () => {
 
       saveSettingsFile({
         settings: { ...DEFAULT_SETTINGS },
-        profiles: [
-          { id: 'default', name: 'Default', isDefault: true, apiKey: 'sk-my-api-key' },
-        ],
+        profiles: [{ id: 'default', name: 'Default', isDefault: true, apiKey: 'sk-my-api-key' }],
       });
 
       expect(mockEncryptSecret).toHaveBeenCalledWith('sk-my-api-key');
@@ -484,9 +477,7 @@ describe('SettingsStore', () => {
 
       saveSettingsFile({
         settings: { ...DEFAULT_SETTINGS },
-        profiles: [
-          { id: 'test-id', name: 'Test Profile', isDefault: false, model: 'claude-3' },
-        ],
+        profiles: [{ id: 'test-id', name: 'Test Profile', isDefault: false, model: 'claude-3' }],
       });
 
       const content = vol.readFileSync(SETTINGS_FILE, 'utf-8') as string;
@@ -596,9 +587,7 @@ describe('SettingsStore', () => {
 
       saveSettingsFile({
         settings: { ...DEFAULT_SETTINGS },
-        profiles: [
-          { id: 'default', name: 'Default', isDefault: true, apiKey: 'sk-round-trip' },
-        ],
+        profiles: [{ id: 'default', name: 'Default', isDefault: true, apiKey: 'sk-round-trip' }],
       });
 
       expect(mockEncryptSecret).toHaveBeenCalledWith('sk-round-trip');

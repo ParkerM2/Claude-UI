@@ -54,8 +54,14 @@ function createWindow(): void {
   });
 
   mainWindow.on('ready-to-show', () => {
+    const isTestMode = process.env.ELECTRON_IS_TEST === '1';
     const startMin = settingsServiceRef?.getSettings().startMinimized;
-    if (!startMin) {
+
+    if (isTestMode) {
+      // In test mode, show without stealing focus (showInactive)
+      // Note: minimize() causes render pausing which breaks E2E tests
+      mainWindow?.showInactive();
+    } else if (!startMin) {
       mainWindow?.show();
     }
   });
@@ -163,10 +169,7 @@ void (async () => {
   // Global exception handlers — registered before app.whenReady() for maximum coverage
   process.on('uncaughtException', (error) => {
     appLogger.error('[Main] Uncaught exception:', error);
-    dialog.showErrorBox(
-      'ADC Error',
-      `An unexpected error occurred:\n\n${error.message}`,
-    );
+    dialog.showErrorBox('ADC Error', `An unexpected error occurred:\n\n${error.message}`);
     // Trigger graceful cleanup via before-quit handler
     app.quit();
   });

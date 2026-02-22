@@ -54,3 +54,4 @@ test-results/
 
 # E2E screenshots (generated, force-added on feature branches)
 tests/e2e/screenshots/
+.e2e-user-data/

@@ -16,12 +16,7 @@ import type { Page } from 'playwright';
  * Briefing, Notes, Planner, Alerts, Comms were moved to Productivity tabs
  * in the ui-layout-refactor and are no longer sidebar items.
  */
-export const TOP_LEVEL_NAV_ITEMS = [
-  'Dashboard',
-  'My Work',
-  'Fitness',
-  'Productivity',
-] as const;
+export const TOP_LEVEL_NAV_ITEMS = ['Dashboard', 'My Work', 'Fitness', 'Productivity'] as const;
 
 /** Expected URL path segments for each top-level sidebar label. */
 export const ROUTE_URL_MAP: Record<string, string> = {
@@ -49,23 +44,21 @@ export const PROJECT_NAV_ITEMS = [
 /**
  * Click a top-level sidebar nav item by its visible label text.
  *
- * Finds the button inside `<aside> <nav>` that contains the label,
- * clicks it, and waits for navigation to settle.
+ * Uses role-based selectors that work with custom sidebar layouts
+ * (which don't use <aside> elements).
  */
 export async function navigateToSidebarItem(page: Page, label: string): Promise<void> {
-  const navButton = page.locator('aside nav button', { hasText: label });
+  // Use getByRole for better compatibility with custom layouts
+  const navButton = page.getByRole('button', { name: label, exact: true });
   await navButton.click();
   await page.waitForLoadState('networkidle');
 }
 
 /**
  * Click the Settings button in the sidebar footer.
- *
- * Settings is NOT inside `<nav>` — it's in the sidebar footer area.
  */
 export async function navigateToSettings(page: Page): Promise<void> {
-  // The Settings button is the last button in the sidebar footer with text "Settings"
-  const settingsButton = page.locator('aside button', { hasText: 'Settings' });
+  const settingsButton = page.getByRole('button', { name: 'Settings', exact: true });
   await settingsButton.click();
   await expect(page).toHaveURL(/\/settings/, { timeout: 10_000 });
 }
@@ -73,11 +66,10 @@ export async function navigateToSettings(page: Page): Promise<void> {
 /**
  * Click a project-scoped sidebar nav item by its visible label text.
  *
- * These items are below the divider in the sidebar and require an active project.
- * If no project is active, these buttons are disabled.
+ * These items require an active project. If no project is active, they are disabled.
  */
 export async function navigateToProjectView(page: Page, label: string): Promise<void> {
-  const navButton = page.locator('aside nav button', { hasText: label });
+  const navButton = page.getByRole('button', { name: label, exact: true });
   // Ensure button is not disabled before clicking
   await expect(navButton).toBeEnabled({ timeout: 5_000 });
   await navButton.click();
@@ -90,25 +82,20 @@ export async function navigateToProjectView(page: Page, label: string): Promise<
  * Click the sidebar collapse toggle button.
  */
 export async function toggleSidebarCollapse(page: Page): Promise<void> {
-  const collapseButton = page.locator('aside button[aria-label="Collapse sidebar"]');
-  const expandButton = page.locator('aside button[aria-label="Expand sidebar"]');
-
-  // Click whichever is visible
-  const isCollapsed = await expandButton.isVisible().catch(() => false);
-
-  if (isCollapsed) {
-    await expandButton.click();
-  } else {
-    await collapseButton.click();
-  }
+  // Use aria-label which works across all layout variants
+  const toggleButton = page.getByRole('button', { name: /toggle sidebar/i });
+  await toggleButton.click();
 }
 
 /**
  * Check whether the sidebar is currently collapsed.
+ * Returns true if the expand button is visible (meaning sidebar is collapsed).
  */
 export async function isSidebarCollapsed(page: Page): Promise<boolean> {
-  const expandButton = page.locator('aside button[aria-label="Expand sidebar"]');
-  return expandButton.isVisible().catch(() => false);
+  // When collapsed, sidebar shows icons only - check if Dashboard text is hidden
+  const dashboardText = page.locator('button:has-text("Dashboard") >> text=Dashboard');
+  const textVisible = await dashboardText.isVisible().catch(() => false);
+  return !textVisible;
 }
 
 // ─── Project Navigation ───────────────────────────────────────

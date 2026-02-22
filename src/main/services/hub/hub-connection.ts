@@ -12,12 +12,7 @@ import type { HubConnection, HubConnectionStatus } from '@shared/types';
 import { hubLogger } from '@main/lib/logger';
 
 import { createHubClient } from './hub-client';
-import {
-  deleteConfig,
-  encryptApiKey,
-  loadConfig,
-  saveConfig,
-} from './hub-config-store';
+import { deleteConfig, encryptApiKey, loadConfig, saveConfig } from './hub-config-store';
 import { configToConnection } from './hub-event-mapper';
 import { createHubWsClient } from './hub-ws-client';
 
@@ -54,6 +49,22 @@ export interface HubConnectionManager {
 
 export function createHubConnectionManager(router: IpcRouter): HubConnectionManager {
   let persistedConfig: PersistedHubConfig | null = loadConfig();
+
+  // In test mode, auto-configure Hub from environment variables if not already configured
+  if (process.env.ELECTRON_IS_TEST === '1' && !persistedConfig) {
+    const testHubUrl = process.env.TEST_HUB_URL;
+    const testHubApiKey = process.env.TEST_HUB_API_KEY;
+    if (testHubUrl && testHubApiKey) {
+      hubLogger.info('[Hub] Test mode: auto-configuring from environment variables');
+      persistedConfig = {
+        hubUrl: testHubUrl,
+        encryptedApiKey: encryptApiKey(testHubApiKey),
+        enabled: true,
+      };
+      saveConfig(persistedConfig);
+    }
+  }
+
   let status: HubConnectionStatus = 'disconnected';
   const messageListeners: Array<(data: unknown) => void> = [];
 
