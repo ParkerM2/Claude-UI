@@ -20,16 +20,49 @@ import {
 
 import type { SettingsFile } from './settings-defaults';
 
+const CONFIG_FILENAME = 'settings.json';
+
 function getSettingsFilePath(): string {
-  return join(app.getPath('userData'), 'settings.json');
+  return join(app.getPath('userData'), CONFIG_FILENAME);
+}
+
+/** Process a single setting value, decrypting if needed. Returns [value, needsMigration]. */
+function processSettingValue(
+  key: string,
+  value: unknown,
+): { processed: unknown; needsMigration: boolean } {
+  if (!isWebhookSecretKey(key)) {
+    return { processed: value, needsMigration: false };
+  }
+
+  if (isEncryptedEntry(value)) {
+    try {
+      return { processed: decryptSecret(value), needsMigration: false };
+    } catch {
+      fsLogger.error(`[Settings] Failed to decrypt ${key}`);
+      return { processed: '', needsMigration: false };
+    }
+  }
+
+  if (typeof value === 'string' && value.length > 0) {
+    // Legacy plaintext value — mark for migration
+    return { processed: value, needsMigration: true };
+  }
+
+  return { processed: '', needsMigration: false };
 }
 
 /** Load settings file with decryption. Handles plaintext-to-encrypted migration. */
 export function loadSettingsFile(): { data: SettingsFile; needsMigration: boolean } {
   const filePath = getSettingsFilePath();
   if (!existsSync(filePath)) {
+    const settings = { ...DEFAULT_SETTINGS };
+    // In test mode, auto-complete onboarding to skip the wizard
+    if (process.env.ELECTRON_IS_TEST === '1') {
+      settings.onboardingCompleted = true;
+    }
     return {
-      data: { settings: { ...DEFAULT_SETTINGS }, profiles: [...DEFAULT_PROFILES] },
+      data: { settings, profiles: [...DEFAULT_PROFILES] },
       needsMigration: false,
     };
   }
@@ -43,23 +76,10 @@ export function loadSettingsFile(): { data: SettingsFile; needsMigration: boolea
     let needsMigration = false;
 
     for (const [key, value] of Object.entries(settingsRaw)) {
-      if (isWebhookSecretKey(key)) {
-        if (isEncryptedEntry(value)) {
-          try {
-            settings[key] = decryptSecret(value);
-          } catch {
-            fsLogger.error(`[Settings] Failed to decrypt ${key}`);
-            settings[key] = '';
-          }
-        } else if (typeof value === 'string' && value.length > 0) {
-          // Legacy plaintext value — mark for migration
-          settings[key] = value;
-          needsMigration = true;
-        } else {
-          settings[key] = '';
-        }
-      } else {
-        settings[key] = value;
+      const result = processSettingValue(key, value);
+      settings[key] = result.processed;
+      if (result.needsMigration) {
+        needsMigration = true;
       }
     }
 
@@ -89,8 +109,16 @@ export function loadSettingsFile(): { data: SettingsFile; needsMigration: boolea
       return decrypted;
     });
 
+    // In test mode, auto-complete onboarding to skip the wizard
+    if (process.env.ELECTRON_IS_TEST === '1') {
+      settings.onboardingCompleted = true;
+    }
+
     return {
-      data: { settings: settings as unknown as AppSettings, profiles: profiles as unknown as Profile[] },
+      data: {
+        settings: settings as unknown as AppSettings,
+        profiles: profiles as unknown as Profile[],
+      },
       needsMigration,
     };
   } catch {

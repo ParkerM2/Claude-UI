@@ -2,25 +2,117 @@
  * E2E authentication helpers.
  *
  * Provides functions to log in via the UI and ensure authenticated state.
- * Reads credentials from TEST_EMAIL and TEST_PASSWORD environment variables.
+ * Reads credentials from environment variables:
+ * - TEST_EMAIL, TEST_PASSWORD: Login credentials
+ * - TEST_HUB_URL, TEST_HUB_API_KEY: Hub configuration
  */
 
 import type { Page } from 'playwright';
 
 /**
- * Wait for Hub connection to be established by polling.
+ * Configure Hub server if not already configured.
  *
- * The app auto-connects to Hub on startup, but this is async.
- * We poll until the login form is ready and no "Hub URL not configured" error appears.
- * Uses a simple delay-based approach since the login page doesn't have a Hub status indicator.
+ * Checks if we're on the login page with "Hub URL not configured" error,
+ * and if so, navigates to Hub setup and configures the Hub.
  */
-async function waitForHubConnection(page: Page): Promise<void> {
-  // Wait for the login form to be ready
-  await page.getByPlaceholder('you@example.com').waitFor({ state: 'visible', timeout: 10_000 });
+async function ensureHubConfigured(page: Page): Promise<void> {
+  const hubUrl = process.env['TEST_HUB_URL'];
+  const apiKey = process.env['TEST_HUB_API_KEY'];
 
-  // Give Hub time to auto-connect (happens async on app startup)
-  // The Hub config exists but connection takes a moment to establish
-  await page.waitForTimeout(3000);
+  if (!hubUrl || !apiKey) {
+    throw new Error(
+      'E2E auth: TEST_HUB_URL and TEST_HUB_API_KEY environment variables are required. ' +
+        'Set them in .env.test before running E2E tests.',
+    );
+  }
+
+  // Check if Hub is already configured by looking for the Hub error message
+  const hubError = page.locator('text=Hub URL not configured');
+  const isHubError = await hubError.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (!isHubError) {
+    // Hub is already configured, nothing to do
+    return;
+  }
+
+  // Navigate to Hub setup via the "Change Hub server" button
+  await page.getByRole('button', { name: 'Change Hub server' }).click();
+
+  // Wait for Hub setup page to load
+  await page
+    .getByRole('heading', { name: 'Welcome to ADC' })
+    .waitFor({ state: 'visible', timeout: 10_000 });
+
+  // Expand manual configuration section
+  await page.getByRole('button', { name: 'I have my own Hub server' }).click();
+
+  // Fill Hub URL and API key
+  await page.getByLabel('Hub URL').fill(hubUrl);
+  await page.getByLabel('API Key').fill(apiKey);
+
+  // Click Connect button
+  await page.getByRole('button', { name: 'Connect' }).click();
+
+  // Wait for redirect back to login page (Hub setup calls onSuccess which navigates to login)
+  await page
+    .getByRole('heading', { name: 'Sign In' })
+    .waitFor({ state: 'visible', timeout: 15_000 });
+
+  // Give Hub connection time to establish
+  await page.waitForTimeout(2000);
+}
+
+/**
+ * Wait for login form to be ready.
+ */
+async function waitForLoginReady(page: Page): Promise<void> {
+  await page.getByPlaceholder('you@example.com').waitFor({ state: 'visible', timeout: 10_000 });
+}
+
+/**
+ * Handle the first-run setup wizard if it appears after login.
+ * Clicks through the wizard to get to the main dashboard.
+ */
+async function handleSetupWizardIfPresent(page: Page): Promise<void> {
+  // Check if we're on the setup wizard (shows "Welcome to ADC" heading)
+  const welcomeHeading = page.getByRole('heading', { name: 'Welcome to ADC' });
+  const isWizardVisible = await welcomeHeading.isVisible({ timeout: 2000 }).catch(() => false);
+
+  if (!isWizardVisible) {
+    return;
+  }
+
+  // Click "Get Started" to proceed through the wizard
+  const getStartedButton = page.getByRole('button', { name: 'Get Started' });
+  if (await getStartedButton.isVisible().catch(() => false)) {
+    await getStartedButton.click();
+  }
+
+  // The wizard may have multiple steps — keep clicking "Next" or "Skip" until done
+  const maxSteps = 5;
+  for (let step = 0; step < maxSteps; step++) {
+    // Wait a moment for the next step to load
+    await page.waitForTimeout(500);
+
+    // Check if we've reached the dashboard (sidebar visible)
+    const sidebar = page.locator('aside').first();
+    if (await sidebar.isVisible().catch(() => false)) {
+      return;
+    }
+
+    // Try clicking various wizard navigation buttons
+    const nextButton = page.getByRole('button', { name: /next|continue|skip|finish|done/i });
+    if (
+      await nextButton
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await nextButton.first().click();
+    } else {
+      break;
+    }
+  }
 }
 
 /**
@@ -43,8 +135,9 @@ export async function loginWithTestAccount(page: Page): Promise<void> {
     );
   }
 
-  // Wait for Hub to be connected before attempting login
-  await waitForHubConnection(page);
+  // Ensure Hub is configured before attempting login
+  await waitForLoginReady(page);
+  await ensureHubConfigured(page);
 
   // Retry login up to 3 times (Hub connection may still be establishing)
   const maxAttempts = 3;
@@ -67,8 +160,13 @@ export async function loginWithTestAccount(page: Page): Promise<void> {
     ]).catch(() => 'timeout' as const);
 
     if (result === 'success') {
-      // Login succeeded, verify sidebar is visible
-      await page.locator('aside').first().waitFor({ state: 'visible', timeout: 10_000 });
+      // Login succeeded — handle setup wizard if shown
+      await handleSetupWizardIfPresent(page);
+
+      // Verify we're on the authenticated layout by checking for Dashboard button in sidebar
+      await page
+        .getByRole('button', { name: 'Dashboard' })
+        .waitFor({ state: 'visible', timeout: 10_000 });
       return;
     }
 
@@ -82,7 +180,9 @@ export async function loginWithTestAccount(page: Page): Promise<void> {
     if (attempt === maxAttempts) {
       // One final wait for dashboard redirect
       await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-      await page.locator('aside').first().waitFor({ state: 'visible', timeout: 10_000 });
+      await page
+        .getByRole('button', { name: 'Dashboard' })
+        .waitFor({ state: 'visible', timeout: 10_000 });
     }
   }
 }
@@ -90,14 +190,15 @@ export async function loginWithTestAccount(page: Page): Promise<void> {
 /**
  * Ensure the page is in an authenticated state.
  *
- * If the sidebar is already visible (indicating a protected page), returns immediately.
- * Otherwise, calls loginWithTestAccount to authenticate.
+ * Checks for authenticated layout indicators (Dashboard button in sidebar).
+ * If already logged in, returns immediately. Otherwise, logs in.
  */
 export async function ensureLoggedIn(page: Page): Promise<void> {
-  const sidebar = page.locator('aside').first();
-  const isVisible = await sidebar.isVisible().catch(() => false);
+  // Check for Dashboard button which exists in all sidebar layouts when logged in
+  const dashboardButton = page.getByRole('button', { name: 'Dashboard' });
+  const isLoggedIn = await dashboardButton.isVisible({ timeout: 2000 }).catch(() => false);
 
-  if (isVisible) {
+  if (isLoggedIn) {
     return;
   }
 

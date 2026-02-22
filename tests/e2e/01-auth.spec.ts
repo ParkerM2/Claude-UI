@@ -19,7 +19,9 @@ test.describe('Auth — Login Page', () => {
     collector = createConsoleCollector(mainWindow);
   });
 
-  test('login page loads with email and password inputs and Sign In button', async ({ mainWindow }) => {
+  test('login page loads with email and password inputs and Sign In button', async ({
+    mainWindow,
+  }) => {
     // The app should land on the login page by default (unauthenticated)
     await expect(mainWindow.getByRole('heading', { name: 'Sign In' })).toBeVisible();
 
@@ -109,9 +111,7 @@ test.describe('Auth — Login Page', () => {
   });
 
   test('Hub setup link exists on login page', async ({ mainWindow }) => {
-    await expect(
-      mainWindow.getByRole('button', { name: 'Change Hub server' }),
-    ).toBeVisible();
+    await expect(mainWindow.getByRole('button', { name: 'Change Hub server' })).toBeVisible();
   });
 
   test('no unexpected console errors during unauthenticated flows', async () => {
@@ -122,7 +122,9 @@ test.describe('Auth — Login Page', () => {
 // ─── Authenticated test (uses authenticatedWindow) ──────────────────
 
 test.describe('Auth — Successful Login', () => {
-  test('successful login redirects to dashboard with sidebar visible', async ({ authenticatedWindow }) => {
+  test('successful login redirects to dashboard with sidebar visible', async ({
+    authenticatedWindow,
+  }) => {
     const collector = createConsoleCollector(authenticatedWindow);
 
     // authenticatedWindow fixture already logs in via loginWithTestAccount.
@@ -130,7 +132,10 @@ test.describe('Auth — Successful Login', () => {
     await expect(authenticatedWindow).toHaveURL(/\/dashboard/, { timeout: 15_000 });
 
     // Verify sidebar is visible (confirms authenticated layout loaded)
-    await expect(authenticatedWindow.locator('aside').first()).toBeVisible({ timeout: 10_000 });
+    // Note: Custom sidebar layouts don't use <aside>, so check for Dashboard button instead
+    await expect(authenticatedWindow.getByRole('button', { name: 'Dashboard' })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Verify the login form is gone
     await expect(authenticatedWindow.getByRole('heading', { name: 'Sign In' })).not.toBeVisible();
